@@ -1,13 +1,14 @@
 {
-  "name": "bie-frontend",
-  "version": "0.0.0",
+  "name": "@apps/bie-frontend",
+  "version": "0.0.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:bie-frontend": "node dist/bie-frontend/server/server.mjs"
+    "serve:ssr:bie-frontend": "node dist/bie-frontend/server/server.mjs",
+    "dev": "ng run bie-frontend:serve-ssr",
+    "build": "ng build && ng run bie-frontend:server"
   },
   "private": true,
   "dependencies": {

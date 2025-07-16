@@ -1,0 +1,63 @@
+{
+  "tileWidth": { "wide": 3, "medium": 2, "narrow": 1 },
+
+  "widgets": {
+    "heading": {
+      "attrs": {
+        "tileX":   { "type": "integer", "minimum": 0 },
+        "tileY":   { "type": "integer", "minimum": 0 },
+        "variant": { "enum": ["postTitle", "subTitle"], "default": "postTitle" },
+        "text":    { "type": "string", "required": true }
+      }
+    },
+
+    "divider": {
+      "attrs": {
+        "tileX":   { "type": "integer", "minimum": 0 },
+        "tileY":   { "type": "integer", "minimum": 0 },
+        "height":  { "type": "number",  "default": 1 }
+      }
+    },
+
+    "paragraph": {
+      "attrs": {
+        "tileX":   { "type": "integer", "minimum": 0 },
+        "tileY":   { "type": "integer", "minimum": 0 },
+        "variant": { "enum": ["wide","medium","narrow"], "default": "wide" },
+        "align":   { "enum": ["left","center","right"],  "default": "left" },
+        "html":    { "type": "string",  "required": true }
+      }
+    },
+
+    "image": {
+      "attrs": {
+        "tileX":   { "type": "integer", "minimum": 0 },
+        "tileY":   { "type": "integer", "minimum": 0 },
+        "src":         { "type": "string", "required": true },
+        "alt":         { "type": "string", "required": true },
+        "variant":     { "enum": ["wide", "medium", "narrow"], "default": "narrow" },
+        "aspectRatio": { "type": "string", "pattern": "^\\d+/\\d+$", "default": "16/9" }
+      }
+    },
+
+    "video": {
+      "attrs": {
+        "tileX":   { "type": "integer", "minimum": 0 },
+        "tileY":   { "type": "integer", "minimum": 0 },
+        "src":         { "type": "string", "required": true },
+        "poster":      { "type": "string", "default": "" },
+        "variant":     { "enum": ["wide", "medium", "narrow"], "default": "medium" },
+        "aspectRatio": { "type": "string", "pattern": "^\\d+/\\d+$", "default": "16/9" }
+      }
+    },
+
+    "textbox": {
+      "attrs": {
+        "tileX":   { "type": "integer", "minimum": 0 },
+        "tileY":   { "type": "integer", "minimum": 0 },
+        "variant": { "enum": ["medium", "narrow"], "default": "narrow" },
+        "image":   { "type": "string", "default": "" }
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "grid": {
+    "columns": 3,
+    "spanMap": { "wide": 3, "medium": 2, "narrow": 1 }
+  },
+
+  "widgets": {
+    "heading": {
+      "attrs": { "type": { "enum": ["postTitle", "subTitle"], "required": true } }
+    },
+
+    "divider": {
+      "attrs": { "height": { "type": "number", "default": 1 } }
+    },
+
+    "paragraph": {
+      "attrs": {
+        "variant": { "enum": ["wide", "medium", "narrow"], "default": "wide" },
+        "align":   { "enum": ["left", "center", "right"],  "default": "left" }
+      }
+    },
+
+    "image": {
+      "attrs": {
+        "src":         { "type": "string", "required": true },
+        "alt":         { "type": "string", "required": true },
+        "variant":     { "enum": ["wide", "medium", "narrow"], "default": "narrow" },
+        "aspectRatio": { "type": "string", "pattern": "^\\d+/\\d+$", "default": "16/9" }
+      }
+    },
+
+    "video": {
+      "attrs": {
+        "src":         { "type": "string", "required": true },
+        "poster":      { "type": "string", "default": "" },
+        "variant":     { "enum": ["wide", "medium", "narrow"], "default": "medium" },
+        "aspectRatio": { "type": "string", "pattern": "^\\d+/\\d+$", "default": "16/9" }
+      }
+    },
+
+    "textbox": {
+      "attrs": {
+        "variant": { "enum": ["medium", "narrow"], "default": "narrow" },
+        "image":   { "type": "string", "default": "" }
+      }
+    }
+  }
+}

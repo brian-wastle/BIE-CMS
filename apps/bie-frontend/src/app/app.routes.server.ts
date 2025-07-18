@@ -1,8 +1,7 @@
-import { RenderMode, ServerRoute } from '@angular/ssr';
+import { Routes } from '@angular/router';
+import { authRoutes } from './component/auth-ui/auth.routes';
 
-export const serverRoutes: ServerRoute[] = [
-  {
-    path: '**',
-    renderMode: RenderMode.Prerender
-  }
+export const serverRoutes: Routes = [
+  ...authRoutes,                   // reuse
+  { path: '**', redirectTo: '' }
 ];

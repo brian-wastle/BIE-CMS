@@ -6,9 +6,8 @@
     "start": "ng serve",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:bie-frontend": "node dist/bie-frontend/server/server.mjs",
-    "dev": "ng run bie-frontend:serve-ssr",
-    "build": "ng build && ng run bie-frontend:server"
+    "dev": "ng serve --configuration development",
+    "build": "ng build --configuration production"
   },
   "private": true,
   "dependencies": {

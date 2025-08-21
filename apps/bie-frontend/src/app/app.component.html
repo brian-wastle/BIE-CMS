@@ -1,0 +1,31 @@
+<mat-sidenav-container class="app-container">
+  <!-- Sidebar Menu -->
+  <mat-sidenav
+    #sidenav
+    class="app-sidenav"
+    [mode]="sidenavMode"
+    [opened]="sidenavOpened"
+  >
+    <mat-toolbar color="primary">BIE-CMS</mat-toolbar>
+    <mat-nav-list>
+      <a mat-list-item href="#">Dashboard</a>
+      <a mat-list-item href="#">Blog</a>
+      <a mat-list-item href="#">How-To</a>
+    </mat-nav-list>
+  </mat-sidenav>
+  <!-- Main Content -->
+  <mat-sidenav-content>
+    <!-- Sidebar Toggle -->
+    <mat-toolbar color="primary">
+      <button mat-icon-button (click)="sidenav.toggle()" aria-label="Toggle sidebar">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="spacer"></span>
+    </mat-toolbar>
+
+    <!-- Content routes -->
+    <div class="content">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

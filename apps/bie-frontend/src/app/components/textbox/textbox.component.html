@@ -1,0 +1,28 @@
+<div *ngIf="editable; else readonly" class="textbox-author">
+  <div
+    #editor
+    class="textbox"
+    dir="ltr"
+    [attr.contenteditable]="true"
+    data-placeholder="Type your text…"
+    (focus)="onFocus()"
+    (blur)="onBlurAndCommit()"
+    (input)="onInput($event)"
+    (keydown.enter)="onEnter($event)">
+  </div>
+
+  <app-layout-controls
+    [layout]="block.layout"
+    [totalColumns]="totalColumns"
+    [editable]="editable"
+    (layoutChange)="onLayoutChange($event)"
+    (editingChange)="editingChange.emit($event)">
+  </app-layout-controls>
+</div>
+
+<!-- Read-only mode -->
+<ng-template #readonly>
+  <div class="textbox-view" [textContent]="block.text"></div>
+</ng-template>
+
+

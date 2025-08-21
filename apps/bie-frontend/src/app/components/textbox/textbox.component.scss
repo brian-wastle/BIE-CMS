@@ -1,0 +1,29 @@
+/* optional wrapper spacing for editor mode */
+.textbox-author { display: grid; gap: 10px; }
+
+/* was .textbox-edit — renamed to match your CSS */
+.textbox {
+  min-height: 96px;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  outline: none;
+  caret-color: auto;
+}
+.textbox:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+.textbox:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+}
+
+/* read-only view inherits your normal text styles */
+.textbox-view {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}

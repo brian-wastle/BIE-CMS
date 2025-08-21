@@ -1,0 +1,37 @@
+<div *ngIf="editable; else preview" class="img-author">
+  <label>
+    <span>Image URL</span>
+    <input type="url"
+           [ngModel]="block.src"
+           (ngModelChange)="onSrcChange($event)"
+           (focus)="onFocus()" (blur)="onBlur()"
+           placeholder="https://example.com/image.jpg"/>
+  </label>
+
+  <label>
+    <span>Alt text</span>
+    <input type="text"
+           [ngModel]="block.alt"
+           (ngModelChange)="onAltChange($event)"
+           (focus)="onFocus()" (blur)="onBlur()"
+           placeholder="Describe the image"/>
+  </label>
+
+  <app-layout-controls
+    [layout]="block.layout"
+    [totalColumns]="totalColumns"
+    [editable]="editable"
+    (layoutChange)="onLayoutChange($event)"
+    (editingChange)="editingChange.emit($event)">
+  </app-layout-controls>
+
+  <div class="preview-wrap" *ngIf="block.src">
+    <img [src]="block.src" [alt]="block.alt || ''"/>
+  </div>
+</div>
+
+<ng-template #preview>
+  <div class="img-preview">
+    <img [src]="block.src" [alt]="block.alt || ''"/>
+  </div>
+</ng-template>

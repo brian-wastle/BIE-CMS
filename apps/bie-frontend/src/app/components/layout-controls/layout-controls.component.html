@@ -1,0 +1,29 @@
+<fieldset class="layout-controls" [attr.aria-disabled]="!editable || null">
+  <legend>Layout</legend>
+
+  <label>
+    <span>Start column</span>
+    <input
+      type="number"
+      [min]="1"
+      [max]="totalColumns"
+      [disabled]="!editable"
+      [ngModel]="layout.colStart"
+      (ngModelChange)="onStartChange($event)"
+      (focus)="onFocus()" (blur)="onBlur()"
+    />
+  </label>
+
+  <label>
+    <span>Span</span>
+    <input
+      type="number"
+      [min]="1"
+      [max]="maxSpan"
+      [disabled]="!editable"
+      [ngModel]="layout.colSpan"
+      (ngModelChange)="onSpanChange($event)"
+      (focus)="onFocus()" (blur)="onBlur()"
+    />
+  </label>
+</fieldset>

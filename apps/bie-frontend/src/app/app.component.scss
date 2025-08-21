@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  height: 100vh;
+}
+
+.app-container {
+  height: 100%;
+}
+
+.app-sidenav {
+  width: 280px; // desktop width
+}
+
+mat-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.title {
+  margin-left: .5rem;
+  font-weight: 600;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.content {
+  padding: 16px;
+  min-height: calc(100vh - 64px); // adjust if toolbar height differs
+  box-sizing: border-box;
+}

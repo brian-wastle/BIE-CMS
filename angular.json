@@ -3,42 +3,40 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "BIE-CMS": {
+    "bie-frontend": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
           "style": "scss"
         }
       },
-      "root": "",
-      "sourceRoot": "src",
+      "root": "apps/bie-frontend",
+      "sourceRoot": "apps/bie-frontend/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/bie-cms",
-            "index": "src/index.html",
-            "browser": "src/main.ts",
+            "outputPath": "dist/bie-frontend/browser",
+            "index": "apps/bie-frontend/src/index.html",
+            "browser": "apps/bie-frontend/src/main.ts",
             "polyfills": [
               "zone.js"
             ],
-            "tsConfig": "tsconfig.app.json",
+            "tsConfig": "apps/bie-frontend/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              }
+              "apps/bie-frontend/src/favicon.ico",
+              "apps/bie-frontend/src/assets"
             ],
             "styles": [
-              "src/styles.scss"
+              "apps/bie-frontend/src/styles.scss"
             ],
             "scripts": [],
-            "server": "src/main.server.ts",
+            "server": "apps/bie-frontend/src/main.server.ts",
             "outputMode": "server",
             "ssr": {
-              "entry": "src/server.ts"
+              "entry": "apps/bie-frontend/src/server.ts"
             }
           },
           "configurations": {
@@ -69,10 +67,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "BIE-CMS:build:production"
+              "buildTarget": "bie-frontend:build:production"
             },
             "development": {
-              "buildTarget": "BIE-CMS:build:development"
+              "buildTarget": "bie-frontend:build:development"
             }
           },
           "defaultConfiguration": "development"

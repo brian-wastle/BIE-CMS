@@ -18,8 +18,7 @@ export const serverRoutes: ServerRoute[] = [
   },
   */
   // CSR - client
-  //{ path: 'playground', renderMode: RenderMode.Client },
-  { path: '', renderMode: RenderMode.Client, headers: { 'X-Render-Mode': 'client' } },
+  { path: '', renderMode: RenderMode.Client },
   // SSR - server
   { path: '**', renderMode: RenderMode.Server },
 ];

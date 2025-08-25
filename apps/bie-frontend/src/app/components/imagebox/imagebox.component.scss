@@ -1,37 +1,4 @@
-.img-author {
-  display: grid;
-  gap: 10px;
-}
-label {
-  display: grid;
-  gap: 4px;
-  font-size: 12px;
-}
-input {
-  padding: 6px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-}
-fieldset.layout-controls {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-  border: 1px dashed #e5e7eb;
-  padding: 8px;
-  border-radius: 8px;
-}
-legend {
-  font-size: 12px;
-  color: #6b7280;
-  padding: 0 4px;
-}
-.preview-wrap, .img-preview {
-  margin-top: 8px;
-}
-img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-}
+.img-author { display: grid; gap: 10px; }
+.preview-wrap, .img-preview { margin-top: 8px; }
+.broken-note { font-size: 12px; color: #b91c1c; margin-top: 6px; }
+img.media.broken { opacity: .3; filter: grayscale(1); }

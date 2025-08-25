@@ -1,37 +1,46 @@
-<div *ngIf="editable; else preview" class="img-author">
-  <label>
+<div *ngIf="editable(); else preview"
+     class="img-author"
+     authorScope
+     (authorEditingChange)="editingChange.emit($event)">
+
+  <label class="field">
     <span>Image URL</span>
-    <input type="url"
-           [ngModel]="block.src"
+    <input class="input" type="url"
+           [ngModel]="block().src"
            (ngModelChange)="onSrcChange($event)"
-           (focus)="onFocus()" (blur)="onBlur()"
-           placeholder="https://example.com/image.jpg"/>
+           pasteUrl
+           (pasteUrl)="onSrcChange($event)"
+           placeholder="https://example.com/image.jpg" />
   </label>
 
-  <label>
+  <label class="field">
     <span>Alt text</span>
-    <input type="text"
-           [ngModel]="block.alt"
+    <input class="input" type="text"
+           [ngModel]="block().alt"
            (ngModelChange)="onAltChange($event)"
-           (focus)="onFocus()" (blur)="onBlur()"
-           placeholder="Describe the image"/>
+           placeholder="Describe the image" />
   </label>
 
   <app-layout-controls
-    [layout]="block.layout"
-    [totalColumns]="totalColumns"
-    [editable]="editable"
-    (layoutChange)="onLayoutChange($event)"
+    [layout]="block().layout"
+    [totalColumns]="totalColumns()"
+    [editable]="editable()"
+    (layoutChange)="update.emit({ layout: $event })"
     (editingChange)="editingChange.emit($event)">
   </app-layout-controls>
 
-  <div class="preview-wrap" *ngIf="block.src">
-    <img [src]="block.src" [alt]="block.alt || ''"/>
+  <div class="preview-wrap" *ngIf="block().src">
+    <img class="media"
+         [src]="block().src"
+         [alt]="block().alt || ''"
+         (error)="broken = true"
+         [class.broken]="broken" />
+    <div *ngIf="broken" class="broken-note">{{block().alt || ''}}</div>
   </div>
 </div>
 
 <ng-template #preview>
   <div class="img-preview">
-    <img [src]="block.src" [alt]="block.alt || ''"/>
+    <img class="media" [src]="block().src" [alt]="block().alt || ''" />
   </div>
 </ng-template>

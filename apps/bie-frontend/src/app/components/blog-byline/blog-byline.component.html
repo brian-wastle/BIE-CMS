@@ -1,0 +1,11 @@
+<!-- Author -->
+<div *ngIf="editable(); else readonly"
+     class="textbox-byline"
+     authorScope
+     (authorEditingChange)="editingChange.emit($event)">
+</div>
+
+<!-- Preview -->
+<ng-template #readonly>
+  <div class="textbox-view" [textContent]="block().text"></div>
+</ng-template>

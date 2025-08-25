@@ -1,4 +1,6 @@
-<div class="canvas-layout">
+<div class="canvas-layout"
+  [class.author-mode]="authorMode"
+  [class.preview-mode]="!authorMode">
   <header class="toolbar">
     <button (click)="authorMode = !authorMode">
       {{ authorMode ? 'Preview' : 'Back to Edit' }}

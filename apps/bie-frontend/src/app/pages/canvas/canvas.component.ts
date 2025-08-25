@@ -1,11 +1,10 @@
-// canvas.component.ts
 import { Component, TrackByFunction, computed, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDrag, CdkDropList, CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AnyBlock, TextBlock, ImageBlock, BlockUpdate } from 'bie-models';
-import { TextBoxComponent } from '../textbox/textbox.component';
-import { ImageBoxComponent } from '../imagebox/imagebox.component';
+import { TextBoxComponent } from '../../components/textbox/textbox.component';
+import { ImageBoxComponent } from '../../components/imagebox/imagebox.component';
 
 @Component({
   selector: 'app-canvas',

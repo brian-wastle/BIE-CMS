@@ -1,30 +1,34 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Output, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { GridPlacement, ImageBlock } from 'bie-models';
+import { GridPlacement, ImageBlock, BlockUpdate } from 'bie-models';
 import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
-
-type BlockUpdate = { layout?: GridPlacement; text?: string; src?: string; alt?: string };
+import { CanvasEditStateService } from '../../services/canvas-edit-state/canvas-edit-state.service';
+import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';
+import { PasteUrlDirective } from '../../directives/paste-url/paste-url.directive';
 
 @Component({
   selector: 'app-imagebox',
   standalone: true,
-  imports: [CommonModule, FormsModule, LayoutControlsComponent],
+  imports: [CommonModule, FormsModule, LayoutControlsComponent, AuthorScopeDirective, PasteUrlDirective],
   templateUrl: './imagebox.component.html',
   styleUrls: ['./imagebox.component.scss'],
 })
 export class ImageBoxComponent {
-  @Input({ required: true }) block!: ImageBlock;
-  @Input() editable = true;
-  @Input() totalColumns = 12;
+  readonly block = input.required<ImageBlock>();
+  readonly editable = input(true);
+  readonly totalColumns = input(12);
 
   @Output() editingChange = new EventEmitter<boolean>();
   @Output() update = new EventEmitter<BlockUpdate>();
 
-  onFocus() { this.editingChange.emit(true); }
-  onBlur()  { this.editingChange.emit(false); }
+  broken = false;
 
-  onSrcChange(v: string) { this.update.emit({ src: v }); }
+  constructor(
+    private host: ElementRef<HTMLElement>,
+    private editState: CanvasEditStateService
+  ) {}
+
+  onSrcChange(v: string) { this.broken = false; this.update.emit({ src: v }); }
   onAltChange(v: string) { this.update.emit({ alt: v }); }
-  onLayoutChange(layout: GridPlacement) { this.update.emit({ layout }); }
 }

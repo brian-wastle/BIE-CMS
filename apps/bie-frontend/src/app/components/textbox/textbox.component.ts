@@ -1,79 +1,50 @@
-import { Component, EventEmitter, Input, Output, ElementRef, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Output, effect, input, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TextBlock, GridPlacement } from 'bie-models';
+import { TextBlock, GridPlacement, BlockUpdate } from 'bie-models';
 import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
-
-type BlockUpdate = { layout?: GridPlacement; text?: string; src?: string; alt?: string };
+import { CanvasEditStateService } from '../../services/canvas-edit-state/canvas-edit-state.service';
+import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';
 
 @Component({
   selector: 'app-textbox',
   standalone: true,
-  imports: [CommonModule, LayoutControlsComponent],
+  imports: [CommonModule, LayoutControlsComponent, AuthorScopeDirective],
   templateUrl: './textbox.component.html',
   styleUrls: ['./textbox.component.scss']
 })
-export class TextBoxComponent implements AfterViewInit {
-  // --- Inputs ---
-  private _block!: TextBlock;
+export class TextBoxComponent {
+  readonly block = input.required<TextBlock>();
+  readonly editable = input(true);
+  readonly totalColumns = input(12);
 
-  @Input({ required: true })
-  set block(value: TextBlock) {
-    this._block = value;
-    // Keep the contenteditable DOM in sync when NOT focused
-    this.syncFromModel();
-  }
-  get block(): TextBlock {
-    return this._block;
-  }
+  readonly editorRef = viewChild<ElementRef<HTMLElement>>('editor');
 
-  @Input() editable = true;
-  @Input() totalColumns = 12;
-
-  // --- Outputs ---
   @Output() editingChange = new EventEmitter<boolean>();
   @Output() update = new EventEmitter<BlockUpdate>();
 
-  // --- Refs ---
-  @ViewChild('editor', { static: false }) editorRef?: ElementRef<HTMLElement>;
-
-  ngAfterViewInit() {
-    // Seed once the view exists
-    this.syncFromModel(/*force*/ true);
+  constructor(
+    private host: ElementRef<HTMLElement>,
+    public editState: CanvasEditStateService
+  ) {
+    effect(() => {
+      if (!this.editable()) return;
+      const elRef = this.editorRef();
+      const text = this.block().text ?? '';
+      if (!elRef) return;
+      const el = elRef.nativeElement;
+      if (document.activeElement !== el) el.textContent = text;
+    });
   }
-
 
   onInput(e: Event) {
     const next = (e.target as HTMLElement).textContent ?? '';
     this.update.emit({ text: next });
   }
-
-  onFocus() { this.editingChange.emit(true); }
-
-  onBlurAndCommit() {
-    const next = this.editorRef?.nativeElement.textContent ?? '';
-    this.update.emit({ text: next });
-    this.editingChange.emit(false);
-  }
-
-  // Keep your original signature (no template cast needed)
   onEnter(event: Event) {
-    const e = event as KeyboardEvent; // (keydown.enter)
-    if (!e.shiftKey && this.editable) {
+    const e = event as KeyboardEvent;
+    if (!e.shiftKey && this.editable()) {
       e.preventDefault();
       (e.target as HTMLElement | null)?.blur();
-    }
-  }
-
-  onLayoutChange(layout: GridPlacement) {
-    this.update.emit({ layout });
-  }
-
-
-  private syncFromModel(force = false) {
-    const el = this.editorRef?.nativeElement;
-    if (!el) return;
-    if (force || document.activeElement !== el) {
-      el.textContent = this._block?.text ?? '';
     }
   }
 }

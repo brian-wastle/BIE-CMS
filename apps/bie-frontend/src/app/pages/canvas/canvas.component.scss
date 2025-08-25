@@ -1,12 +1,33 @@
-/* canvas.component.scss */
-.canvas-layout {
-  display: grid;
-  grid-template-columns: 1fr 240px 280px; /* canvas | palette | inspector */
-  gap: 16px;
+// Author Mode
+.canvas-layout.author-mode .grid {
+  background: white;
+  border: 1px dashed #ddd;
+  padding: 8px;
 }
-
+.canvas-layout.author-mode .block {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+.canvas-layout.author-mode .block.selected {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
 .toolbar { grid-column: 1 / -1; }
 
+// Preview Mode
+.canvas-layout.preview-mode .grid {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.canvas-layout.preview-mode .block {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+// Canvas
 .canvas-area {
   background: #fafafa;
   padding: 12px;

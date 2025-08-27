@@ -8,8 +8,9 @@
     "dev": "tsx -r tsconfig-paths/register --watch src/index.ts",
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js",
-    "migrate": "ts-node ./db/run-migrations.ts",
-    "seed:admin": "ts-node ./auth/seed-admin.ts"
+    "db:bootstrap": "tsx db/bootstrap.ts",
+    "migrate": "tsx db/run-migrations.ts",
+    "seed:admin": "tsx auth/seed-admin.ts"
   },
   "dependencies": {
     "argon2": "^0.44.0",

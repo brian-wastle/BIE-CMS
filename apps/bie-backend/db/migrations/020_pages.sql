@@ -35,10 +35,5 @@ CREATE TRIGGER trg_pages_updated_at
 BEFORE UPDATE ON pages
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Helpful index if you list pages by status
+-- Index by page status
 CREATE INDEX IF NOT EXISTS idx_pages_status ON pages(status);
-
--- Optional seed (remove if you don't want it)
--- INSERT INTO pages (slug, title, blocks, meta) VALUES
--- ('home', 'Home', '[]'::jsonb, '{}'::jsonb)
--- ON CONFLICT (slug) DO NOTHING;

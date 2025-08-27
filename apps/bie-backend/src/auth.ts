@@ -22,19 +22,26 @@ const cookieOpts = {
 };
 
 function signAccessToken(user: { id: string; email: string }) {
-  return jwt.sign(
-    { sub: user.id, email: user.email },
-    JWT_SECRET,
-    { algorithm: 'HS256', expiresIn: `${ACCESS_TTL_MIN}m` }
-  );
+  return jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, {
+    algorithm: 'HS256',
+    expiresIn: `${ACCESS_TTL_MIN}m`,
+  });
 }
 
 function newRefreshToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+// NOTE: hash with argon2id explicitly (good defaults; tune later if needed)
+async function hashPassword(plain: string) {
+  return argon2.hash(plain, { type: argon2.argon2id });
+}
+async function verifyPassword(plain: string, hash: string) {
+  return argon2.verify(hash, plain);
+}
+
 async function storeRefreshToken(userId: string, token: string) {
-  const hash = await argon2.hash(token);
+  const hash = await argon2.hash(token, { type: argon2.argon2id });
   const res = await pool.query(
     `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
      VALUES ($1, $2, now() + ($3 || ' days')::interval)
@@ -70,14 +77,14 @@ async function rotateRefreshToken(oldRow: any, userId: string) {
 
 router.use(cookieParser());
 
-// Register
+// Register (argon2id)
 router.post('/register', async (req, res) => {
   const schema = z.object({ email: z.string().email(), password: z.string().min(8) });
   const parse = schema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: 'Invalid payload' });
 
   const { email, password } = parse.data;
-  const hash = await argon2.hash(password);
+  const hash = await hashPassword(password);
   try {
     const r = await pool.query(
       `INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email`,
@@ -90,7 +97,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login
+// Login (argon2 verify)
 router.post('/login', async (req, res) => {
   const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
   const parse = schema.safeParse(req.body);
@@ -101,7 +108,7 @@ router.post('/login', async (req, res) => {
   const user = rows[0];
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const ok = await argon2.verify(user.password_hash, password);
+  const ok = await verifyPassword(password, user.password_hash);
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
   const access = signAccessToken({ id: user.id, email: user.email });
@@ -114,18 +121,14 @@ router.post('/login', async (req, res) => {
     .json({ ok: true });
 });
 
-// Refresh token
+// Refresh + Logout unchanged (already argon2 for token hashes)
 router.post('/refresh', async (req, res) => {
   const refresh = req.cookies['refresh_token'];
   if (!refresh) return res.status(401).json({ error: 'No refresh token' });
 
   const accessMaybe = req.cookies['access_token'];
   let userId: string | null = null;
-  if (accessMaybe) {
-    try { userId = (jwt.decode(accessMaybe) as any)?.sub ?? null; } catch {}
-  }
-  
-  // TODO: /me call before refresh to cache user id
+  if (accessMaybe) { try { userId = (jwt.decode(accessMaybe) as any)?.sub ?? null; } catch {} }
   if (!userId) return res.status(401).json({ error: 'Unknown session' });
 
   const row = await findValidRefresh(userId, refresh);
@@ -143,11 +146,9 @@ router.post('/refresh', async (req, res) => {
     .json({ ok: true });
 });
 
-// Logout
 router.post('/logout', async (req, res) => {
   const refresh = req.cookies['refresh_token'];
   if (refresh) {
-    // Revoke access
     const accessMaybe = req.cookies['access_token'];
     let userId: string | null = null;
     if (accessMaybe) { try { userId = (jwt.decode(accessMaybe) as any)?.sub ?? null; } catch {} }
@@ -161,7 +162,6 @@ router.post('/logout', async (req, res) => {
      .json({ ok: true });
 });
 
-// Auth check for routes
 export function requireAccess(req: express.Request, res: express.Response, next: express.NextFunction) {
   const token = req.cookies['access_token'];
   if (!token) return res.status(401).json({ error: 'No token' });
@@ -174,7 +174,7 @@ export function requireAccess(req: express.Request, res: express.Response, next:
   }
 }
 
-router.get('/me', requireAccess, async (req, res) => {
+router.get('/me', requireAccess, (req, res) => {
   res.json({ user: (req as any).user });
 });
 

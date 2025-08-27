@@ -15,10 +15,14 @@
     "dev": "npm-run-all -p dev:front dev:back",
     "dev:front": "npm -w apps/bie-frontend run start",
     "dev:back": "npm -w apps/bie-backend run dev",
-    "dev:ssr": "npm-run-all -p serve:ssr dev:back",
     "build:front": "npm -w apps/bie-frontend run build",
     "build:back": "npm -w apps/bie-backend run build",
-    "build": "npm-run-all -s build:front build:back"
+    "build": "npm-run-all -s build:front build:back",
+    "db:bootstrap": "npm -w bie-backend run db:bootstrap",
+    "db:migrate": "npm -w bie-backend run migrate",
+    "db:seed:admin": "npm -w bie-backend run seed:admin",
+    "db:all": "npm run db:bootstrap && npm run db:migrate && npm run db:seed:admin",
+    "dev:ssr": "npm-run-all -p serve:ssr dev:back"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^19.2.15",

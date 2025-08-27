@@ -1,9 +1,16 @@
+import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { Pool } from 'pg';
 
-const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const localDir = path.join(__dirname, 'migrations'); // for running script from backend root dir
+const monoDir  = path.resolve(process.cwd(), 'apps/bie-backend/db/migrations'); // for running script from repo root dir
+const MIGRATIONS_DIR = fs.existsSync(localDir) ? localDir : monoDir;
 
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });

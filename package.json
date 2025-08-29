@@ -21,6 +21,8 @@
     "db:bootstrap": "npm -w bie-backend run db:bootstrap",
     "db:migrate": "npm -w bie-backend run migrate",
     "db:seed:admin": "npm -w bie-backend run seed:admin",
+    "db:drop": "npm -w bie-backend run drop:db",
+    "db:rebase": "npm run db:drop && npm run db:bootstrap && npm run db:migrate && npm run db:seed:admin",
     "db:all": "npm run db:bootstrap && npm run db:migrate && npm run db:seed:admin",
     "dev:ssr": "npm-run-all -p serve:ssr dev:back"
   },

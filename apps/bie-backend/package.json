@@ -10,7 +10,8 @@
     "start": "node dist/index.js",
     "db:bootstrap": "tsx db/bootstrap.ts",
     "migrate": "tsx db/run-migrations.ts",
-    "seed:admin": "tsx auth/seed-admin.ts"
+    "seed:admin": "tsx auth/seed-admin.ts",
+    "drop:db": "tsx db/drop-db.ts"
   },
   "dependencies": {
     "argon2": "^0.44.0",

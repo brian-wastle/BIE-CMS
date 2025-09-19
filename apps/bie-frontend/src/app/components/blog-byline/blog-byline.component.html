@@ -1,11 +1,36 @@
 <!-- Author -->
 <div *ngIf="editable(); else readonly"
-     class="textbox-byline"
+     class="byline-author"
      authorScope
      (authorEditingChange)="editingChange.emit($event)">
+
+  <div class="byline__content">
+    <span class="byline__label">Published by</span>
+    <span class="name">{{ authorName() }}</span>
+    <span class="dot">&bull;</span>
+    <time [attr.datetime]="displayIso()" [title]="displayIso()">
+      {{ displayDate() | date: displayFormat }}
+    </time>
+  </div>
+
+  <app-layout-controls
+    class="byline__controls"
+    [layout]="block().layout"
+    [totalColumns]="totalColumns()"
+    [editable]="editable()"
+    (layoutChange)="update.emit({ layout: $event })"
+    (editingChange)="editingChange.emit($event)">
+  </app-layout-controls>
 </div>
 
 <!-- Preview -->
 <ng-template #readonly>
-  <div class="textbox-view" [textContent]="block().text"></div>
+  <div class="byline-view">
+    <span class="byline__label">Published by</span>
+    <span class="name">{{ authorName() }}</span>
+    <span class="dot">&bull;</span>
+    <time [attr.datetime]="displayIso()" [title]="displayIso()">
+      {{ displayDate() | date: displayFormat }}
+    </time>
+  </div>
 </ng-template>

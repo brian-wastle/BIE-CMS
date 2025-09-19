@@ -1,3 +1,4 @@
+<!-- Author -->
 <div *ngIf="editable(); else preview"
      class="img-author"
      authorScope
@@ -39,6 +40,7 @@
   </div>
 </div>
 
+<!-- Preview -->
 <ng-template #preview>
   <div class="img-preview">
     <img class="media" [src]="block().src" [alt]="block().alt || ''" />

@@ -1,53 +1,36 @@
-import { Component, input, inject, signal, computed, OnInit, PLATFORM_ID } from '@angular/core';
-import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
-import { CdkDrag } from '@angular/cdk/drag-drop';
+import { Component, EventEmitter, Output, computed, input } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
+import { BylineBlock, BlockUpdate } from 'bie-models';
+import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
+import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';
+
+const DISPLAY_FORMAT = 'MMMM d, y';
 
 @Component({
   selector: 'app-byline-block',
   standalone: true,
-  imports: [CommonModule, DatePipe, CdkDrag],
-  template: `
-    <div class="byline" cdkDrag [cdkDragDisabled]="!draggable()"
-         [cdkDragData]="{ type: 'byline', name: name() }">
-      <span class="name">{{ name() }}</span>
-      <span class="dot">•</span>
-      <time [attr.datetime]="isoNow()" [title]="isoNow()">
-        {{ now() | date: format() }}
-      </time>
-      <ng-content select="[controls]"></ng-content>
-    </div>
-  `,
-  styles: [`
-    .byline{ display:inline-flex; align-items:center; gap:.5rem;
-             font:600 .95rem/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial }
-    .name{ letter-spacing:.2px }
-    .dot{ opacity:.5 }
-    time{ opacity:.8 }
-  `]
+  imports: [CommonModule, DatePipe, LayoutControlsComponent, AuthorScopeDirective],
+  templateUrl: './blog-byline.component.html',
+  styleUrls: ['./blog-byline.component.scss'],
 })
-export class BylineBlockComponent implements OnInit {
-  readonly name = input.required<string>();
-  readonly format = input('EEEE, MMM d, y, h:mm a');
-  readonly live = input(true);
-  readonly draggable = input(true);
+export class BylineBlockComponent {
+  readonly block = input.required<BylineBlock>();
+  readonly editable = input(true);
+  readonly totalColumns = input(12);
 
-  private platformId = inject(PLATFORM_ID);
+  @Output() editingChange = new EventEmitter<boolean>();
+  @Output() update = new EventEmitter<BlockUpdate>();
 
-  private _now = signal(new Date());
-  now = this._now.asReadonly();
-  isoNow = computed(() => this._now().toISOString());
-
-  private _timer: any;
-
-  ngOnInit() {
-    if (this.live() && isPlatformBrowser(this.platformId)) {
-      const tick = () => {
-        this._now.set(new Date());
-        const msToNextMinute = 60000 - (Date.now() % 60000);
-        this._timer = setTimeout(tick, msToNextMinute);
-      };
-      this._timer = setTimeout(tick, 0);
-    }
-  }
-  ngOnDestroy() { if (this._timer) clearTimeout(this._timer); }
+  readonly displayFormat = DISPLAY_FORMAT;
+  readonly authorName = computed(() => this.block().author ?? '');
+  readonly displayDate = computed(() => {
+    const publishedAt = this.block().publishedAt;
+    return publishedAt ? new Date(publishedAt) : new Date();
+  });
+  readonly displayIso = computed(() => {
+    const date = this.displayDate();
+    return isNaN(date.getTime()) ? '' : date.toISOString();
+  });
 }
+
+export const BYLINE_DATE_FORMAT = DISPLAY_FORMAT;

@@ -28,14 +28,14 @@ export class LayoutControlsComponent {
 
   onStartChange(val: number) {
     const colStart = this.clamp(+val, 1, this.totalColumns);
-    const colSpan = Math.min(this.layout.colSpan ?? 1, this.totalColumns - colStart + 1);
+    const colSpan = Math.min(this.layout.colSpan ?? 2, this.totalColumns - colStart + 1);
     this.layoutChange.emit({ colStart, colSpan });
   }
 
   onSpanChange(val: number) {
     const colStart = this.layout?.colStart ?? 1;
     const maxSpan = this.totalColumns - colStart + 1;
-    const colSpan = this.clamp(+val, 1, maxSpan);
+    const colSpan = this.clamp(+val, 2, maxSpan);
     this.layoutChange.emit({ colStart, colSpan });
   }
 

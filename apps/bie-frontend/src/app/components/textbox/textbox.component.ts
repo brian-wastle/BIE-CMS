@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Output, effect, input, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TextBlock, GridPlacement, BlockUpdate } from 'bie-models';
+import { TextBlock, BlockUpdate } from 'bie-models';
 import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
 import { CanvasEditStateService } from '../../services/canvas-edit-state/canvas-edit-state.service';
 import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';

@@ -1,15 +1,27 @@
-import { Component, TrackByFunction, computed, signal, HostListener } from '@angular/core';
+import { Component, TrackByFunction, computed, signal, HostListener, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDrag, CdkDropList, CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { AnyBlock, TextBlock, ImageBlock, BlockUpdate } from 'bie-models';
+import { AnyBlock, TextBlock, ImageBlock, BylineBlock, BlockUpdate } from 'bie-models';
 import { TextBoxComponent } from '../../components/textbox/textbox.component';
 import { ImageBoxComponent } from '../../components/imagebox/imagebox.component';
-
+import { BylineBlockComponent } from '../../components/blog-byline/blog-byline.component';
+import { CurrentUserService } from '../../services/current-user/current-user.service';
+import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-canvas',
   standalone: true,
-  imports: [CommonModule, FormsModule, CdkDrag, CdkDropList, DragDropModule, TextBoxComponent, ImageBoxComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    CdkDrag,
+    CdkDropList,
+    DragDropModule,
+    MatIconModule,
+    TextBoxComponent,
+    ImageBoxComponent,
+    BylineBlockComponent,
+  ],
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.scss'],
 })
@@ -18,9 +30,37 @@ export class CanvasComponent {
   columns = 12;
   gapPx = 16;
 
-  // Keep track of editor state/focus with Signals
+  // Get current username as Author and generate initial byline block
+  private readonly currentUserService = inject(CurrentUserService);
+  readonly currentUser = this.currentUserService.user;
+  private readonly currentAuthor = computed(() => {
+    const user = this.currentUser();
+    if (!user) { return 'Author'; }
+    return user.username ? user.username.trim() :
+      (user.firstName ? user.firstName : 'Admin');
+  });
+
+
+  constructor() {
+    effect(() => {
+      const author = this.currentAuthor();
+      this.blocks.update(arr => {
+        let changed = false;
+        const next = arr.map(block => {
+          if (this.isBylineBlock(block) && block.author !== author) {
+            changed = true;
+            return { ...block, author };
+          }
+          return block;
+        });
+        return changed ? next : arr;
+      });
+    });
+  }
+
+  // Initial editor state and selected block as Signals
   blocks = signal<AnyBlock[]>([
-    { id: 't1', type: 'text', order: 0, layout: { colStart: 1, colSpan: 6 }, text: 'Hello world' } as TextBlock
+    { id: 't1', type: 'byline', order: 0, layout: { colStart: 1, colSpan: 6 }, author: '', publishedAt: '' } as BylineBlock
   ]);
   pageBlocks = computed(() => [...this.blocks()].sort((a, b) => a.order - b.order));
 
@@ -30,11 +70,17 @@ export class CanvasComponent {
   @HostListener('document:keydown.escape')
   onEsc() { this.clearSelection(); }
 
-  // Guards
-  isTextBlock(b: AnyBlock): b is TextBlock { return b.type === 'text'; }
-  isImageBlock(b: AnyBlock): b is ImageBlock { return b.type === 'image'; }
+  isBylineBlock(block: AnyBlock): block is BylineBlock { return block.type === 'byline'; }
+  isTextBlock(block: AnyBlock): block is TextBlock { return block.type === 'text'; }
+  isImageBlock(block: AnyBlock): block is ImageBlock { return block.type === 'image'; }
 
   // Generate new Component
+  addByline() {
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+    this.blocks.update(arr => [...arr, { id, type: 'byline', order: arr.length, layout: { colStart: 1, colSpan: 12 }, author: this.currentAuthor() } as BylineBlock]);
+    this.selectedId.set(id);
+  }
+
   addText() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => [...arr, { id, type: 'text', order: arr.length, layout: { colStart: 1, colSpan: 6 }, text: '' } as TextBlock]);
@@ -84,20 +130,20 @@ export class CanvasComponent {
     const colStart = Math.max(1, Math.min(val, cols));
     const maxSpan = cols - colStart + 1;
     this.blocks.update(arr => arr.map(b =>
-      b.id === block.id ? { ...b, layout: { colStart, colSpan: Math.min(b.layout.colSpan, maxSpan) } } : b
+      b.id === block.id ? { ...b, layout: { colStart, colSpan: Math.max(2, Math.min(b.layout.colSpan, maxSpan)) } } : b
     ));
   }
 
   setColSpan(block: AnyBlock, val: number) {
     const cols = this.columns;
     const maxSpan = cols - block.layout.colStart + 1;
-    const colSpan = Math.max(1, Math.min(val, maxSpan));
+    const colSpan = Math.max(2, Math.min(val, maxSpan));
     this.blocks.update(arr => arr.map(b =>
       b.id === block.id ? { ...b, layout: { ...b.layout, colSpan } } : b
     ));
   }
 
-  onEditing(blockId: string, isEditing: boolean) { 
+  onEditing(blockId: string, isEditing: boolean) {
     if (isEditing) {
       this.selectedId.set(blockId);
     } else if (this.selectedId() === blockId) {
@@ -115,9 +161,16 @@ export class CanvasComponent {
       if (this.isImageBlock(base)) {
         return {
           ...base,
-          ...( 'src' in patch ? { src: patch.src ?? '' } : {} ),
-          ...( 'alt' in patch ? { alt: patch.alt } : {} ),
+          ...('src' in patch ? { src: patch.src ?? '' } : {}),
+          ...('alt' in patch ? { alt: patch.alt } : {}),
         } as ImageBlock;
+      }
+      if (this.isBylineBlock(base)) {
+        return {
+          ...base,
+          ...('author' in patch ? { author: patch.author ?? base.author } : {}),
+          ...('publishedAt' in patch ? { publishedAt: patch.publishedAt } : {}),
+        } as BylineBlock;
       }
       return base;
     }));

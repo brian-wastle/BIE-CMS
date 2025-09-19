@@ -174,8 +174,38 @@ export function requireAccess(req: express.Request, res: express.Response, next:
   }
 }
 
-router.get('/me', requireAccess, (req, res) => {
-  res.json({ user: (req as any).user });
+router.get('/me', requireAccess, async (req, res) => {
+  try {
+    const { user } = req as any;
+    const { rows } = await pool.query(
+      `SELECT id, email, username, first_name, last_name, display_name FROM user_public WHERE id=$1`,
+      [user.id]
+    );
+    const row = rows[0];
+    if (!row) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    return res.json({
+      user: {
+        id: row.id,
+        email: row.email,
+        username: row.username,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        displayName: row.display_name,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to load user profile', error);
+    return res.status(500).json({ error: 'Failed to load user profile' });
+  }
 });
 
 export default router;
+
+
+
+
+
+
+

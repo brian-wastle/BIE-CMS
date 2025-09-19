@@ -18,8 +18,8 @@
           [cdkDragDisabled]="!authorMode || selectedId() === block.id" cdkDrag *ngIf="authorMode">
 
           <div class="chrome">
-            <button (click)="remove(block.id); $event.stopPropagation()" title="Remove">×</button>
-            <span class="handle" cdkDragHandle title="Drag to reorder">≡</span>
+            <span class="handle" cdkDragHandle title="Drag to reorder"><mat-icon fontIcon="drag_handle"></mat-icon></span>
+            <button (click)="remove(block.id); $event.stopPropagation()" title="Remove"><mat-icon fontIcon="delete"></mat-icon></button>
           </div>
 
           <app-textbox *ngIf="isTextBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
@@ -29,12 +29,17 @@
           <app-imagebox *ngIf="isImageBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
             (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
           </app-imagebox>
+
+          <app-byline-block *ngIf="isBylineBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
+            (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
+          </app-byline-block>
         </div>
 
         <!-- PREVIEW MODE -->
         <div class="block" [ngStyle]="gridStyle(block)" *ngIf="!authorMode">
           <app-textbox *ngIf="isTextBlock(block)" [block]="block" [editable]="false"></app-textbox>
           <app-imagebox *ngIf="isImageBlock(block)" [block]="block" [editable]="false"></app-imagebox>
+          <app-byline-block *ngIf="isBylineBlock(block)" [block]="block" [editable]="false"></app-byline-block>
         </div>
       </ng-container>
     </div>
@@ -42,6 +47,8 @@
 
   <aside class="component-palette">
     <h3>Add</h3>
+    
+    <button (click)="addByline()">+ Byline</button>
     <button (click)="addText()">+ Text</button>
     <button (click)="addImage()">+ Image</button>
   </aside>
@@ -55,7 +62,7 @@
     </label>
 
     <label>Span
-      <input type="number" [min]="1" [max]="columns - b.layout.colStart + 1" [ngModel]="b.layout.colSpan"
+      <input type="number" [min]="2" [max]="columns - b.layout.colStart + 1" [ngModel]="b.layout.colSpan"
         (ngModelChange)="setColSpan(b, +$event)">
     </label>
 
@@ -69,3 +76,4 @@
     </ng-container>
   </aside>
 </div>
+

@@ -1,7 +1,7 @@
 import { Component, ElementRef, EventEmitter, Output, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { GridPlacement, ImageBlock, BlockUpdate } from 'bie-models';
+import { ImageBlock, BlockUpdate } from 'bie-models';
 import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
 import { CanvasEditStateService } from '../../services/canvas-edit-state/canvas-edit-state.service';
 import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';

@@ -18,7 +18,7 @@
  *   can render it.
  */
 
-export type BlockType = 'text' | 'image' | 'video' | 'carousel' | 'byline';
+export type BlockType = 'text' | 'image' | 'video' | 'title' | 'byline';
 
 export interface GridPlacement {
   colStart: number; // Starting column
@@ -29,6 +29,17 @@ export interface ContentBlockBase {
   type: BlockType;
   order: number;
   layout: GridPlacement;
+}
+
+export interface BylineBlock extends ContentBlockBase {
+  type: 'byline';
+  author: string;           // Display name of the author
+  publishedAt?: string;     // ISO timestamp filled in when the post publishes
+}
+
+export interface TitleBlock extends ContentBlockBase {
+  type: 'title';
+  text: string;
 }
 
 export interface TextBlock extends ContentBlockBase {
@@ -42,12 +53,6 @@ export interface ImageBlock extends ContentBlockBase {
   alt?: string;
 }
 
-export interface BylineBlock extends ContentBlockBase {
-  type: 'byline';
-  author: string;           // Display name of the author
-  publishedAt?: string;     // ISO timestamp filled in when the post publishes
-}
-
 export type BlockUpdate = {
   layout?: GridPlacement;
   text?: string;
@@ -58,11 +63,9 @@ export type BlockUpdate = {
   publishedAt?: string;
 };
 
-export type AnyBlock = TextBlock | ImageBlock | BylineBlock;    // Used during component creation/editing
+export type AnyBlock = TextBlock | ImageBlock | BylineBlock | TitleBlock;    // Used during component creation/editing
 
-/**
- * Contract for the read-only page endpoint consumed by SSR and the canvas app.
- */
+// Published page
 export interface PageContentResponse {
   id: string;             // Stable document identifier (UUID or slug)
   slug: string;           // Public-facing slug used by the blog route

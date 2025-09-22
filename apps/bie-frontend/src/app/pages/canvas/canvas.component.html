@@ -33,6 +33,10 @@
           <app-byline-block *ngIf="isBylineBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
             (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
           </app-byline-block>
+
+          <app-title-block *ngIf="isTitleBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
+            (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
+          </app-title-block>
         </div>
 
         <!-- PREVIEW MODE -->
@@ -40,6 +44,7 @@
           <app-textbox *ngIf="isTextBlock(block)" [block]="block" [editable]="false"></app-textbox>
           <app-imagebox *ngIf="isImageBlock(block)" [block]="block" [editable]="false"></app-imagebox>
           <app-byline-block *ngIf="isBylineBlock(block)" [block]="block" [editable]="false"></app-byline-block>
+          <app-title-block *ngIf="isTitleBlock(block)" [block]="block" [editable]="false"></app-title-block>
         </div>
       </ng-container>
     </div>
@@ -47,7 +52,7 @@
 
   <aside class="component-palette">
     <h3>Add</h3>
-    
+    <button (click)="addTitle()">+ Title</button>
     <button (click)="addByline()">+ Byline</button>
     <button (click)="addText()">+ Text</button>
     <button (click)="addImage()">+ Image</button>

@@ -7,7 +7,6 @@ import { AuthorScopeDirective } from '../../directives/author-scope/author-scope
 
 @Component({
   selector: 'app-textbox',
-  standalone: true,
   imports: [CommonModule, LayoutControlsComponent, AuthorScopeDirective],
   templateUrl: './textbox.component.html',
   styleUrls: ['./textbox.component.scss']

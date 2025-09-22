@@ -5,10 +5,10 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { Pool } from 'pg';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const filename = fileURLToPath(import.meta.url);
+const dirname = path.dirname(filename);
 
-const localDir = path.join(__dirname, 'migrations'); // for running script from backend root dir
+const localDir = path.join(dirname, 'migrations'); // for running script from backend root dir
 const monoDir  = path.resolve(process.cwd(), 'apps/bie-backend/db/migrations'); // for running script from repo root dir
 const MIGRATIONS_DIR = fs.existsSync(localDir) ? localDir : monoDir;
 

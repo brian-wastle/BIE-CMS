@@ -2,12 +2,13 @@ import { Component, TrackByFunction, computed, signal, HostListener, effect, inj
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDrag, CdkDropList, CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { AnyBlock, TextBlock, ImageBlock, BylineBlock, BlockUpdate } from 'bie-models';
+import { MatIconModule } from '@angular/material/icon';
+import { CurrentUserService } from '../../services/current-user/current-user.service';
+import { AnyBlock, TextBlock, ImageBlock, BylineBlock, TitleBlock, BlockUpdate } from 'bie-models';
+import { BlogTitleComponent } from '../../components/blog-title/blog-title.component';
+import { BlogBylineComponent } from '../../components/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/textbox/textbox.component';
 import { ImageBoxComponent } from '../../components/imagebox/imagebox.component';
-import { BylineBlockComponent } from '../../components/blog-byline/blog-byline.component';
-import { CurrentUserService } from '../../services/current-user/current-user.service';
-import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-canvas',
   standalone: true,
@@ -20,7 +21,8 @@ import { MatIconModule } from '@angular/material/icon';
     MatIconModule,
     TextBoxComponent,
     ImageBoxComponent,
-    BylineBlockComponent,
+    BlogTitleComponent,
+    BlogBylineComponent,
   ],
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.scss'],
@@ -60,7 +62,8 @@ export class CanvasComponent {
 
   // Initial editor state and selected block as Signals
   blocks = signal<AnyBlock[]>([
-    { id: 't1', type: 'byline', order: 0, layout: { colStart: 1, colSpan: 6 }, author: '', publishedAt: '' } as BylineBlock
+    { id: 't1', type: 'title', order: 0, layout: { colStart: 1, colSpan: 12 }, text: '' } as TitleBlock,
+    { id: 'b1', type: 'byline', order: 1, layout: { colStart: 1, colSpan: 12 }, author: '', publishedAt: '' } as BylineBlock
   ]);
   pageBlocks = computed(() => [...this.blocks()].sort((a, b) => a.order - b.order));
 
@@ -70,11 +73,20 @@ export class CanvasComponent {
   @HostListener('document:keydown.escape')
   onEsc() { this.clearSelection(); }
 
+  // Help the canvas id which block types to render
+  isTitleBlock(block: AnyBlock): block is TitleBlock { return block.type === 'title'; }
   isBylineBlock(block: AnyBlock): block is BylineBlock { return block.type === 'byline'; }
   isTextBlock(block: AnyBlock): block is TextBlock { return block.type === 'text'; }
   isImageBlock(block: AnyBlock): block is ImageBlock { return block.type === 'image'; }
 
   // Generate new Component
+
+  addTitle() {
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+    this.blocks.update(arr => [...arr, { id, type: 'title', order: arr.length, layout: { colStart: 1, colSpan: 12 }, text:'' } as TitleBlock]);
+    this.selectedId.set(id);
+  }
+
   addByline() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => [...arr, { id, type: 'byline', order: arr.length, layout: { colStart: 1, colSpan: 12 }, author: this.currentAuthor() } as BylineBlock]);
@@ -155,6 +167,9 @@ export class CanvasComponent {
     this.blocks.update(arr => arr.map(b => {
       if (b.id !== block.id) return b;
       const base: AnyBlock = patch.layout ? { ...b, layout: { ...patch.layout } } : b;
+      if (this.isTitleBlock(base)) {
+        return ('text' in patch) ? { ...base, text: patch.text ?? '' } as TitleBlock : base;
+      }
       if (this.isTextBlock(base)) {
         return ('text' in patch) ? { ...base, text: patch.text ?? '' } as TextBlock : base;
       }
@@ -178,3 +193,5 @@ export class CanvasComponent {
 
   trackByBlockId: TrackByFunction<AnyBlock> = (_i, block) => block.id;
 }
+
+

@@ -4,8 +4,8 @@
      authorScope
      (authorEditingChange)="editingChange.emit($event)">
 
-  <div class="byline__content">
-    <span class="byline__label">Published by</span>
+  <div class="byline-content">
+    <span class="byline-label">Published by</span>
     <span class="name">{{ authorName() }}</span>
     <span class="dot">&bull;</span>
     <time [attr.datetime]="displayIso()" [title]="displayIso()">
@@ -14,7 +14,7 @@
   </div>
 
   <app-layout-controls
-    class="byline__controls"
+    class="byline-controls"
     [layout]="block().layout"
     [totalColumns]="totalColumns()"
     [editable]="editable()"
@@ -26,7 +26,7 @@
 <!-- Preview -->
 <ng-template #readonly>
   <div class="byline-view">
-    <span class="byline__label">Published by</span>
+    <span class="byline-label">Published by</span>
     <span class="name">{{ authorName() }}</span>
     <span class="dot">&bull;</span>
     <time [attr.datetime]="displayIso()" [title]="displayIso()">

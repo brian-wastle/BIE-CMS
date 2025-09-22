@@ -13,7 +13,7 @@ const DISPLAY_FORMAT = 'MMMM d, y';
   templateUrl: './blog-byline.component.html',
   styleUrls: ['./blog-byline.component.scss'],
 })
-export class BylineBlockComponent {
+export class BlogBylineComponent {
   readonly block = input.required<BylineBlock>();
   readonly editable = input(true);
   readonly totalColumns = input(12);

@@ -1,31 +1,27 @@
-import { Component, ElementRef, EventEmitter, Output, effect, input, viewChild } from '@angular/core';
+// textbox.component.ts
+import { Component, ElementRef, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TextBlock, BlockUpdate } from 'bie-models';
+import { TextBlock } from 'bie-models';
 import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
-import { CanvasEditStateService } from '../../services/canvas-edit-state/canvas-edit-state.service';
 import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';
+import { BlockShell } from '../block-shell/block-shell'; 
 
 @Component({
   selector: 'app-textbox',
   imports: [CommonModule, LayoutControlsComponent, AuthorScopeDirective],
   templateUrl: './textbox.component.html',
-  styleUrls: ['./textbox.component.scss']
+  styleUrls: ['./textbox.component.scss'],
 })
-export class TextBoxComponent {
-  readonly block = input.required<TextBlock>();
-  readonly editable = input(true);
-  readonly totalColumns = input(12);
+export class TextBoxComponent extends BlockShell<TextBlock> {
+  // Access teh component's content template in the DOM
+  readonly editorRef = viewChild<ElementRef<HTMLElement>>('textContent');
 
-  readonly editorRef = viewChild<ElementRef<HTMLElement>>('editor');
-
-  @Output() editingChange = new EventEmitter<boolean>();
-  @Output() update = new EventEmitter<BlockUpdate>();
-
-  constructor(
-    private host: ElementRef<HTMLElement>,
-    public editState: CanvasEditStateService
-  ) {
-    effect(() => {
+  // Effect syncs blocks signal data to canvas
+  // this.editable() - Whether block is in author mode
+  // this.editorRef() - The ElementRef for the content-editable DOM node
+  // this.block().text - The current text value for the block
+  protected override initEffects(): void {
+    this.runEffect(() => {
       if (!this.editable()) return;
       const elRef = this.editorRef();
       const text = this.block().text ?? '';
@@ -35,9 +31,10 @@ export class TextBoxComponent {
     });
   }
 
+  // Handle text input
   onInput(e: Event) {
-    const next = (e.target as HTMLElement).textContent ?? '';
-    this.update.emit({ text: next });
+    const keyPress = (e.target as HTMLElement).textContent ?? '';
+    this.emitUpdate({ text: keyPress });
   }
   onEnter(event: Event) {
     const e = event as KeyboardEvent;

@@ -1,4 +1,4 @@
-<div class="canvas-layout"
+﻿<div class="canvas-layout"
   [class.author-mode]="authorMode"
   [class.preview-mode]="!authorMode">
   <header class="toolbar">
@@ -12,44 +12,58 @@
       (cdkDropListDropped)="onDrop($event)">
 
       <ng-container *ngFor="let block of pageBlocks(); trackBy: trackByBlockId">
-        <!-- EDIT MODE -->
-        <div class="block" [ngClass]="{selected: selectedId() === block.id}" [ngStyle]="gridStyle(block)"
-          (click)="toggleSelect(block.id); $event.stopPropagation()"
-          [cdkDragDisabled]="!authorMode || selectedId() === block.id" cdkDrag *ngIf="authorMode">
+        <!-- EDIT/PREVIEW MODES -->
+        @if (authorMode) {
+          <div class="block" [ngClass]="{selected: selectedId() === block.id}" [ngStyle]="gridStyle(block)"
+            (click)="toggleSelect(block.id); $event.stopPropagation()"
+            [cdkDragDisabled]="!authorMode || selectedId() === block.id" cdkDrag>
 
-          <div class="chrome">
-            <span class="handle" cdkDragHandle title="Drag to reorder"><mat-icon fontIcon="drag_handle"></mat-icon></span>
-            <button (click)="remove(block.id); $event.stopPropagation()" title="Remove"><mat-icon fontIcon="delete"></mat-icon></button>
+            <div class="chrome">
+              <span class="handle" cdkDragHandle title="Drag to reorder"><mat-icon fontIcon="drag_handle"></mat-icon></span>
+              <button (click)="remove(block.id); $event.stopPropagation()" title="Remove"><mat-icon fontIcon="delete"></mat-icon></button>
+            </div>
+
+            @if (isTextBlock(block)) {
+              <app-textbox [block]="block" [editable]="true" [totalColumns]="columns"
+                (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
+              </app-textbox>
+            }
+            @if (isImageBlock(block)) {
+              <app-imagebox [block]="block" [editable]="true" [totalColumns]="columns"
+                (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
+              </app-imagebox>
+            }
+            @if (isBylineBlock(block)) {
+              <app-byline-block [block]="block" [editable]="true" [totalColumns]="columns"
+                (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
+              </app-byline-block>
+            }
+            @if (isTitleBlock(block)) {
+              <app-title-block [block]="block" [editable]="true" [totalColumns]="columns"
+                (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
+              </app-title-block>
+            }
           </div>
-
-          <app-textbox *ngIf="isTextBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
-            (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
-          </app-textbox>
-
-          <app-imagebox *ngIf="isImageBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
-            (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
-          </app-imagebox>
-
-          <app-byline-block *ngIf="isBylineBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
-            (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
-          </app-byline-block>
-
-          <app-title-block *ngIf="isTitleBlock(block)" [block]="block" [editable]="true" [totalColumns]="columns"
-            (editingChange)="onEditing(block.id, $event)" (update)="onBlockUpdate(block, $event)">
-          </app-title-block>
-        </div>
-
-        <!-- PREVIEW MODE -->
-        <div class="block" [ngStyle]="gridStyle(block)" *ngIf="!authorMode">
-          <app-textbox *ngIf="isTextBlock(block)" [block]="block" [editable]="false"></app-textbox>
-          <app-imagebox *ngIf="isImageBlock(block)" [block]="block" [editable]="false"></app-imagebox>
-          <app-byline-block *ngIf="isBylineBlock(block)" [block]="block" [editable]="false"></app-byline-block>
-          <app-title-block *ngIf="isTitleBlock(block)" [block]="block" [editable]="false"></app-title-block>
-        </div>
+        } @else {
+          <div class="block" [ngStyle]="gridStyle(block)">
+            @if (isTextBlock(block)) {
+              <app-textbox [block]="block" [editable]="false"></app-textbox>
+            }
+            @if (isImageBlock(block)) {
+              <app-imagebox [block]="block" [editable]="false"></app-imagebox>
+            }
+            @if (isBylineBlock(block)) {
+              <app-byline-block [block]="block" [editable]="false"></app-byline-block>
+            }
+            @if (isTitleBlock(block)) {
+              <app-title-block [block]="block" [editable]="false"></app-title-block>
+            }
+          </div>
+        }
       </ng-container>
     </div>
   </div>
-
+  <!-- Toolbox -->
   <aside class="component-palette">
     <h3>Add</h3>
     <button (click)="addTitle()">+ Title</button>
@@ -58,27 +72,29 @@
     <button (click)="addImage()">+ Image</button>
   </aside>
 
-  <aside class="inspector" *ngIf="selected() as b">
-    <h3>Inspector</h3>
+  <!-- Inspector -->
+  @if (selected(); as b) {
+    <aside class="inspector">
+      <h3>Inspector</h3>
 
-    <label>Start column
-      <input type="number" [min]="1" [max]="columns" [ngModel]="b.layout.colStart"
-        (ngModelChange)="setColStart(b, +$event)">
-    </label>
-
-    <label>Span
-      <input type="number" [min]="2" [max]="columns - b.layout.colStart + 1" [ngModel]="b.layout.colSpan"
-        (ngModelChange)="setColSpan(b, +$event)">
-    </label>
-
-    <ng-container *ngIf="isImageBlock(b)">
-      <label>Alt text
-        <input type="text" [ngModel]="b.alt" (ngModelChange)="onBlockUpdate(b, { alt: $event })">
+      <label>Start
+        <input type="number" [min]="1" [max]="columns" [ngModel]="b.layout.colStart"
+          (ngModelChange)="setColStart(b, +$event)">
       </label>
-      <label>Source URL
-        <input type="text" [ngModel]="b.src" (ngModelChange)="onBlockUpdate(b, { src: $event })">
+
+      <label>Span
+        <input type="number" [min]="2" [max]="columns - b.layout.colStart + 1" [ngModel]="b.layout.colSpan"
+          (ngModelChange)="setColSpan(b, +$event)">
       </label>
-    </ng-container>
-  </aside>
+
+      @if (isImageBlock(b)) {
+        <label>Alt text
+          <input type="text" [ngModel]="b.alt" (ngModelChange)="onBlockUpdate(b, { alt: $event })">
+        </label>
+        <label>Source URL
+          <input type="text" [ngModel]="b.src" (ngModelChange)="onBlockUpdate(b, { src: $event })">
+        </label>
+      }
+    </aside>
+  }
 </div>
-

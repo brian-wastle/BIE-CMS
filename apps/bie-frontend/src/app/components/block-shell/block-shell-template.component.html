@@ -1,0 +1,16 @@
+@if (resolvedEditable) {
+<div [class]="editClass || null" authorScope (authorEditingChange)="onEditingChange($event)"
+    [attr.aria-label]="editAriaLabel || null">
+    <ng-content select="[blockAuthor]"></ng-content>
+
+    @if (resolvedLayout; as layout) {
+    <app-layout-controls [class]="controlsClass || null" [layout]="layout" [totalColumns]="resolvedTotalColumns"
+        [editable]="resolvedEditable" (layoutChange)="onLayoutChange($event)" (editingChange)="onEditingChange($event)">
+    </app-layout-controls>
+    }
+</div>
+} @else {
+<div [class]="previewClass || null">
+    <ng-content select="[blockPreview]"></ng-content>
+</div>
+}

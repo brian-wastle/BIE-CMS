@@ -1,36 +1,25 @@
-<!-- Author -->
-<div *ngIf="editable(); else readonly"
-     class="byline-author"
-     authorScope
-     (authorEditingChange)="editingChange.emit($event)">
+﻿<app-block-shell-template
+  editClass="byline-author"
+  previewClass="byline-view"
+  controlsClass="byline-controls">
 
-  <div class="byline-content">
-    <span class="byline-label">Published by</span>
+  <ng-container blockAuthor>
+    <div class="byline-content">
+      <span class="byline-label">Published by </span>
+      <span class="name">{{ authorName() }}</span>
+      <span class="dot"> &bull;</span>
+      <time [attr.datetime]="displayIso()" [title]="displayIso()">
+        {{ displayDate() | date: displayFormat }}
+      </time>
+    </div>
+  </ng-container>
+
+  <ng-container blockPreview>
+    <span class="byline-label">Published by </span>
     <span class="name">{{ authorName() }}</span>
-    <span class="dot">&bull;</span>
+    <span class="dot"> &bull;</span>
     <time [attr.datetime]="displayIso()" [title]="displayIso()">
       {{ displayDate() | date: displayFormat }}
     </time>
-  </div>
-
-  <app-layout-controls
-    class="byline-controls"
-    [layout]="block().layout"
-    [totalColumns]="totalColumns()"
-    [editable]="editable()"
-    (layoutChange)="update.emit({ layout: $event })"
-    (editingChange)="editingChange.emit($event)">
-  </app-layout-controls>
-</div>
-
-<!-- Preview -->
-<ng-template #readonly>
-  <div class="byline-view">
-    <span class="byline-label">Published by</span>
-    <span class="name">{{ authorName() }}</span>
-    <span class="dot">&bull;</span>
-    <time [attr.datetime]="displayIso()" [title]="displayIso()">
-      {{ displayDate() | date: displayFormat }}
-    </time>
-  </div>
-</ng-template>
+  </ng-container>
+</app-block-shell-template>

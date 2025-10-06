@@ -1,14 +1,15 @@
 // textbox.component.ts
-import { Component, ElementRef, viewChild } from '@angular/core';
+import { Component, ElementRef, viewChild, forwardRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TextBlock } from 'bie-models';
-import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
-import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';
-import { BlockShell } from '../block-shell/block-shell'; 
+import { BlockShell } from '../block-shell/block-shell';
+import { BlockShellTemplateComponent } from '../block-shell/block-shell-template.component';
+import { BLOCK_SHELL } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-textbox',
-  imports: [CommonModule, LayoutControlsComponent, AuthorScopeDirective],
+  providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => TextBoxComponent) }],
+  imports: [CommonModule, BlockShellTemplateComponent],
   templateUrl: './textbox.component.html',
   styleUrls: ['./textbox.component.scss'],
 })
@@ -16,7 +17,7 @@ export class TextBoxComponent extends BlockShell<TextBlock> {
   // Access teh component's content template in the DOM
   readonly editorRef = viewChild<ElementRef<HTMLElement>>('textContent');
 
-  // Effect syncs blocks signal data to canvas
+  // Effect syncs blocks' signal data and canvas
   // this.editable() - Whether block is in author mode
   // this.editorRef() - The ElementRef for the content-editable DOM node
   // this.block().text - The current text value for the block

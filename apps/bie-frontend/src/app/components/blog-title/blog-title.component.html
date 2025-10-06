@@ -1,29 +1,17 @@
-<!-- Author -->
-<div *ngIf="editable(); else readonly"
-     class="title-author"
-     authorScope
-     (authorEditingChange)="editingChange.emit($event)">
+﻿<app-block-shell-template
+  editClass="title-author"
+  previewClass="title-view"
+  controlsClass="title-controls">
 
-  <div class="title-content">
-    <input
-    type="text"
-    [value]="titleContent()"
-    (input)="onInput($any($event.target).value)" />
-  </div>
+  <ng-container blockAuthor>
+    <div class="title-content">
+      <input type="text"
+             [value]="titleContent()"
+             (input)="onInput($any($event.target).value)" />
+    </div>
+  </ng-container>
 
-  <app-layout-controls
-    class="title-controls"
-    [layout]="block().layout"
-    [totalColumns]="totalColumns()"
-    [editable]="editable()"
-    (layoutChange)="update.emit({ layout: $event })"
-    (editingChange)="editingChange.emit($event)">
-  </app-layout-controls>
-</div>
-
-<!-- Preview -->
-<ng-template #readonly>
-  <div class="title-view">
+  <ng-container blockPreview>
     <h1 class="title-line">{{ titleContent() }}</h1>
-  </div>
-</ng-template>
+  </ng-container>
+</app-block-shell-template>

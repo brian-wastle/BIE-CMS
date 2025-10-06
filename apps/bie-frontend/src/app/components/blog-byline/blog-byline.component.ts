@@ -1,26 +1,20 @@
-import { Component, EventEmitter, Output, computed, input } from '@angular/core';
+import { Component, computed, forwardRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { BylineBlock, BlockUpdate } from 'bie-models';
-import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
-import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';
-
+import { BylineBlock } from 'bie-models';
+import { BlockShell } from '../block-shell/block-shell';
+import { BlockShellTemplateComponent } from '../block-shell/block-shell-template.component';
+import { BLOCK_SHELL } from '../block-shell/block-shell';
 const DISPLAY_FORMAT = 'MMMM d, y';
 
 @Component({
   selector: 'app-byline-block',
   standalone: true,
-  imports: [CommonModule, DatePipe, LayoutControlsComponent, AuthorScopeDirective],
+  providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => BlogBylineComponent) }],
+  imports: [CommonModule, DatePipe, BlockShellTemplateComponent],
   templateUrl: './blog-byline.component.html',
   styleUrls: ['./blog-byline.component.scss'],
 })
-export class BlogBylineComponent {
-  readonly block = input.required<BylineBlock>();
-  readonly editable = input(true);
-  readonly totalColumns = input(12);
-
-  @Output() editingChange = new EventEmitter<boolean>();
-  @Output() update = new EventEmitter<BlockUpdate>();
-
+export class BlogBylineComponent extends BlockShell<BylineBlock> {
   readonly displayFormat = DISPLAY_FORMAT;
   readonly authorName = computed(() => this.block().author ?? '');
   readonly displayDate = computed(() => {

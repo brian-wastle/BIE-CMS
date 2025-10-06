@@ -6,11 +6,12 @@
     [mode]="sidenavMode"
     [opened]="sidenavOpened"
   >
-    <mat-toolbar color="primary">BIE-CMS</mat-toolbar>
+    <mat-toolbar color="primary">{{title}}</mat-toolbar>
+    <p class="cms-tagline">powered by <span style="font-style:italic">BIE-CMS</span></p>
     <mat-nav-list>
-      <a mat-list-item href="#">Dashboard</a>
+      <a mat-list-item href="#">Canvas</a>
+      <a mat-list-item href="#">Media Upload</a>
       <a mat-list-item href="#">Blog</a>
-      <a mat-list-item href="#">How-To</a>
     </mat-nav-list>
   </mat-sidenav>
   <!-- Main Content -->

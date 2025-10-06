@@ -1,48 +1,43 @@
-<!-- Author -->
-<div *ngIf="editable(); else preview"
-     class="img-author"
-     authorScope
-     (authorEditingChange)="editingChange.emit($event)">
+﻿<app-block-shell-template
+  editClass="img-author"
+  previewClass="img-preview">
 
-  <label class="field">
-    <span>Image URL</span>
-    <input class="input" type="url"
-           [ngModel]="block().src"
-           (ngModelChange)="onSrcChange($event)"
-           pasteUrl
-           (pasteUrl)="onSrcChange($event)"
-           placeholder="https://example.com/image.jpg" />
-  </label>
+  <ng-container blockAuthor>
+    <label class="field">
+      <span>Image URL</span>
+      <input class="input"
+             type="url"
+             [ngModel]="block().src"
+             (ngModelChange)="onSrcChange($event)"
+             pasteUrl
+             (pasteUrl)="onSrcChange($event)"
+             placeholder="https://example.com/image.jpg" />
+    </label>
 
-  <label class="field">
-    <span>Alt text</span>
-    <input class="input" type="text"
-           [ngModel]="block().alt"
-           (ngModelChange)="onAltChange($event)"
-           placeholder="Describe the image" />
-  </label>
+    <label class="field">
+      <span>Alt text</span>
+      <input class="input"
+             type="text"
+             [ngModel]="block().alt"
+             (ngModelChange)="onAltChange($event)"
+             placeholder="Describe the image" />
+    </label>
 
-  <app-layout-controls
-    [layout]="block().layout"
-    [totalColumns]="totalColumns()"
-    [editable]="editable()"
-    (layoutChange)="update.emit({ layout: $event })"
-    (editingChange)="editingChange.emit($event)">
-  </app-layout-controls>
+    @if (block().src) {
+      <div class="preview-wrap">
+        <img class="media"
+             [src]="block().src"
+             [alt]="block().alt || ''"
+             (error)="broken = true"
+             [class.broken]="broken" />
+        @if (broken) {
+          <div class="broken-note">{{ block().alt || '' }}</div>
+        }
+      </div>
+    }
+  </ng-container>
 
-  <div class="preview-wrap" *ngIf="block().src">
-    <img class="media"
-         [src]="block().src"
-         [alt]="block().alt || ''"
-         (error)="broken = true"
-         [class.broken]="broken" />
-    <div *ngIf="broken" class="broken-note">{{block().alt || ''}}</div>
-  </div>
-</div>
-
-<!-- Preview -->
-<ng-template #preview>
-  <div class="img-preview">
+  <ng-container blockPreview>
     <img class="media" [src]="block().src" [alt]="block().alt || ''" />
-  </div>
-</ng-template>
+  </ng-container>
+</app-block-shell-template>

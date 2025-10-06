@@ -24,7 +24,7 @@ import { MatButtonModule } from '@angular/material/button';
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnInit {
-  title = 'BIE-CMS';
+  title = 'Blogks';
   private bp = inject(BreakpointObserver);
   sidenavMode: 'side' | 'over' = 'side';
   sidenavOpened = true;

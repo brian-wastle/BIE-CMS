@@ -1,17 +1,18 @@
 // imagebox.component.ts
-import { Component } from '@angular/core';
+import { Component, forwardRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ImageBlock } from 'bie-models';
-import { LayoutControlsComponent } from '../layout-controls/layout-controls.component';
-import { AuthorScopeDirective } from '../../directives/author-scope/author-scope.directive';
+import { BlockShell } from '../block-shell/block-shell';
+import { BlockShellTemplateComponent } from '../block-shell/block-shell-template.component';
 import { PasteUrlDirective } from '../../directives/paste-url/paste-url.directive';
-import { BlockShell } from '../block-shell/block-shell'; 
+import { BLOCK_SHELL } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-imagebox',
   standalone: true,
-  imports: [CommonModule, FormsModule, LayoutControlsComponent, AuthorScopeDirective, PasteUrlDirective],
+  providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => ImageBoxComponent) }],
+  imports: [CommonModule, FormsModule, BlockShellTemplateComponent, PasteUrlDirective],
   templateUrl: './imagebox.component.html',
   styleUrls: ['./imagebox.component.scss'],
 })

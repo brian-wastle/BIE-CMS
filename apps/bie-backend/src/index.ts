@@ -3,16 +3,16 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import authRouter from '../src/auth.js'; // or './auth.js' if JS build
+import authRouter from '../src/auth.js';
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(helmet({ contentSecurityPolicy: false })); // simple default; tune later
+app.use(helmet({ contentSecurityPolicy: false })); // TODO: tuning
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 // API Routes
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authRouter);           // Login/Auth
 
 // SSR Proxy
 const SSR_TARGET = process.env.SSR_TARGET ?? 'http://127.0.0.1:4100';

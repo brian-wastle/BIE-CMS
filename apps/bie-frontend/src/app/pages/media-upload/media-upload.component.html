@@ -1,13 +1,86 @@
 <div class="asset-manager-layout" [class.asset-manager-layout--drag]="dragActive()">
-  <section
-    class="uploader"
-    (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave($event)"
-    (drop)="onFileDrop($event)"
-  >
-    <div class="dropzone" [class.dropzone--active]="dragActive()">
-      <p class="dropzone-title">Drop media files here</p>
-      <p class="dropzone-hint">Select images, audio, or video assets to add them to your library.</p>
+  <section class="directory-browser">
+    <header class="directory-header">
+      <div class="directory-title">
+        <h1>Media Directories</h1>
+        <p class="directory-subtitle">
+          Select a folder below or define a custom path to control where uploads are stored.
+        </p>
+      </div>
+      <button type="button" class="refresh" (click)="refreshDirectories()" [disabled]="directoriesLoading()">
+        Refresh
+      </button>
+    </header>
+
+    @if (directoryError()) {
+      <p class="error error--inline">{{ directoryError() }}</p>
+    }
+
+    @if (directoriesLoading()) {
+      <div class="directory-grid directory-grid--loading">
+        @for (tile of skeletonTiles; track tile) {
+          <div class="folder-tile folder-tile--loading">
+            <div class="folder-icon placeholder"></div>
+            <div class="folder-label placeholder"></div>
+          </div>
+        }
+      </div>
+    } @else if (hasDirectories()) {
+      <div class="directory-grid">
+        @for (entry of directories(); track entry.directory ?? $index) {
+          <button
+            type="button"
+            class="folder-tile"
+            [class.folder-tile--selected]="isDirectorySelected(entry.directory)"
+            (click)="onDirectorySelect(entry)"
+          >
+            <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+            <span class="folder-name">{{ directoryLabel(entry.directory) }}</span>
+            <span class="folder-count">{{ itemCountLabel(entry.itemCount) }}</span>
+            @if (entry.lastUploaded) {
+              <span class="folder-meta">Updated {{ entry.lastUploaded | date: 'mediumDate' }}</span>
+            }
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="directory-empty">
+        <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+        <p>No directories yet. Enter a path below to create one with your next upload.</p>
+      </div>
+    }
+
+    <div class="custom-directory">
+      <label>Active directory</label>
+      <input
+        type="text"
+        name="directory"
+        [ngModel]="directoryInput"
+        (ngModelChange)="onDirectoryInputChange($event)"
+        placeholder="e.g. blog-assets/headers"
+        [disabled]="loading()"
+      />
+      <small>Pick an existing folder or type a new path to create it automatically.</small>
+      <div class="custom-directory-badge">
+        <span class="badge-label">Current selection:</span>
+        <span class="badge-value">{{ activeDirectoryLabel() }}</span>
+        @if (customDirectoryActive()) {
+          <span class="badge-extra">Custom path</span>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="uploader-panel">
+    <div
+      class="dropzone"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onFileDrop($event)"
+      [class.dropzone--active]="dragActive()"
+    >
+      <p class="dropzone-title">Drop media files to upload</p>
+      <p class="dropzone-hint">Files will be stored under <strong>{{ activeDirectoryLabel() }}</strong>.</p>
       <div class="dropzone-actions">
         <button type="button" (click)="triggerFileDialog(fileInput)" [disabled]="loading()">Browse files</button>
         <span>or drag &amp; drop</span>
@@ -47,44 +120,10 @@
         }
       </ul>
     } @else {
-      <p class="empty-state">No files selected yet.</p>
+      <p class="empty-state">Add files to begin uploading.</p>
     }
-  </section>
 
-  <section class="controls">
-    <form (ngSubmit)="uploadAll()" novalidate>
-      <h2>Upload Details</h2>
-
-      <label class="field">
-        <span>Directory</span>
-        <input
-          type="text"
-          name="directory"
-          [(ngModel)]="directoryInput"
-          placeholder="e.g. blog-assets/headers"
-          [disabled]="loading()"
-        />
-      </label>
-
-      @if (directories().length) {
-        <div class="directory-suggestions">
-          <span class="hint">Quick select:</span>
-          @for (entry of directories(); track $index) {
-            <button
-              type="button"
-              class="chip"
-              (click)="useDirectory(entry.directory)"
-              [disabled]="loading()"
-            >
-              {{ entry.directory || 'Unsorted' }}
-              @if (entry.itemCount) {
-                <span class="count">({{ entry.itemCount }})</span>
-              }
-            </button>
-          }
-        </div>
-      }
-
+    <form class="uploader-controls" (ngSubmit)="uploadAll()" novalidate>
       <label class="field">
         <span>Allowed MIME types</span>
         <input
@@ -102,8 +141,8 @@
         <span>Total size: {{ formatSize(totalSize()) }}</span>
       </div>
 
-      @if (error()) {
-        <p class="error">{{ error() }}</p>
+      @if (uploadError()) {
+        <p class="error">{{ uploadError() }}</p>
       }
 
       @if (success()) {

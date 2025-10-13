@@ -30,6 +30,10 @@ interface FilestackPolicyResponse {
   cdnBaseUrl?: string | null;
 }
 
+const UNSORTED_LABEL = 'Unsorted';
+const SKELETON_TILE_COUNT = 6;
+const UNSORTED_KEY = '__unsorted__';
+
 @Component({
   selector: 'app-media-upload',
   standalone: true,
@@ -38,18 +42,27 @@ interface FilestackPolicyResponse {
   styleUrl: './media-upload.component.scss'
 })
 export class MediaUploadComponent {
+  readonly folderIcon = 'assets/foldericon.svg';
+
   readonly queue = signal<UploadItem[]>([]);
   readonly directories = signal<DirectoryMeta[]>([]);
+  readonly directoriesLoading = signal(true);
+  readonly directoryError = signal<string | null>(null);
+  readonly selectedDirectory = signal<string | null>(null);
+  readonly customDirectoryActive = signal(false);
+
   readonly loading = signal(false);
   readonly policyLoading = signal(false);
   readonly dragActive = signal(false);
-  readonly error = signal<string | null>(null);
+  readonly uploadError = signal<string | null>(null);
   readonly success = signal<string | null>(null);
 
   directoryInput = '';
   mimetypesInput = '';
 
+  readonly skeletonTiles = Array.from({ length: SKELETON_TILE_COUNT }, (_, index) => index);
   readonly hasFiles = computed(() => this.queue().length > 0);
+  readonly hasDirectories = computed(() => this.directories().length > 0);
   readonly totalSize = computed(() => this.queue().reduce((sum, item) => sum + item.file.size, 0));
   readonly selectedMimetypes = computed(() =>
     this.mimetypesInput
@@ -57,27 +70,44 @@ export class MediaUploadComponent {
       .map((value) => value.trim())
       .filter(Boolean)
   );
+  readonly activeDirectoryLabel = computed(() => this.computeActiveDirectoryLabel());
 
   constructor() {
     void this.refreshDirectories();
   }
 
   async refreshDirectories() {
+    this.directoriesLoading.set(true);
+    this.directoryError.set(null);
     try {
-      const response = await fetch('/api/filestack/directories', {
+      const response = await fetch('/api/media/directories', {
         credentials: 'include'
       });
       if (!response.ok) {
         const problem = await safeJson(response);
         throw new Error(problem?.error || 'Unable to load directories');
       }
-      const payload = await response.json() as { directories?: DirectoryMeta[] };
-      if (Array.isArray(payload.directories)) {
-        this.directories.set(payload.directories);
+      const payload = (await response.json()) as { directories?: DirectoryMeta[] };
+      const list = Array.isArray(payload.directories) ? payload.directories : [];
+      const usingCustom = this.customDirectoryActive();
+      const selected = this.selectedDirectory();
+
+      this.directories.set(list);
+
+      if (!usingCustom) {
+        const existingKeys = new Set(list.map((entry) => this.directoryKey(entry.directory ?? null)));
+        if (!existingKeys.has(this.directoryKey(selected))) {
+          this.selectedDirectory.set(null);
+          if (!this.directoryInput.trim()) {
+            this.directoryInput = '';
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to load media directories', err);
-      this.error.set((err as Error).message ?? 'Failed to load directories');
+      this.directoryError.set((err as Error).message ?? 'Failed to load directories');
+    } finally {
+      this.directoriesLoading.set(false);
     }
   }
 
@@ -139,9 +169,9 @@ export class MediaUploadComponent {
     });
     if (!added) {
       this.success.set(null);
-      this.error.set('These files are already queued.');
+      this.uploadError.set('These files are already queued.');
     } else {
-      this.error.set(null);
+      this.uploadError.set(null);
       this.success.set(null);
     }
   }
@@ -152,10 +182,50 @@ export class MediaUploadComponent {
 
   clearQueue() {
     this.queue.set([]);
+    this.uploadError.set(null);
+    this.success.set(null);
   }
 
-  useDirectory(directory: string | null) {
+  onDirectorySelect(entry: DirectoryMeta) {
+    const directory = entry.directory ?? null;
+    this.selectedDirectory.set(directory);
+    this.customDirectoryActive.set(false);
     this.directoryInput = directory ?? '';
+    this.uploadError.set(null);
+    this.success.set(null);
+  }
+
+  onDirectoryInputChange(value: string) {
+    this.directoryInput = value;
+    const trimmed = value.trim();
+    if (!trimmed) {
+      this.customDirectoryActive.set(false);
+      this.selectedDirectory.set(null);
+      return;
+    }
+    const match = this.directories().find((entry) => entry.directory === trimmed);
+    if (match) {
+      this.customDirectoryActive.set(false);
+      this.selectedDirectory.set(match.directory ?? null);
+    } else {
+      this.customDirectoryActive.set(true);
+      this.selectedDirectory.set(trimmed);
+    }
+  }
+
+  directoryLabel(directory: string | null) {
+    return directory ?? UNSORTED_LABEL;
+  }
+
+  itemCountLabel(count: number) {
+    return `${count} item${count === 1 ? '' : 's'}`;
+  }
+
+  isDirectorySelected(directory: string | null) {
+    if (this.customDirectoryActive()) {
+      return false;
+    }
+    return this.directoryKey(this.selectedDirectory()) === this.directoryKey(directory ?? null);
   }
 
   formatSize(bytes: number) {
@@ -173,14 +243,14 @@ export class MediaUploadComponent {
       return;
     }
     this.loading.set(true);
-    this.error.set(null);
+    this.uploadError.set(null);
     this.success.set(null);
 
     let policy: FilestackPolicyResponse | null = null;
     try {
       policy = await this.createPolicy();
     } catch (err) {
-      this.error.set((err as Error).message ?? 'Failed to create upload policy');
+      this.uploadError.set((err as Error).message ?? 'Failed to create upload policy');
       this.loading.set(false);
       return;
     }
@@ -201,6 +271,7 @@ export class MediaUploadComponent {
     const allUploaded = this.queue().length && this.queue().every((entry) => entry.status === 'success');
     if (allUploaded) {
       this.success.set('Upload complete!');
+      this.uploadError.set(null);
       void this.refreshDirectories();
     }
   }
@@ -217,7 +288,7 @@ export class MediaUploadComponent {
       if (types.length) {
         body['mimetypes'] = types;
       }
-      const response = await fetch('/api/filestack/policy', {
+      const response = await fetch('/api/media/policy', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -227,7 +298,7 @@ export class MediaUploadComponent {
         const problem = await safeJson(response);
         throw new Error(problem?.error || 'Failed to request upload policy');
       }
-      return await response.json() as FilestackPolicyResponse;
+      return (await response.json()) as FilestackPolicyResponse;
     } finally {
       this.policyLoading.set(false);
     }
@@ -262,7 +333,7 @@ export class MediaUploadComponent {
       throw new Error(message || 'Filestack upload failed');
     }
 
-    const payload = await response.json() as { handle?: string; url?: string };
+    const payload = (await response.json()) as { handle?: string; url?: string };
     this.updateQueue(itemId, {
       status: 'success',
       progress: 100,
@@ -272,9 +343,27 @@ export class MediaUploadComponent {
   }
 
   private updateQueue(id: string, patch: Partial<UploadItem>) {
-    this.queue.update((items) =>
-      items.map((item) => (item.id === id ? { ...item, ...patch } : item))
-    );
+    this.queue.update((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  }
+
+  private computeActiveDirectoryLabel() {
+    const selected = this.selectedDirectory();
+    if (this.customDirectoryActive()) {
+      const trimmed = selected?.trim() ?? '';
+      return trimmed || UNSORTED_LABEL;
+    }
+    if (selected === null) {
+      return UNSORTED_LABEL;
+    }
+    const trimmed = selected.trim();
+    return trimmed || UNSORTED_LABEL;
+  }
+
+  private directoryKey(directory: string | null) {
+    if (directory === null) {
+      return UNSORTED_KEY;
+    }
+    return directory;
   }
 }
 

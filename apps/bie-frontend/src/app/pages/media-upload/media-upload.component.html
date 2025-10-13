@@ -1,12 +1,119 @@
-<div class="asset-manager-layout">
-    <div class="uploader">
+<div class="asset-manager-layout" [class.asset-manager-layout--drag]="dragActive()">
+  <section
+    class="uploader"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onFileDrop($event)"
+  >
+    <div class="dropzone" [class.dropzone--active]="dragActive()">
+      <p class="dropzone-title">Drop media files here</p>
+      <p class="dropzone-hint">Select images, audio, or video assets to add them to your library.</p>
+      <div class="dropzone-actions">
+        <button type="button" (click)="triggerFileDialog(fileInput)" [disabled]="loading()">Browse files</button>
+        <span>or drag &amp; drop</span>
+      </div>
+      <input #fileInput type="file" multiple (change)="onFileInput($event)" hidden />
+    </div>
 
-    </div>
-    <div clas="controls">
-        @if (loading) {
-            <div class="controls-loading"></div>
-        } @else {
-            <div class="controls-upload"></div>
+    @if (hasFiles()) {
+      <ul class="file-queue">
+        @for (item of queue(); track item.id) {
+          <li class="file-item">
+            <div class="file-meta">
+              <p class="file-name">{{ item.file.name }}</p>
+              <span class="file-size">{{ formatSize(item.file.size) }}</span>
+            </div>
+            <div class="file-status">
+              <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
+              @if (item.error) {
+                <span class="status-error">{{ item.error }}</span>
+              }
+              @if (item.cdnUrl) {
+                <a class="status-link" [href]="item.cdnUrl" target="_blank" rel="noopener">View</a>
+              }
+            </div>
+            <div class="progress">
+              <div class="progress-bar" [style.width.%]="item.progress"></div>
+            </div>
+            <button
+              type="button"
+              class="remove"
+              (click)="removeFromQueue(item.id)"
+              [disabled]="loading() || item.status === 'uploading'"
+            >
+              Remove
+            </button>
+          </li>
         }
-    </div>
+      </ul>
+    } @else {
+      <p class="empty-state">No files selected yet.</p>
+    }
+  </section>
+
+  <section class="controls">
+    <form (ngSubmit)="uploadAll()" novalidate>
+      <h2>Upload Details</h2>
+
+      <label class="field">
+        <span>Directory</span>
+        <input
+          type="text"
+          name="directory"
+          [(ngModel)]="directoryInput"
+          placeholder="e.g. blog-assets/headers"
+          [disabled]="loading()"
+        />
+      </label>
+
+      @if (directories().length) {
+        <div class="directory-suggestions">
+          <span class="hint">Quick select:</span>
+          @for (entry of directories(); track $index) {
+            <button
+              type="button"
+              class="chip"
+              (click)="useDirectory(entry.directory)"
+              [disabled]="loading()"
+            >
+              {{ entry.directory || 'Unsorted' }}
+              @if (entry.itemCount) {
+                <span class="count">({{ entry.itemCount }})</span>
+              }
+            </button>
+          }
+        </div>
+      }
+
+      <label class="field">
+        <span>Allowed MIME types</span>
+        <input
+          type="text"
+          name="mimetypes"
+          [(ngModel)]="mimetypesInput"
+          placeholder="Optional: image/*,video/mp4"
+          [disabled]="loading()"
+        />
+        <small>Comma separated list. Leave blank to accept any type.</small>
+      </label>
+
+      <div class="summary">
+        <span>Total files: {{ queue().length }}</span>
+        <span>Total size: {{ formatSize(totalSize()) }}</span>
+      </div>
+
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
+
+      @if (success()) {
+        <p class="success">{{ success() }}</p>
+      }
+
+      <div class="actions">
+        <button type="submit" [disabled]="!hasFiles() || loading() || policyLoading()">Upload Files</button>
+        <button type="button" (click)="clearQueue()" [disabled]="!hasFiles() || loading()">Clear Queue</button>
+      </div>
+    </form>
+  </section>
 </div>

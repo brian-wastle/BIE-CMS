@@ -9,13 +9,12 @@ import filestackRouter from './filestack.js';
 const app = express();
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false })); // TODO: tuning
-app.use('/api/media/webhook', express.raw({ type: '*/*' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 // API Routes
 app.use('/api/auth', authRouter);           // Login/Auth
-app.use('/api/media', filestackRouter);     // Filestack media & webhooks
+app.use('/api/media', filestackRouter);     // Filestack media
 
 // SSR Proxy
 const SSR_TARGET = process.env.SSR_TARGET ?? 'http://127.0.0.1:4100';

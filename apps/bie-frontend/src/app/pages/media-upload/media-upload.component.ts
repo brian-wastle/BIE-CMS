@@ -20,16 +20,6 @@ interface DirectoryMeta {
   lastUploaded: string | null;
 }
 
-interface FilestackPolicyResponse {
-  apiKey: string;
-  policy: string;
-  signature: string;
-  expiresAt: number;
-  storagePrefix: string;
-  directory: string | null;
-  cdnBaseUrl?: string | null;
-}
-
 const UNSORTED_LABEL = 'Unsorted';
 const SKELETON_TILE_COUNT = 6;
 const UNSORTED_KEY = '__unsorted__';
@@ -52,7 +42,6 @@ export class MediaUploadComponent {
   readonly customDirectoryActive = signal(false);
 
   readonly loading = signal(false);
-  readonly policyLoading = signal(false);
   readonly dragActive = signal(false);
   readonly uploadError = signal<string | null>(null);
   readonly success = signal<string | null>(null);
@@ -67,7 +56,7 @@ export class MediaUploadComponent {
   readonly selectedMimetypes = computed(() =>
     this.mimetypesInput
       .split(',')
-      .map((value) => value.trim())
+      .map((value) => value.trim().toLowerCase())
       .filter(Boolean)
   );
   readonly activeDirectoryLabel = computed(() => this.computeActiveDirectoryLabel());
@@ -246,18 +235,28 @@ export class MediaUploadComponent {
     this.uploadError.set(null);
     this.success.set(null);
 
-    let policy: FilestackPolicyResponse | null = null;
-    try {
-      policy = await this.createPolicy();
-    } catch (err) {
-      this.uploadError.set((err as Error).message ?? 'Failed to create upload policy');
-      this.loading.set(false);
-      return;
+    const allowedTypes = this.selectedMimetypes();
+    if (allowedTypes.length) {
+      const disallowed = this.queue().filter((entry) => !this.matchesMimetype(entry.file.type, allowedTypes));
+      if (disallowed.length) {
+        for (const item of disallowed) {
+          this.updateQueue(item.id, {
+            status: 'error',
+            error: 'File type not permitted by the current filter.',
+            progress: 0
+          });
+        }
+        this.uploadError.set('Remove files that do not match the allowed MIME types.');
+        this.loading.set(false);
+        return;
+      }
     }
+
+    const directory = this.resolveActiveDirectory();
 
     for (const item of this.queue()) {
       try {
-        await this.uploadWithPolicy(item.id, policy);
+        await this.uploadToServer(item.id, directory);
       } catch (err) {
         this.updateQueue(item.id, {
           status: 'error',
@@ -276,70 +275,98 @@ export class MediaUploadComponent {
     }
   }
 
-  private async createPolicy(): Promise<FilestackPolicyResponse> {
-    this.policyLoading.set(true);
-    try {
-      const body: Record<string, unknown> = {};
-      const directory = this.directoryInput.trim();
-      if (directory) {
-        body['directory'] = directory;
-      }
-      const types = this.selectedMimetypes();
-      if (types.length) {
-        body['mimetypes'] = types;
-      }
-      const response = await fetch('/api/media/policy', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!response.ok) {
-        const problem = await safeJson(response);
-        throw new Error(problem?.error || 'Failed to request upload policy');
-      }
-      return (await response.json()) as FilestackPolicyResponse;
-    } finally {
-      this.policyLoading.set(false);
-    }
-  }
-
-  private async uploadWithPolicy(itemId: string, policy: FilestackPolicyResponse) {
+  private async uploadToServer(itemId: string, directory: string | null) {
     const target = this.queue().find((entry) => entry.id === itemId);
     if (!target) {
       return;
     }
-    this.updateQueue(itemId, { status: 'uploading', progress: 5, error: undefined });
+    this.updateQueue(itemId, { status: 'uploading', progress: 10, error: undefined });
 
     const form = new FormData();
-    form.append('policy', policy.policy);
-    form.append('signature', policy.signature);
     form.append('fileUpload', target.file, target.file.name);
-    form.append('path', `/${policy.storagePrefix}/${target.file.name}`);
     if (target.file.type) {
       form.append('mimetype', target.file.type);
     }
-
-    const response = await fetch('https://www.filestackapi.com/api/store/S3', {
-      method: 'POST',
-      headers: {
-        'Filestack-Api-Key': policy.apiKey
-      },
-      body: form
-    });
-
-    if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || 'Filestack upload failed');
+    if (directory) {
+      form.append('directory', directory);
     }
 
-    const payload = (await response.json()) as { handle?: string; url?: string };
+    let response: Response;
+    try {
+      response = await fetch('/api/media/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: form
+      });
+    } catch (err) {
+      console.error('Failed to upload media (network)', err);
+      throw new Error('Network error while uploading file.');
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed.error === 'string') {
+          throw new Error(parsed.error);
+        }
+      } catch {
+        // Ignore JSON parse errors, fall back to raw text.
+      }
+      throw new Error(text || 'Upload failed');
+    }
+
+    const payload = (await response.json()) as { handle?: string; url?: string | null };
     this.updateQueue(itemId, {
       status: 'success',
       progress: 100,
-      handle: payload.handle,
-      cdnUrl: payload.url
+      handle: payload.handle ?? undefined,
+      cdnUrl: payload.url ?? undefined
     });
+  }
+
+  private resolveActiveDirectory(): string | null {
+    const input = this.directoryInput.trim();
+    if (this.customDirectoryActive()) {
+      return input || null;
+    }
+    const selected = this.selectedDirectory();
+    if (selected) {
+      const trimmed = selected.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+    if (input) {
+      return input;
+    }
+    return null;
+  }
+
+  private matchesMimetype(fileType: string | undefined, allowed: string[]) {
+    if (!allowed.length) {
+      return true;
+    }
+    const type = (fileType || '').toLowerCase();
+    if (!type.includes('/')) {
+      return allowed.includes(type);
+    }
+    const [major = '', minor = ''] = type.split('/');
+    for (const pattern of allowed) {
+      if (!pattern.includes('/')) {
+        if (type === pattern) {
+          return true;
+        }
+        continue;
+      }
+      const [allowedMajor = '', allowedMinor = ''] = pattern.split('/');
+      const majorMatches = allowedMajor === '*' || allowedMajor === major;
+      const minorMatches = allowedMinor === '*' || allowedMinor === minor;
+      if (majorMatches && minorMatches) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private updateQueue(id: string, patch: Partial<UploadItem>) {

@@ -49,6 +49,24 @@
         <p>No directories yet. Enter a path below to create one with your next upload.</p>
       </div>
     }
+  </section>
+
+  <section class="uploader-panel">
+    <div
+      class="dropzone"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onFileDrop($event)"
+      [class.dropzone--active]="dragActive()"
+    >
+      <p class="dropzone-title">Drop media files to upload</p>
+      <p class="dropzone-hint">Files will be stored under <strong>{{ activeDirectoryLabel() }}</strong>.</p>
+      <div class="dropzone-actions">
+        <button type="button" (click)="triggerFileDialog(fileInput)" [disabled]="loading()">Browse files</button>
+        <span>or drag &amp; drop</span>
+      </div>
+      <input #fileInput type="file" multiple (change)="onFileInput($event)" hidden />
+    </div>
 
     <div class="custom-directory">
       <label>Active directory</label>
@@ -69,25 +87,7 @@
         }
       </div>
     </div>
-  </section>
-
-  <section class="uploader-panel">
-    <div
-      class="dropzone"
-      (dragover)="onDragOver($event)"
-      (dragleave)="onDragLeave($event)"
-      (drop)="onFileDrop($event)"
-      [class.dropzone--active]="dragActive()"
-    >
-      <p class="dropzone-title">Drop media files to upload</p>
-      <p class="dropzone-hint">Files will be stored under <strong>{{ activeDirectoryLabel() }}</strong>.</p>
-      <div class="dropzone-actions">
-        <button type="button" (click)="triggerFileDialog(fileInput)" [disabled]="loading()">Browse files</button>
-        <span>or drag &amp; drop</span>
-      </div>
-      <input #fileInput type="file" multiple (change)="onFileInput($event)" hidden />
-    </div>
-
+    
     @if (hasFiles()) {
       <ul class="file-queue">
         @for (item of queue(); track item.id) {
@@ -150,7 +150,7 @@
       }
 
       <div class="actions">
-        <button type="submit" [disabled]="!hasFiles() || loading() || policyLoading()">Upload Files</button>
+        <button type="submit" [disabled]="!hasFiles() || loading()">Upload Files</button>
         <button type="button" (click)="clearQueue()" [disabled]="!hasFiles() || loading()">Clear Queue</button>
       </div>
     </form>

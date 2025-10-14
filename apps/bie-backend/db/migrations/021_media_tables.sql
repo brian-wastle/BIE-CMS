@@ -4,12 +4,9 @@ CREATE TABLE IF NOT EXISTS media (
   filename        TEXT,
   mime_type       TEXT,
   size_bytes      INTEGER,
-  width           INTEGER,
-  height          INTEGER,
   directory_path  TEXT,
   storage_path    TEXT NOT NULL,                     -- e.g. userId/gallery/photo.jpg
   cdn_url         TEXT NOT NULL,
-  metadata        JSONB,
   alt_text        TEXT,
   owner_user_id   UUID REFERENCES users(id)
                     ON DELETE SET NULL

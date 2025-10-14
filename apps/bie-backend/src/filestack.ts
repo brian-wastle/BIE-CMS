@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import express, { Request, Response } from 'express';
-import fetch from 'node-fetch';
+import fetch, { File, FormData } from 'node-fetch';
+import multer from 'multer';
 import { Pool } from 'pg';
 import { z } from 'zod';
 
@@ -11,32 +12,27 @@ const router = express.Router();
 // Env Config
 const API_KEY = process.env.FILESTACK_API_KEY!;
 const APP_SECRET = process.env.FILESTACK_APP_SECRET!;
-const WEBHOOK_SEC = process.env.FILESTACK_WEBHOOK_SECRET || APP_SECRET;
 const EXPIRY_SEC = Number(process.env.FILESTACK_POLICY_EXPIRY_SEC || 900);
 const MEDIA_TABLE = process.env.MEDIA_TABLE || 'media';
 const CDN_BASE = process.env.FILESTACK_CDN_BASE || 'https://cdn.filestackcontent.com';
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = (() => {
+  const parsed = Number(process.env.MEDIA_MAX_UPLOAD_BYTES);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return DEFAULT_MAX_UPLOAD_BYTES;
+})();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_BYTES },
+});
 
 // Combine cookie and login
 type AuthedRequest = Request & {
   user?: { id: string; email: string };
-};
-
-// Filestack POST req to webhook
-type StoredEvent = {
-  text?: string;
-  data?: {
-    handle?: string;
-    url?: string;
-    filename?: string;
-    mimetype?: string;
-    size?: number;
-    key?: string;
-    path?: string;
-    width?: number;
-    height?: number;
-    metadata?: Record<string, unknown>;
-  };
+  file?: Express.Multer.File;
 };
 
 // Normalized record to store in DB
@@ -47,11 +43,8 @@ type MediaRecord = {
   filename: string | null;
   mimetype: string | null;
   size: number | null;
-  width: number | null;
-  height: number | null;
   cdnUrl: string | null;
-  storagePath: string | null;
-  metadata: Record<string, unknown> | null;
+  storagePath: string;
 };
 
 // Encodes an object as base64 for Filestack policy payloads.
@@ -65,30 +58,19 @@ function sign(policyB64: string, secret: string) {
   return crypto.createHmac('sha256', secret).update(policyB64).digest('hex');
 }
 
-// Compare two hex strings by size (Buffer.length) and HMAC digest (crypto.timingSafeEqual)
-function secureFSPayload(a: string, b: string) {
-  try {
-    const bufferA = Buffer.from(a, 'hex');
-    const bufferB = Buffer.from(b, 'hex');
-    if (bufferA.length !== bufferB.length) return false;
-    return crypto.timingSafeEqual(bufferA, bufferB);
-  } catch {
-    return false;
-  }
-}
-
 // Normalize directory supplied by user
-function sanitizeSegment(segment: string, label: string) {
-  if (!segment) {
-    throw new Error(`${label} is required`);
+function sanitizeDirname(dirPath: string) {
+  if (!dirPath) {
+    throw new Error(`Directory is required`);
   }
-  const parts = segment.split('/').filter(Boolean);
-  if (!parts.length) throw new Error(`${label} is required`);
-  const sanitized = parts.map((part) => {
-    if (!/^[a-zA-Z0-9_-]{1,60}$/.test(part)) {
-      throw new Error(`${label} contains invalid characters`);
+  const dirArray = dirPath.split('/').filter(Boolean);
+  dirArray.forEach(dir => dir.toLowerCase());
+  if (!dirArray.length) throw new Error(`Directory is required`);
+  const sanitized = dirArray.map((dir) => {
+    if (!/^[a-zA-Z0-9_-]{1,60}$/.test(dir)) {
+      throw new Error(`Retry name '${dir}': contains invalid characters`);
     }
-    return part;
+    return dir;
   });
   return sanitized.join('/');
 }
@@ -97,19 +79,16 @@ function sanitizeSegment(segment: string, label: string) {
 async function appendMedia(record: MediaRecord) {
   const query = `
     INSERT INTO ${MEDIA_TABLE}
-      (handle, owner_user_id, directory_path, filename, mime_type, size_bytes, width, height, cdn_url, storage_path, metadata)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      (handle, owner_user_id, directory_path, filename, mime_type, size_bytes, cdn_url, storage_path)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     ON CONFLICT (handle) DO UPDATE SET
       owner_user_id = EXCLUDED.owner_user_id,
       directory_path = EXCLUDED.directory_path,
       filename = EXCLUDED.filename,
       mime_type = EXCLUDED.mime_type,
       size_bytes = EXCLUDED.size_bytes,
-      width = EXCLUDED.width,
-      height = EXCLUDED.height,
       cdn_url = EXCLUDED.cdn_url,
       storage_path = EXCLUDED.storage_path,
-      metadata = EXCLUDED.metadata,
       is_deleted = FALSE,
       updated_at = now();
   `;
@@ -120,11 +99,8 @@ async function appendMedia(record: MediaRecord) {
     record.filename,
     record.mimetype,
     record.size,
-    record.width,
-    record.height,
     record.cdnUrl,
     record.storagePath,
-    record.metadata,
   ];
   await pool.query(query, values);
 }
@@ -140,20 +116,6 @@ async function removeMedia(handle: string, userId?: string) {
   await pool.query(query, params);
 }
 
-// Parse the Filestack storage key into its owner, directory, and filename parts.
-// Drop leading slashes, split into user/directory/filename
-function parseStorageKey(key?: string | null) {
-  if (!key) return null;
-  const trimmed = key.replace(/^\/+/, '');
-  const parts = trimmed.split('/').filter(Boolean);
-  if (parts.length < 2) return null;
-  const [userId, ...rest] = parts;
-  if (!rest.length) return null;
-  const filename = rest.pop() || null;
-  const directory = rest.length ? rest.join('/') : null;
-  return { userId, directory, filename, storagePath: trimmed };
-}
-
 // Basic Filestack security policy allowing pick/store/read.
 function buildPolicyPayload(expiryEpoch: number, pathPrefix: string, mimetypes?: string[]) {
   const payload: Record<string, unknown> = {
@@ -165,7 +127,7 @@ function buildPolicyPayload(expiryEpoch: number, pathPrefix: string, mimetypes?:
   return payload;
 }
 
-// Issues a signed Filestack policy for emdia upload
+// Issues a signed Filestack policy for media upload
 // Stores to user's optional directory
 // Blank directories default to "Unsorted"
 router.post('/policy', requireAccess, async (req: AuthedRequest, res: Response) => {
@@ -185,7 +147,7 @@ router.post('/policy', requireAccess, async (req: AuthedRequest, res: Response) 
   // Build payload, b64 expectedd by FS, signed
   let sanitizedDir: string | undefined;
   try {
-    sanitizedDir = directory ? sanitizeSegment(directory, 'directory') : 'Unsorted';
+    sanitizedDir = directory ? sanitizeDirname(directory) : 'Unsorted';
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
   }
@@ -208,73 +170,111 @@ router.post('/policy', requireAccess, async (req: AuthedRequest, res: Response) 
   });
 });
 
-// Webhook receiver
-// Verify Filestack event payload and store new media record in DB
-router.post('/webhook', async (req: Request, res: Response) => {
-  const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body ?? '');
-  const sigHeader = req.get('Filestack-Signature') || '';
-  const parts = sigHeader.split('sha256=');
-  const hexFromHeader = parts[1] || undefined;
-
-  const computed = crypto.createHmac('sha256', WEBHOOK_SEC).update(rawBody).digest('hex');
-
-  if (!hexFromHeader || !secureFSPayload(hexFromHeader, computed)) {
-    return res.status(401).json({ error: 'Invalid webhook signature' });
-  }
-
-  let evt: StoredEvent;
-  try {
-    evt = JSON.parse(rawBody.toString('utf-8'));
-  } catch (e) {
-    return res.status(400).json({ error: 'Invalid JSON payload' });
-  }
-
-  if (evt.text === 'file.store' && evt.data?.handle) {
-    const data = evt.data;
-    const keyInfo = parseStorageKey(data.key || data.path || null);
-    const metadata = data.metadata;
-
-    if (!keyInfo) {
-      console.warn('Skipping media webhook without structured storage key', {
-        handle: data.handle ?? '',
-        key: data.key,
-        path: data.path,
-      });
-      return res.status(204).end();
+// Receive a browser upload, forward to Filestack, and respond with the resulting handle.
+router.post(
+  '/upload',
+  requireAccess,
+  upload.single('fileUpload'),
+  async (req: AuthedRequest, res: Response) => {
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) {
+      return res.status(400).json({ error: 'Missing fileUpload field' });
     }
 
-    const sizeFromMetadata =
-      metadata && typeof metadata['size'] === 'number' ? (metadata['size'] as number) : null;
-    const widthFromMetadata =
-      metadata && typeof metadata['width'] === 'number' ? (metadata['width'] as number) : null;
-    const heightFromMetadata =
-      metadata && typeof metadata['height'] === 'number' ? (metadata['height'] as number) : null;
-    const metadataMimetype =
-      metadata && typeof metadata['mimetype'] === 'string' ? (metadata['mimetype'] as string) : null;
+    const user = req.user!;
+    const rawDirectory =
+      typeof req.body?.directory === 'string' ? req.body.directory.trim() : '';
 
-    const record: MediaRecord = {
-      handle: data.handle ?? 'untitled',
-      userId: keyInfo.userId || null,
-      directory: keyInfo.directory || null,
-      filename: data.filename || keyInfo.filename || null,
-      mimetype: data.mimetype || metadataMimetype || null,
-      size: typeof data.size === 'number' ? data.size : sizeFromMetadata,
-      width: typeof data.width === 'number' ? data.width : widthFromMetadata,
-      height: typeof data.height === 'number' ? data.height : heightFromMetadata,
-      cdnUrl: data.url || `${CDN_BASE}/${data.handle}`,
-      storagePath: keyInfo.storagePath || null,
-      metadata: metadata ?? null,
-    };
+    let sanitizedDir: string;
     try {
-      await appendMedia(record);
-    } catch (dbErr) {
-      console.error('Failed to persist media record', dbErr);
-      return res.status(500).json({ error: 'Failed to store media metadata' });
+      sanitizedDir = rawDirectory ? sanitizeDirname(rawDirectory) : 'unsorted';
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
     }
-  }
 
-  return res.status(204).end();
-});
+    const safeFilename = (file.originalname || 'upload').replace(/[/\\]/g, '_');
+    const storagePrefix = [user.id, sanitizedDir].join('/');
+    const expiryEpoch = Math.floor(Date.now() / 1000) + EXPIRY_SEC;
+    const policyPayload = buildPolicyPayload(expiryEpoch, storagePrefix);
+    const policyB64 = b64(policyPayload);
+    const signature = sign(policyB64, APP_SECRET);
+
+    const body = new FormData();
+    body.append('policy', policyB64);
+    body.append('signature', signature);
+    body.append('path', `/${storagePrefix}/${safeFilename}`);
+    if (file.mimetype) {
+      body.append('mimetype', file.mimetype);
+    }
+    const bytes = Uint8Array.from(file.buffer);
+    const fileBlob = new File([bytes], safeFilename, {
+      type: file.mimetype || 'application/octet-stream',
+      lastModified: Date.now(),
+    });
+    body.append('fileUpload', fileBlob);
+
+    let resp;
+    try {
+      const uploadUrl = new URL('https://www.filestackapi.com/api/store/S3');
+      uploadUrl.searchParams.set('key', API_KEY);
+      resp = await fetch(uploadUrl, {
+        method: 'POST',
+        body,
+      });
+    } catch (err) {
+      console.error('Filestack upload network failure', err);
+      return res.status(502).json({ error: 'Failed to reach Filestack upload service' });
+    }
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error('Filestack upload rejected', resp.status, text);
+      return res.status(resp.status).send(text || 'Filestack upload failed');
+    }
+
+    const raw = await resp.text();
+    let payload: any = null;
+    try {
+      payload = JSON.parse(raw);
+    } catch (err) {
+      console.error('Unexpected Filestack upload response', raw);
+      return res.status(502).json({ error: 'Unexpected response from Filestack upload service' });
+    }
+
+    const url = payload?.url ?? null;
+
+    const pathParts = url.split('/');
+    const handle = pathParts.pop() ?? null;
+
+    const normalizedDirectory = sanitizedDir === 'unsorted' ? null : sanitizedDir;
+    if (handle) {
+      try {
+        await appendMedia({
+          handle,
+          userId: user.id,
+          directory: normalizedDirectory,
+          filename: safeFilename,
+          mimetype: file.mimetype || null,
+          size: file.size,
+          cdnUrl: url,
+          storagePath: `${storagePrefix}/${safeFilename}`,
+        });
+      } catch (err) {
+        console.error('Failed to persist media record after upload', err);
+      }
+    }
+
+    return res.status(201).json({
+      handle,
+      url,
+      filename: safeFilename,
+      directory: normalizedDirectory,
+      storagePath: `${storagePrefix}/${safeFilename}`,
+      size: file.size,
+      mimetype: file.mimetype || null,
+    });
+  }
+);
 
 // Retrieve Filestack asset metadata (auth-gated)
 // Show dimensions, sort images, helpful info for inspector (height/width)
@@ -296,7 +296,7 @@ router.get('/files', requireAccess, async (req: AuthedRequest, res: Response) =>
   let sanitizedDir: string | null = null;
   try {
     if (rawDir && rawDir !== '/') {
-      sanitizedDir = sanitizeSegment(rawDir, 'directory');
+      sanitizedDir = sanitizeDirname(rawDir);
     } else if (rawDir === '/') {
       sanitizedDir = '';
     }
@@ -314,9 +314,9 @@ router.get('/files', requireAccess, async (req: AuthedRequest, res: Response) =>
            filename,
            mime_type AS mimetype,
            size_bytes AS size,
-           width,
-           height,
-           metadata,
+           NULL::INTEGER AS width,
+           NULL::INTEGER AS height,
+           NULL::JSONB AS metadata,
            cdn_url,
            storage_path,
            created_at,

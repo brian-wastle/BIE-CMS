@@ -1,6 +1,6 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, FormControl, ReactiveFormsModule } from '@angular/forms';
 
 type UploadStatus = 'pending' | 'uploading' | 'success' | 'error';
 
@@ -27,39 +27,43 @@ const UNSORTED_KEY = '__unsorted__';
 @Component({
   selector: 'app-media-upload',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  providers: [DatePipe],
   templateUrl: './media-upload.component.html',
   styleUrl: './media-upload.component.scss'
 })
 export class MediaUploadComponent {
   readonly folderIcon = 'assets/foldericon.svg';
-
+  // Track directories
   readonly queue = signal<UploadItem[]>([]);
   readonly directories = signal<DirectoryMeta[]>([]);
   readonly directoriesLoading = signal(true);
   readonly directoryError = signal<string | null>(null);
   readonly selectedDirectory = signal<string | null>(null);
-  readonly customDirectoryActive = signal(false);
+  readonly tempDirectories = signal<DirectoryMeta[]>([]); // just dirs created this session, linked to page refresh
+  readonly sessionDirectories = computed(() => this.tempDirectories().concat(this.directories()));  // all dirs persistent and temporary
+  
+  // Manage directories
+  readonly pendingDirectory = signal<DirectoryMeta | null>(null); // current directory under editing
+  readonly dirNameFC = new FormControl<string>('', { nonNullable: true });
 
+  // Page status
   readonly loading = signal(false);
   readonly dragActive = signal(false);
   readonly uploadError = signal<string | null>(null);
   readonly success = signal<string | null>(null);
 
-  directoryInput = '';
   mimetypesInput = '';
 
   readonly skeletonTiles = Array.from({ length: SKELETON_TILE_COUNT }, (_, index) => index);
   readonly hasFiles = computed(() => this.queue().length > 0);
-  readonly hasDirectories = computed(() => this.directories().length > 0);
+  readonly disableButtons = computed(() => this.loading() || this.pendingDirectory() !== null);
+  readonly hasDirectories = computed(() => this.sessionDirectories().length > 0);
   readonly totalSize = computed(() => this.queue().reduce((sum, item) => sum + item.file.size, 0));
   readonly selectedMimetypes = computed(() =>
-    this.mimetypesInput
-      .split(',')
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean)
+    this.mimetypesInput.split(',').map((value) => value.trim().toLowerCase()).filter(Boolean)
   );
-  readonly activeDirectoryLabel = computed(() => this.computeActiveDirectoryLabel());
+  readonly activeDirectoryLabel = computed(() => this.directoryLabel(this.selectedDirectory()));
 
   constructor() {
     void this.refreshDirectories();
@@ -78,18 +82,28 @@ export class MediaUploadComponent {
       }
       const payload = (await response.json()) as { directories?: DirectoryMeta[] };
       const list = Array.isArray(payload.directories) ? payload.directories : [];
-      const usingCustom = this.customDirectoryActive();
-      const selected = this.selectedDirectory();
-
       this.directories.set(list);
 
-      if (!usingCustom) {
-        const existingKeys = new Set(list.map((entry) => this.directoryKey(entry.directory ?? null)));
-        if (!existingKeys.has(this.directoryKey(selected))) {
-          this.selectedDirectory.set(null);
-          if (!this.directoryInput.trim()) {
-            this.directoryInput = '';
+      const serverKeys = new Set(list.map((entry) => this.normalizeDirectory(entry.directory ?? null)));
+
+      this.tempDirectories.update((dirs) =>
+        dirs.filter((entry) => {
+          if (entry === this.pendingDirectory()) {
+            return true;
           }
+          const key = this.normalizeDirectory(entry.directory ?? null);
+          return !serverKeys.has(key);
+        })
+      );
+
+      const selected = this.selectedDirectory();
+      if (selected !== null) {
+        const knownKeys = new Set([
+          ...serverKeys,
+          ...this.tempDirectories().map((entry) => this.normalizeDirectory(entry.directory ?? null))
+        ]);
+        if (!knownKeys.has(this.normalizeDirectory(selected))) {
+          this.selectedDirectory.set(null);
         }
       }
     } catch (err) {
@@ -100,10 +114,73 @@ export class MediaUploadComponent {
     }
   }
 
-  triggerFileDialog(input: HTMLInputElement) {
-    input.click();
+  addTempDirectory() {
+    if (this.pendingDirectory()) {
+      return;
+    }
+    const newDir: DirectoryMeta = { directory: '', itemCount: 0, lastUploaded: null };
+    this.tempDirectories.update((dirs) => [newDir, ...dirs]);
+    this.dirNameFC.setValue('');
+    this.pendingDirectory.set(newDir);
+    this.directoryError.set(null);
   }
 
+  savePendingDirectory() {
+    const pending = this.pendingDirectory();
+    if (!pending) {
+      return;
+    }
+    const error = this.pendingDirectoryError();
+    if (error) {
+      return;
+    }
+    const name = this.dirNameFC.value.trim();
+    this.tempDirectories.update((dirs) =>
+      dirs.map((entry) => (entry === pending ? { ...entry, directory: name, lastUploaded: null } : entry))
+    );
+    this.pendingDirectory.set(null);
+    this.dirNameFC.setValue('');
+  }
+
+  cancelPendingDirectory() {
+    const pending = this.pendingDirectory();
+    if (!pending) {
+      return;
+    }
+    this.tempDirectories.update((dirs) => dirs.filter((entry) => entry !== pending));
+    this.pendingDirectory.set(null);
+    this.dirNameFC.setValue('');
+  }
+
+  pendingDirectoryError(): string | null {
+    const pending = this.pendingDirectory();
+    if (!pending) {
+      return null;
+    }
+    const raw = this.dirNameFC.value;
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return 'Folder name is required.';
+    }
+    const key = this.normalizeDirectory(trimmed);
+    const duplicate = this.sessionDirectories().some((entry) => {
+      if (entry === pending) {
+        return false;
+      }
+      return this.normalizeDirectory(entry.directory ?? null) === key;
+    });
+    if (duplicate) {
+      return 'That folder already exists.';
+    }
+    return null;
+  }
+
+  // Pop-up file picker on "dropzone" HTML input element
+  triggerFileDialog(input: HTMLInputElement) {
+    input.showPicker();
+  }
+
+  //Handle file selection
   onFileInput(event: Event) {
     const target = event.target as HTMLInputElement | null;
     const files = target?.files;
@@ -114,17 +191,14 @@ export class MediaUploadComponent {
       target.value = '';
     }
   }
-
   onDragOver(event: DragEvent) {
     event.preventDefault();
     this.dragActive.set(true);
   }
-
   onDragLeave(event: DragEvent) {
     event.preventDefault();
     this.dragActive.set(false);
   }
-
   onFileDrop(event: DragEvent) {
     event.preventDefault();
     const files = event.dataTransfer?.files;
@@ -133,7 +207,6 @@ export class MediaUploadComponent {
     }
     this.dragActive.set(false);
   }
-
   onSelectFiles(list: FileList | File[]) {
     const incoming: File[] = Array.from(list);
     let added = 0;
@@ -164,11 +237,9 @@ export class MediaUploadComponent {
       this.success.set(null);
     }
   }
-
   removeFromQueue(id: string) {
     this.queue.update((items) => items.filter((item) => item.id !== id));
   }
-
   clearQueue() {
     this.queue.set([]);
     this.uploadError.set(null);
@@ -176,34 +247,17 @@ export class MediaUploadComponent {
   }
 
   onDirectorySelect(entry: DirectoryMeta) {
-    const directory = entry.directory ?? null;
-    this.selectedDirectory.set(directory);
-    this.customDirectoryActive.set(false);
-    this.directoryInput = directory ?? '';
+    if (this.pendingDirectory()) {
+      return;
+    }
+    const selected = entry.directory?.trim();
+    this.selectedDirectory.set(selected || null);
     this.uploadError.set(null);
     this.success.set(null);
   }
 
-  onDirectoryInputChange(value: string) {
-    this.directoryInput = value;
-    const trimmed = value.trim();
-    if (!trimmed) {
-      this.customDirectoryActive.set(false);
-      this.selectedDirectory.set(null);
-      return;
-    }
-    const match = this.directories().find((entry) => entry.directory === trimmed);
-    if (match) {
-      this.customDirectoryActive.set(false);
-      this.selectedDirectory.set(match.directory ?? null);
-    } else {
-      this.customDirectoryActive.set(true);
-      this.selectedDirectory.set(trimmed);
-    }
-  }
-
   directoryLabel(directory: string | null) {
-    return directory ?? UNSORTED_LABEL;
+    return directory?.trim() || UNSORTED_LABEL;
   }
 
   itemCountLabel(count: number) {
@@ -211,10 +265,7 @@ export class MediaUploadComponent {
   }
 
   isDirectorySelected(directory: string | null) {
-    if (this.customDirectoryActive()) {
-      return false;
-    }
-    return this.directoryKey(this.selectedDirectory()) === this.directoryKey(directory ?? null);
+    return this.normalizeDirectory(this.selectedDirectory()) === this.normalizeDirectory(directory ?? null);
   }
 
   formatSize(bytes: number) {
@@ -326,21 +377,12 @@ export class MediaUploadComponent {
   }
 
   private resolveActiveDirectory(): string | null {
-    const input = this.directoryInput.trim();
-    if (this.customDirectoryActive()) {
-      return input || null;
-    }
     const selected = this.selectedDirectory();
-    if (selected) {
-      const trimmed = selected.trim();
-      if (trimmed) {
-        return trimmed;
-      }
+    if (!selected) {
+      return null;
     }
-    if (input) {
-      return input;
-    }
-    return null;
+    const trimmed = selected.trim();
+    return trimmed || null;
   }
 
   private matchesMimetype(fileType: string | undefined, allowed: string[]) {
@@ -373,24 +415,9 @@ export class MediaUploadComponent {
     this.queue.update((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }
 
-  private computeActiveDirectoryLabel() {
-    const selected = this.selectedDirectory();
-    if (this.customDirectoryActive()) {
-      const trimmed = selected?.trim() ?? '';
-      return trimmed || UNSORTED_LABEL;
-    }
-    if (selected === null) {
-      return UNSORTED_LABEL;
-    }
-    const trimmed = selected.trim();
-    return trimmed || UNSORTED_LABEL;
-  }
-
-  private directoryKey(directory: string | null) {
-    if (directory === null) {
-      return UNSORTED_KEY;
-    }
-    return directory;
+  private normalizeDirectory(directory: string | null) {
+    const value = directory?.trim();
+    return value || UNSORTED_KEY;
   }
 }
 

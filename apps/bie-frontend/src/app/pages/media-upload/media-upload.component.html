@@ -2,14 +2,19 @@
   <section class="directory-browser">
     <header class="directory-header">
       <div class="directory-title">
-        <h1>Media Directories</h1>
+        <h1>Media Browser</h1>
         <p class="directory-subtitle">
-          Select a folder below or define a custom path to control where uploads are stored.
+          Select a folder below or create a new one to control where uploads are stored.
         </p>
       </div>
-      <button type="button" class="refresh" (click)="refreshDirectories()" [disabled]="directoriesLoading()">
-        Refresh
-      </button>
+      <div class="browser-controls">
+        <button type="button" (click)="addTempDirectory()" [disabled]="disableButtons()">
+          New Folder
+        </button>
+        <button type="button" (click)="refreshDirectories()" [disabled]="disableButtons()">
+          Refresh
+        </button>
+      </div>
     </header>
 
     @if (directoryError()) {
@@ -27,26 +32,48 @@
       </div>
     } @else if (hasDirectories()) {
       <div class="directory-grid">
-        @for (entry of directories(); track entry.directory ?? $index) {
-          <button
-            type="button"
-            class="folder-tile"
-            [class.folder-tile--selected]="isDirectorySelected(entry.directory)"
-            (click)="onDirectorySelect(entry)"
-          >
-            <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
-            <span class="folder-name">{{ directoryLabel(entry.directory) }}</span>
-            <span class="folder-count">{{ itemCountLabel(entry.itemCount) }}</span>
-            @if (entry.lastUploaded) {
-              <span class="folder-meta">Updated {{ entry.lastUploaded | date: 'mediumDate' }}</span>
-            }
-          </button>
+        @for (entry of sessionDirectories(); track entry.directory ?? $index) {
+          @if (pendingDirectory() === entry) {
+            <div class="folder-tile folder-tile--editing">
+              <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+              <form class="folder-form" (ngSubmit)="savePendingDirectory()" novalidate>
+                <input
+                  type="text"
+                  name="newDirName"
+                  [formControl]="dirNameFC"
+                  placeholder="e.g. blog-assets/headers"
+                  autofocus
+                  (keydown.escape)="cancelPendingDirectory()"
+                />
+                @if (pendingDirectoryError()) {
+                  <p class="folder-error">{{ pendingDirectoryError() }}</p>
+                }
+                <div class="folder-edit-actions">
+                  <button type="submit" [disabled]="pendingDirectoryError() !== null">Save</button>
+                  <button type="button" (click)="cancelPendingDirectory()">Cancel</button>
+                </div>
+              </form>
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="folder-tile"
+              [class.folder-tile--selected]="isDirectorySelected(entry.directory)"
+              (click)="onDirectorySelect(entry)"
+              [disabled]="pendingDirectory() !== null"
+            >
+              <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+              <span class="folder-name">{{ directoryLabel(entry.directory) }}</span>
+              <span class="folder-count">{{ itemCountLabel(entry.itemCount) }}</span>
+              <span class="folder-meta">Updated {{ entry.lastUploaded | date }}</span>
+            </button>
+          }
         }
       </div>
     } @else {
       <div class="directory-empty">
         <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
-        <p>No directories yet. Enter a path below to create one with your next upload.</p>
+        <p>No directories yet. Use “New Folder” to create one for your next upload.</p>
       </div>
     }
   </section>
@@ -68,26 +95,6 @@
       <input #fileInput type="file" multiple (change)="onFileInput($event)" hidden />
     </div>
 
-    <div class="custom-directory">
-      <label>Active directory</label>
-      <input
-        type="text"
-        name="directory"
-        [ngModel]="directoryInput"
-        (ngModelChange)="onDirectoryInputChange($event)"
-        placeholder="e.g. blog-assets/headers"
-        [disabled]="loading()"
-      />
-      <small>Pick an existing folder or type a new path to create it automatically.</small>
-      <div class="custom-directory-badge">
-        <span class="badge-label">Current selection:</span>
-        <span class="badge-value">{{ activeDirectoryLabel() }}</span>
-        @if (customDirectoryActive()) {
-          <span class="badge-extra">Custom path</span>
-        }
-      </div>
-    </div>
-    
     @if (hasFiles()) {
       <ul class="file-queue">
         @for (item of queue(); track item.id) {

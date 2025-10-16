@@ -12,7 +12,7 @@
 }
 
 .canvas-layout.author-mode .block.selected {
-  outline: 2px solid #1976d2;
+  outline: 2px solid #38bdf8;
   outline-offset: 2px;
 }
 
@@ -38,6 +38,8 @@
   background: #fafafa;
   padding: 12px;
   border: 1px solid #eee;
+  border-radius: .75rem;
+  margin-top: 1rem;
 }
 
 .grid {
@@ -52,6 +54,7 @@
   padding: 8px;
   background: white;
   border: 1px dashed #ddd;
+  border-radius: .75rem;
 }
 
 .block {
@@ -63,7 +66,7 @@
 }
 
 .block.selected {
-  outline: 2px solid #1976d2;
+  outline: 2px solid #38bdf8;
   outline-offset: 2px;
 }
 
@@ -103,6 +106,8 @@
   background: #fff;
   padding: 12px;
   border: 1px solid #eee;
+  border-radius: .75rem;
+  margin-top: 1rem;
 }
 
 .inspector label {

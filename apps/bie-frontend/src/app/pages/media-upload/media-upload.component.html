@@ -34,7 +34,7 @@
       <div class="directory-grid">
         @for (entry of sessionDirectories(); track entry.directory ?? $index) {
           @if (pendingDirectory() === entry) {
-            <div class="folder-tile folder-tile--editing">
+            <div class="folder-tile folder-tile--editing folder-tile--selected">
               <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
               <form class="folder-form" (ngSubmit)="savePendingDirectory()" novalidate>
                 <input
@@ -60,12 +60,16 @@
               class="folder-tile"
               [class.folder-tile--selected]="isDirectorySelected(entry.directory)"
               (click)="onDirectorySelect(entry)"
-              [disabled]="pendingDirectory() !== null"
+              [disabled]="disableButtons()"
             >
               <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
-              <span class="folder-name">{{ directoryLabel(entry.directory) }}</span>
+              <span class="folder-name">{{ entry.directory?.trim() }}</span>
               <span class="folder-count">{{ itemCountLabel(entry.itemCount) }}</span>
-              <span class="folder-meta">Updated {{ entry.lastUploaded | date }}</span>
+              @if (entry.lastUploaded) {
+                <span class="folder-meta">Updated {{ entry.lastUploaded | date }}</span>
+              } @else {
+                <span class="folder-meta ">Updated {{ dateObj | date }}</span>
+              }
             </button>
           }
         }

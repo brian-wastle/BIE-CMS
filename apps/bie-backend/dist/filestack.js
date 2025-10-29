@@ -35,18 +35,19 @@ function sign(policyB64, secret) {
     return crypto.createHmac('sha256', secret).update(policyB64).digest('hex');
 }
 // Normalize directory supplied by user
-function sanitizeSegment(segment, label) {
-    if (!segment) {
-        throw new Error(`${label} is required`);
+function sanitizeDirname(dirPath) {
+    if (!dirPath) {
+        throw new Error(`Directory is required`);
     }
-    const parts = segment.split('/').filter(Boolean);
-    if (!parts.length)
-        throw new Error(`${label} is required`);
-    const sanitized = parts.map((part) => {
-        if (!/^[a-zA-Z0-9_-]{1,60}$/.test(part)) {
-            throw new Error(`${label} contains invalid characters`);
+    const dirArray = dirPath.split('/').filter(Boolean);
+    dirArray.forEach(dir => dir.toLowerCase());
+    if (!dirArray.length)
+        throw new Error(`Directory is required`);
+    const sanitized = dirArray.map((dir) => {
+        if (!/^[a-zA-Z0-9_-]{1,60}$/.test(dir)) {
+            throw new Error(`Retry name '${dir}': contains invalid characters`);
         }
-        return part;
+        return dir;
     });
     return sanitized.join('/');
 }
@@ -100,10 +101,12 @@ function buildPolicyPayload(expiryEpoch, pathPrefix, mimetypes) {
         payload.mimetypes = mimetypes;
     return payload;
 }
-// Issues a signed Filestack policy for emdia upload
+// Issues a signed Filestack policy for media upload
 // Stores to user's optional directory
 // Blank directories default to "Unsorted"
+// TODO: The current buildPolicyPayload function does not allow for deletion of files, and a separate policy is needed
 router.post('/policy', requireAccess, async (req, res) => {
+    // Zod ts validation allows for .safeParse
     const schema = z.object({
         directory: z.string().optional(),
         mimetypes: z.array(z.string()).optional(),
@@ -114,11 +117,11 @@ router.post('/policy', requireAccess, async (req, res) => {
     }
     const { directory, mimetypes } = parseResult.data;
     const user = req.user;
-    // Take user, create path from user's dir input, calc expiry
-    // Build payload, b64 expectedd by FS, signed
+    // Build the expected FS payload: Take user, create path from user's dir input from browser, calc expiry
+    // Then convert to b64 expected by FS, policy is then signed
     let sanitizedDir;
     try {
-        sanitizedDir = directory ? sanitizeSegment(directory, 'directory') : 'Unsorted';
+        sanitizedDir = directory ? sanitizeDirname(directory) : 'Unsorted';
     }
     catch (err) {
         return res.status(400).json({ error: err.message });
@@ -150,7 +153,7 @@ router.post('/upload', requireAccess, upload.single('fileUpload'), async (req, r
     const rawDirectory = typeof req.body?.directory === 'string' ? req.body.directory.trim() : '';
     let sanitizedDir;
     try {
-        sanitizedDir = rawDirectory ? sanitizeSegment(rawDirectory, 'directory') : 'Unsorted';
+        sanitizedDir = rawDirectory ? sanitizeDirname(rawDirectory) : 'unsorted';
     }
     catch (err) {
         return res.status(400).json({ error: err.message });
@@ -201,9 +204,10 @@ router.post('/upload', requireAccess, upload.single('fileUpload'), async (req, r
         console.error('Unexpected Filestack upload response', raw);
         return res.status(502).json({ error: 'Unexpected response from Filestack upload service' });
     }
-    const handle = payload?.handle ?? null;
-    const url = payload?.url ?? (handle ? `${CDN_BASE}/${handle}` : null);
-    const normalizedDirectory = sanitizedDir === 'Unsorted' ? null : sanitizedDir;
+    const url = payload?.url ?? null;
+    const pathParts = url.split('/');
+    const handle = pathParts.pop() ?? null;
+    const normalizedDirectory = sanitizedDir === 'unsorted' ? null : sanitizedDir;
     if (handle) {
         try {
             await appendMedia({
@@ -243,6 +247,7 @@ router.get('/metadata/:handle', requireAccess, async (req, res) => {
     res.json(json);
 });
 // Return the files within a specific directory of the current user from DB
+// Expects 2 params: directory and sort (created_desc, created_asc, or filename)
 router.get('/files', requireAccess, async (req, res) => {
     const user = req.user;
     const rawDir = typeof req.query.directory === 'string' ? req.query.directory.trim() : '';
@@ -250,7 +255,7 @@ router.get('/files', requireAccess, async (req, res) => {
     let sanitizedDir = null;
     try {
         if (rawDir && rawDir !== '/') {
-            sanitizedDir = sanitizeSegment(rawDir, 'directory');
+            sanitizedDir = sanitizeDirname(rawDir);
         }
         else if (rawDir === '/') {
             sanitizedDir = '';
@@ -280,7 +285,7 @@ router.get('/files', requireAccess, async (req, res) => {
     FROM ${MEDIA_TABLE}
     WHERE owner_user_id=$1
       AND is_deleted = FALSE
-      AND COALESCE(directory_path, '') = $2
+      AND directory_path = $2
     ORDER BY ${orderBy};
   `;
     try {
@@ -296,13 +301,13 @@ router.get('/files', requireAccess, async (req, res) => {
 router.get('/directories', requireAccess, async (req, res) => {
     const user = req.user;
     const sql = `
-    SELECT COALESCE(directory_path, '') AS directory,
+    SELECT directory_path AS directory,
            COUNT(*) AS item_count,
            MAX(created_at) AS last_uploaded
     FROM ${MEDIA_TABLE}
     WHERE owner_user_id=$1
       AND is_deleted = FALSE
-    GROUP BY COALESCE(directory_path, '')
+    GROUP BY directory_path
     ORDER BY last_uploaded DESC NULLS LAST, directory ASC;
   `;
     try {

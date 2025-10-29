@@ -1,0 +1,62 @@
+<div class="browser-window">
+  @if (directoryError()) {
+    <p class="error error--inline">{{ directoryError() }}</p>
+  }
+
+  @if (directoriesLoading()) {
+    <div class="directory-grid directory-grid--loading">
+      @for (tile of skeletonTiles; track tile) {
+        <div class="folder-tile folder-tile--loading">
+          <div class="folder-icon placeholder"></div>
+          <div class="folder-label placeholder"></div>
+        </div>
+      }
+    </div>
+  } @else if (hasDirectories()) {
+    <div class="directory-grid">
+      @for (entry of sessionDirectories(); track entry.directory ?? $index) {
+        @if (pendingDirectory() === entry) {
+          <div class="folder-tile folder-tile--editing folder-tile--selected">
+            <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+            <form class="folder-form" (ngSubmit)="savePendingDirectory()" novalidate>
+              <input
+                type="text"
+                name="newDirName"
+                [formControl]="dirNameFC"
+                placeholder="e.g. blog-assets/headers"
+                autofocus
+                (keydown.escape)="cancelPendingDirectory()" />
+              @if (pendingDirectoryError()) {
+                <p class="folder-error">{{ pendingDirectoryError() }}</p>
+              }
+              <div class="folder-edit-actions">
+                <button type="submit" [disabled]="pendingDirectoryError() !== null">Save</button>
+                <button type="button" (click)="cancelPendingDirectory()">Cancel</button>
+              </div>
+            </form>
+          </div>
+        } @else {
+          <button
+            type="button"
+            class="folder-tile"
+            [class.folder-tile--selected]="isDirectorySelected(entry.directory)"
+            (click)="onDirectorySelect(entry)">
+            <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+            <span class="folder-name">{{ entry.directory?.trim() }}</span>
+            <span class="folder-count">{{ itemCountLabel(entry.itemCount) }}</span>
+            @if (entry.lastUploaded) {
+              <span class="folder-meta">Updated {{ entry.lastUploaded | date }}</span>
+            } @else {
+              <span class="folder-meta">Updated {{ today | date }}</span>
+            }
+          </button>
+        }
+      }
+    </div>
+  } @else {
+    <div class="directory-empty">
+      <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+      <p>No directories yet. Use “New Folder” to create one for your next upload.</p>
+    </div>
+  }
+</div>

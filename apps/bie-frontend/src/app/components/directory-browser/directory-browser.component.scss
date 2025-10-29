@@ -1,0 +1,166 @@
+@use 'sass:color';
+
+$surface: #faf9fd;
+$surface-elevated: #f0eff3;
+$surface-accent: #dad9de;
+$border-muted: #86b8ac40;
+$border-accent: #7ba09733;
+$text-dark: #3e4e5e;
+$accent-green: #419970;
+$accent-soft: #0e997929;
+$error: #f87171;
+$error-soft: #f8717133;
+$success: #4ade80;
+
+.browser-window {
+  padding: 0 clamp(1.5rem, 4vw, 2rem) clamp(1.5rem, 4vw, 2rem) clamp(1.5rem, 4vw, 2rem);
+}
+
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 200px));
+  gap: 1.25rem;
+}
+
+.folder-tile {
+  padding: 1.25rem 1rem;
+  background: $surface-elevated;
+  border-style: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+  cursor: pointer;
+  margin: 1px;
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.folder-tile:hover {
+  border-color: $border-accent;
+  background: $surface-accent;
+  transform: translateY(-1px);
+}
+
+.folder-tile--selected {
+  border: 1px solid $accent-green;
+  border-radius: 0.25rem;
+  background: $accent-soft;
+  margin: 0;
+}
+
+.folder-tile--loading {
+  border: 1px dashed $border-accent;
+  border-radius: 0.75rem;
+  background: $surface-accent;
+  cursor: default;
+  margin: 0;
+}
+
+.folder-tile--editing {
+  cursor: default;
+  margin: 1px;
+}
+
+.folder-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.folder-form input {
+  width: 85%;
+  background: $surface;
+  border: 1px solid $border-accent;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  color: $text-dark;
+}
+
+.folder-form input:focus {
+  outline: none;
+  border-color: $accent-green;
+  box-shadow: 0 0 0 2px $accent-soft;
+}
+
+.folder-error {
+  margin: 0;
+  color: color.adjust($error, $lightness: 25%);
+  font-size: 0.8rem;
+}
+
+.folder-edit-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.folder-edit-actions button {
+  border: 1px solid $border-accent;
+  border-radius: 999px;
+  background: $surface-accent;
+  color: $text-dark;
+  padding: 0.6rem 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.folder-edit-actions button:first-child {
+  background: $accent-green;
+  color: $surface;
+  border-color: $accent-green;
+}
+
+.folder-edit-actions button:hover:not(:disabled) {
+  border-color: $accent-green;
+  background: $surface;
+  transform: translateY(-1px);
+}
+
+.folder-edit-actions button:first-child:hover:not(:disabled) {
+  background: color.adjust($accent-green, $lightness: 5%);
+  border-color: color.adjust($accent-green, $lightness: 5%);
+  color: $surface;
+}
+
+.folder-edit-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.folder-name {
+  padding-left: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.folder-count,
+.folder-meta {
+  padding-left: 8px;
+  font-size: 0.85rem;
+  color: $text-dark;
+}
+
+.directory-empty {
+  border: 1px dashed #94a3b84d;
+  border-radius: 1rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: $text-dark;
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+}
+
+.error {
+  background: $error-soft;
+  border-radius: 0.9rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color.adjust($error-soft, $lightness: 10%);
+  color: color.adjust($error, $lightness: 25%);
+}
+
+.error--inline {
+  margin: 0;
+}

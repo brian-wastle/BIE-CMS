@@ -1,6 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -24,20 +24,35 @@ import { MatButtonModule } from '@angular/material/button';
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnInit {
-  title = 'Blogks';
+  title = 'BLOGKS';
   private bp = inject(BreakpointObserver);
   sidenavMode: 'side' | 'over' = 'side';
-  sidenavOpened = true;
+  sidenavOpened: boolean = true;
+  opened: WritableSignal<boolean> = signal(true);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  pageTitle = signal<string>('');
 
   ngOnInit(): void {
     this.bp.observe('(max-width: 768px)').subscribe(res => {
       if (res.matches) {
         this.sidenavMode = 'over';
         this.sidenavOpened = false;
+        this.opened.set(false);
       } else {
         this.sidenavMode = 'side';
         this.sidenavOpened = true;
+        this.opened.set(true);
       }
     });
+  }
+
+  onActivate(cmp: any) {
+    this.pageTitle.set(cmp?.pageTitle ?? this.route.firstChild?.snapshot.data['pageTitle'] ?? '');
+  }
+
+  toggleNavState() {
+    this.opened.set(!this.opened())
   }
 }

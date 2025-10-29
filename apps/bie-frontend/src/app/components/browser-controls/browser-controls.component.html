@@ -1,0 +1,37 @@
+<div class="browser-controls">
+  <div class="view-controls">
+    <button
+      class="view-button view-button-left"
+      mat-mini-fab
+      type="button"
+      aria-label="List view"
+      [class.view-button--active]="viewMode === 'list'"
+      (click)="onViewModeSelect('list')">
+      <mat-icon>view_list</mat-icon>
+    </button>
+    <button
+      class="view-button view-button-center"
+      mat-mini-fab
+      type="button"
+      aria-label="Grid view"
+      [class.view-button--active]="viewMode === 'grid'"
+      (click)="onViewModeSelect('grid')">
+      <mat-icon>view_module</mat-icon>
+    </button>
+    <button
+      class="view-button view-button-right"
+      mat-mini-fab
+      type="button"
+      aria-label="Details view"
+      [class.view-button--active]="viewMode === 'details'"
+      (click)="onViewModeSelect('details')">
+      <mat-icon>view_sidebar</mat-icon>
+    </button>
+  </div>
+  <button type="button" class="folder-button" (click)="onCreateFolder()" [disabled]="disabled">
+    New Folder
+  </button>
+  <button type="button" class="folder-button" (click)="onRefresh()" [disabled]="disabled">
+    Refresh Folders
+  </button>
+</div>

@@ -5,6 +5,7 @@ import multer from 'multer';
 import { Pool } from 'pg';
 import { z } from 'zod';
 
+
 import { requireAccess } from './auth.js';
 
 const router = express.Router();
@@ -29,7 +30,7 @@ const upload = multer({
   limits: { fileSize: MAX_UPLOAD_BYTES },
 });
 
-// Combine cookie and login
+// Append browser/middleware request to Express Request object
 type AuthedRequest = Request & {
   user?: { id: string; email: string };
   file?: Express.Multer.File;
@@ -130,7 +131,9 @@ function buildPolicyPayload(expiryEpoch: number, pathPrefix: string, mimetypes?:
 // Issues a signed Filestack policy for media upload
 // Stores to user's optional directory
 // Blank directories default to "Unsorted"
+// TODO: The current buildPolicyPayload function does not allow for deletion of files, and a separate policy is needed
 router.post('/policy', requireAccess, async (req: AuthedRequest, res: Response) => {
+  // Zod ts validation allows for .safeParse
   const schema = z.object({
     directory: z.string().optional(),
     mimetypes: z.array(z.string()).optional(),
@@ -143,8 +146,9 @@ router.post('/policy', requireAccess, async (req: AuthedRequest, res: Response) 
 
   const { directory, mimetypes } = parseResult.data;
   const user = req.user!;
-  // Take user, create path from user's dir input, calc expiry
-  // Build payload, b64 expectedd by FS, signed
+
+  // Build the expected FS payload: Take user, create path from user's dir input from browser, calc expiry
+  // Then convert to b64 expected by FS, policy is then signed
   let sanitizedDir: string | undefined;
   try {
     sanitizedDir = directory ? sanitizeDirname(directory) : 'Unsorted';
@@ -288,6 +292,7 @@ router.get('/metadata/:handle', requireAccess, async (req: AuthedRequest, res: R
 });
 
 // Return the files within a specific directory of the current user from DB
+// Expects 2 params: directory and sort (created_desc, created_asc, or filename)
 router.get('/files', requireAccess, async (req: AuthedRequest, res: Response) => {
   const user = req.user!;
   const rawDir = typeof req.query.directory === 'string' ? req.query.directory.trim() : '';
@@ -324,7 +329,7 @@ router.get('/files', requireAccess, async (req: AuthedRequest, res: Response) =>
     FROM ${MEDIA_TABLE}
     WHERE owner_user_id=$1
       AND is_deleted = FALSE
-      AND COALESCE(directory_path, '') = $2
+      AND directory_path = $2
     ORDER BY ${orderBy};
   `;
 
@@ -341,13 +346,13 @@ router.get('/files', requireAccess, async (req: AuthedRequest, res: Response) =>
 router.get('/directories', requireAccess, async (req: AuthedRequest, res: Response) => {
   const user = req.user!;
   const sql = `
-    SELECT COALESCE(directory_path, '') AS directory,
+    SELECT directory_path AS directory,
            COUNT(*) AS item_count,
            MAX(created_at) AS last_uploaded
     FROM ${MEDIA_TABLE}
     WHERE owner_user_id=$1
       AND is_deleted = FALSE
-    GROUP BY COALESCE(directory_path, '')
+    GROUP BY directory_path
     ORDER BY last_uploaded DESC NULLS LAST, directory ASC;
   `;
 

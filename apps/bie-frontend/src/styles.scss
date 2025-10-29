@@ -13,7 +13,17 @@ html {
     typography: Roboto,
     density: 0,
   ));
-}/* You can add global styles to this file, and also import other style files */
+
+  @include mat.list-overrides((
+    list-item-label-text-color: #ffefdf,
+    list-item-hover-label-text-color: #abca9e,
+    list-item-label-text-size: 18px
+  ));
+
+  @include mat.icon-overrides((
+    color: #3e4e5e,
+  ));
+}
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
@@ -32,4 +42,38 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
+}
+
+@keyframes placeholder-pulse {
+  0% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
+}
+
+.directory-grid--loading .folder-icon.placeholder,
+.directory-grid--loading .folder-label.placeholder {
+  width: 100%;
+  height: 42px;
+  background: #dad9de;
+  border-radius: 0.75rem;
+  animation: placeholder-pulse 1.4s ease-in-out infinite;
+}
+
+.directory-grid--loading .folder-label.placeholder {
+  margin-top: 0.75rem;
+  height: 18px;
+}
+
+.directory-browser .folder-icon {
+  width: 96px;
+  height: 96px;
+  filter: brightness(0) saturate(100%) invert(23%) sepia(6%) saturate(4164%) hue-rotate(116deg) brightness(92%) contrast(80%);
 }

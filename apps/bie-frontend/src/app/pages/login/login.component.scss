@@ -1,0 +1,37 @@
+form {
+    min-height: 400px;
+}
+
+p {
+    margin-bottom: 36px;
+}
+
+button {
+    width: 80px;
+    margin-left: 400px;
+}
+
+.login-form-grid {
+    display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  max-width: 480px;
+  margin-bottom: 24px;
+}
+
+.login-form-grid label {
+  justify-self: end;                      /* right-align labels */
+}
+
+.login-form-grid input {
+  width: 100%;                            /* let inputs fill their cell */
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+@media (max-width: 480px) {
+  .login-form-grid { grid-template-columns: 1fr; }
+  .login-form-grid label { justify-self: start; }
+}
+

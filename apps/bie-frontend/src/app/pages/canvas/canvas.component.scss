@@ -1,12 +1,18 @@
+@use 'sass:color';
+
+$white: #fff;
+$raised-area: #eefaff40; //#fafafa
+
+
 // Author Mode
 .canvas-layout.author-mode .grid {
-  background: white;
+  background: $white;
   border: 1px dashed #ddd;
   padding: 8px;
 }
 
 .canvas-layout.author-mode .block {
-  background: #fff;
+  background: $white;
   border: 1px solid #ddd;
   padding: 8px;
 }
@@ -35,7 +41,7 @@
 
 // Canvas
 .canvas-area {
-  background: #fafafa;
+  background: $raised-area;
   padding: 12px;
   border: 1px solid #eee;
   border-radius: .75rem;
@@ -52,14 +58,14 @@
   gap: var(--gap);
   min-height: 100px;
   padding: 8px;
-  background: white;
+  background: $white;
   border: 1px dashed #ddd;
   border-radius: .75rem;
 }
 
 .block {
   position: relative;
-  background: #fff;
+  background: $white;
   border: 1px solid #ddd;
   padding: 8px;
   min-width: 280px;
@@ -73,7 +79,7 @@
 .chrome {
   display: flex;
   align-items: center;
-  justify-content:space-between;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
 
@@ -95,7 +101,7 @@
 }
 
 .chrome .mat-icon {
-  position:relative;
+  position: relative;
 }
 
 .component-palette,
@@ -103,7 +109,7 @@
   display: grid;
   gap: 8px;
   align-content: start;
-  background: #fff;
+  background: $raised-area;
   padding: 12px;
   border: 1px solid #eee;
   border-radius: .75rem;

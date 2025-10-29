@@ -1,10 +1,12 @@
-import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, signal, inject } from '@angular/core';
-import { FormsModule, FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MediaLibraryService } from '../../services/media-library/media-library.service';
-import type { DirectoryMeta } from 'bie-models';
+import { CommonModule } from '@angular/common';
+import { Component, ViewChild, computed, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { BrowserControlsComponent } from '../../components/browser-controls/browser-controls.component';
+import { DirectoryBrowserComponent } from '../../components/directory-browser/directory-browser.component';
+import { MediaPickerComponent } from '../../components/media-picker/media-picker.component';
 
 type UploadStatus = 'pending' | 'uploading' | 'success' | 'error';
+type ViewMode = 'list' | 'grid' | 'details';
 
 interface UploadItem {
   id: string;
@@ -17,161 +19,62 @@ interface UploadItem {
 }
 
 const UNSORTED_LABEL = 'Unsorted';
-const SKELETON_TILE_COUNT = 6;
-const UNSORTED_KEY = '__unsorted__';
 
 @Component({
   selector: 'app-media-upload',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
-  providers: [DatePipe],
+  imports: [CommonModule, FormsModule, BrowserControlsComponent, DirectoryBrowserComponent, MediaPickerComponent],
   templateUrl: './media-upload.component.html',
   styleUrl: './media-upload.component.scss'
 })
 export class MediaUploadComponent {
-  private mls = inject(MediaLibraryService);
-  readonly dateObj: Date = new Date();
-  readonly folderIcon = 'assets/foldericon.svg';
-  // Track directories
-  readonly queue = signal<UploadItem[]>([]);
-  readonly directories = signal<DirectoryMeta[]>([]);
-  readonly directoriesLoading = signal(true);
-  readonly directoryError = signal<string | null>(null);
-  readonly tempDirectories = this.mls.tempDirectories; // persisted new dirs that exist only within the current session
-  readonly sessionDirectories = computed(() => this.tempDirectories().concat(this.directories()));  // all dirs persistent and temporary
-  readonly selectedDirectory = signal<string | null>(null);
-  readonly activeDirectoryLabel = computed(() => this.selectedDirectory()?.trim());
-  private lastSelectedDirectory: string | null = null;
-  
-  // Manage directories
-  readonly pendingDirectory = signal<DirectoryMeta | null>(null); // current directory under editing
-  readonly dirNameFC = new FormControl<string>('', { nonNullable: true });
+  @ViewChild(MediaPickerComponent) mediaPicker?: MediaPickerComponent;
+  @ViewChild(DirectoryBrowserComponent) directoryBrowser?: DirectoryBrowserComponent;
 
-  // Page status
+  readonly folderIcon = 'assets/foldericon.svg';
+  readonly queue = signal<UploadItem[]>([]);
+  readonly selectedDirectory = signal<string | null>(null);
+  readonly activeDirectoryLabel = computed(() => this.selectedDirectory()?.trim() || UNSORTED_LABEL);
+  readonly pageView = signal<ViewMode>('list');
   readonly loading = signal(false);
   readonly dragActive = signal(false);
   readonly uploadError = signal<string | null>(null);
   readonly success = signal<string | null>(null);
-
-  mimetypesInput = '';
-
-  readonly skeletonTiles = Array.from({ length: SKELETON_TILE_COUNT }, (_, index) => index);
+  readonly directoryControlsDisabled = signal(false);
+  readonly browserControlsDisabled = computed(() => this.loading() || this.directoryControlsDisabled());
   readonly hasFiles = computed(() => this.queue().length > 0);
-  readonly disableButtons = computed(() => this.loading() || this.pendingDirectory() !== null);
-  readonly hasDirectories = computed(() => this.sessionDirectories().length > 0);
   readonly totalSize = computed(() => this.queue().reduce((sum, item) => sum + item.file.size, 0));
   readonly selectedMimetypes = computed(() =>
     this.mimetypesInput.split(',').map((value) => value.trim().toLowerCase()).filter(Boolean)
   );
 
-  constructor() {
-    void this.refreshDirectories();
-  }
+  mimetypesInput = '';
 
-  // Re-fetches directories, but maintains any temp empty directories that currently only exist in browser
   async refreshDirectories() {
-    this.directoriesLoading.set(true);
-    this.directoryError.set(null);
-    try {
-      const directories = await this.mls.fetchDirectories();
-      this.directories.set(directories);
-      const serverKeys = new Set(directories.map((entry) => entry.directory || null));
-
-      this.tempDirectories.update((dirs) =>
-        dirs.filter((entry) => {
-          if (entry === this.pendingDirectory()) {
-            return true;
-          }
-
-          return !serverKeys.has(entry.directory);
-        })
-      );
-
-      const selected = this.selectedDirectory();
-      if (selected !== null) {
-        const knownKeys = new Set([
-          ...serverKeys,
-          ...this.tempDirectories().map((entry) => entry.directory ?? null)
-        ]);
-        if (!knownKeys.has(selected)) {
-          this.selectedDirectory.set(null);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load media directories', err);
-      this.directoryError.set((err as Error).message ?? 'Failed to load directories');
-    } finally {
-      this.directoriesLoading.set(false);
-    }
+    await this.directoryBrowser?.refresh();
+    await this.mediaPicker?.reload();
   }
 
-  // Adds a blank DirectoryMeta object to tempDirectories, and sets the pendingDirectory signal
-  // This triggers configuration of the new folder
-  addTempDirectory() {
-    if (this.pendingDirectory()) {
-      return;
-    }
-    this.lastSelectedDirectory = this.selectedDirectory();
-    const newDir: DirectoryMeta = { directory: '', itemCount: 0, lastUploaded: null };
-    this.tempDirectories.update((dirs) => [newDir, ...dirs]);
-    this.dirNameFC.setValue('');
-    this.pendingDirectory.set(newDir);
-    this.directoryError.set(null);
-    this.selectedDirectory.set(null);
+  onDirectorySelected(directory: string | null) {
+    this.selectedDirectory.set(directory);
+    this.uploadError.set(null);
+    this.success.set(null);
   }
 
-  savePendingDirectory() {
-    const pending = this.pendingDirectory();
-    if (!pending) {
-      return;
-    }
-    const error = this.pendingDirectoryError();
-    if (error) {
-      return;
-    }
-    const dirName = this.dirNameFC.value;
-    const normalizedName = this.mls.normalizeDirectory(dirName);
-    this.tempDirectories.update((dirs) =>
-      dirs.map((entry) => (entry === pending ? { ...entry, directory: normalizedName, lastUploaded: null } : entry))
-    );
-    this.pendingDirectory.set(null);
-    this.selectedDirectory.set(normalizedName);
-    this.lastSelectedDirectory = null;
-    this.dirNameFC.setValue('');
+  onDirectoryControlsDisabledChange(disabled: boolean) {
+    this.directoryControlsDisabled.set(disabled);
   }
 
-  cancelPendingDirectory() {
-    const pending = this.pendingDirectory();
-    if (!pending) {
-      return;
-    }
-    this.tempDirectories.update((dirs) => dirs.filter((entry) => entry !== pending));
-    this.pendingDirectory.set(null);
-    this.selectedDirectory.set(this.lastSelectedDirectory ?? null);
-    this.lastSelectedDirectory = null;
-    this.dirNameFC.setValue('');
+  onBrowserViewModeChange(mode: ViewMode) {
+    this.pageView.set(mode);
   }
 
-  pendingDirectoryError(): string | null {
-    const pending = this.pendingDirectory();
-    if (!pending) {
-      return null;
-    }
-    const rawName = this.dirNameFC.value;
-    if (!rawName) {
-      return 'Folder name is required.';
-    }
-    const key = this.mls.normalizeDirectory(rawName);
-    const duplicate = this.sessionDirectories().some((entry) => {
-      if (entry === pending) {
-        return false;
-      }
-      return this.mls.normalizeDirectory(entry.directory ?? null) === key;
-    });
-    if (duplicate) {
-      return 'That folder already exists.';
-    }
-    return null;
+  onCreateFolderRequested() {
+    this.directoryBrowser?.startCreateDirectory();
+  }
+
+  onRefreshFoldersRequested() {
+    void this.refreshDirectories();
   }
 
   // Pop-up file picker on "dropzone" HTML input element
@@ -245,23 +148,8 @@ export class MediaUploadComponent {
     this.success.set(null);
   }
 
-  onDirectorySelect(entry: DirectoryMeta) {
-    if (this.pendingDirectory()) {
-      return;
-    }
-    const selected = entry.directory?.trim();
-    this.selectedDirectory.set(selected || null);
-    this.uploadError.set(null);
-    this.success.set(null);
-  }
-
-  // Determine whether item count is singular or plural
-  itemCountLabel(count: number) {
-    return `${count} item${count === 1 ? '' : 's'}`;
-  }
-
-  isDirectorySelected(directory: string | null) {
-    return this.mls.normalizeDirectory(this.selectedDirectory()) === this.mls.normalizeDirectory(directory ?? null);
+  onMediaDeleted() {
+    void this.refreshDirectories();
   }
 
   formatSize(bytes: number) {
@@ -319,6 +207,7 @@ export class MediaUploadComponent {
       this.success.set('Upload complete!');
       this.uploadError.set(null);
       void this.refreshDirectories();
+      void this.mediaPicker?.reload();
     }
   }
 

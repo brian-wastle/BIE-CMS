@@ -3,22 +3,23 @@
 $surface: #faf9fd;
 $surface-elevated: #f0eff3;
 $surface-accent: #dad9de;
-$border-muted: #94a3b840;
-$border-accent: #94a3b833;
-$text-dark: #5e5e5e;
-$accent: #38bdf8;
-$accent-soft: #38bdf829;
+$border-muted: #86b8ac40;
+$border-accent: #7ba09733;
+$text-dark: #3e4e5e;
+$accent-green: #419970;
+$accent-soft: #0e997929;
 $success: #4ade80;
 $success-soft: #297a4733;
 $error: #f87171;
 $error-soft: #f8717133;
+$green-shadow: #0e997938;
+
 
 .asset-manager-layout {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 2.5rem;
-  padding: 2.5rem;
-  background: $surface;
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+  padding: clamp(1.25rem, 5vw, 2.5rem);
   color: $text-dark;
 }
 
@@ -39,197 +40,80 @@ $error-soft: #f8717133;
   background: $surface-elevated;
   border: 1px solid $border-muted;
   border-radius: .75rem;
-  padding: 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-.directory-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   gap: 1rem;
 }
 
 
-.directory-title {
-  max-width: 50%;
+.browser-top {
+  padding: clamp(1.25rem, 4vw, 2rem) clamp(1.5rem, 4vw, 2rem) 0 clamp(1.5rem, 4vw, 2rem);
 }
 
-.directory-title h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.75rem;
+.uploader-panel {
+  padding: clamp(1.5rem, 4.5vw, 2rem);
 }
 
-.directory-subtitle {
-  margin: 0;
-  color: $text-dark;
-}
-
-.browser-controls button {
+ul {
+  max-width: 30vw;
   border: 1px solid $border-muted;
-  border-radius: 999px;
-  background: transparent;
-  color: $text-dark;
-  margin: 0 0.2rem;
-  padding: 0.8rem 1.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+  border-radius: .25rem;
+  margin-top: 0;
+  padding: 8px;
+  padding-left: 36px;
 }
 
-.browser-controls button:hover:not(:disabled) {
-  border-color: $border-accent;
-  background: $surface-accent;
-  transform: translateY(-1px);
+@media (max-width: 768px) {
+  .asset-manager-layout {
+    padding: 1.5rem;
+    gap: 1.5rem;
+  }
+
+  ul {
+    min-width: 80%;
+  }
+
+  .browser-top {
+    padding: 1.25rem 1.25rem 0;
+  }
+
+  .uploader-panel {
+    padding: 1.25rem;
+  }
 }
 
-.browser-controls button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+@media (max-width: 480px) {
+  .asset-manager-layout {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .browser-top {
+    padding: 1rem 1rem 0;
+  }
+
+  .uploader-panel {
+    padding: 1rem;
+  }
+
+  .dropzone {
+    padding: 2rem 1rem;
+  }
 }
 
-.directory-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 200px));
-  gap: 1.25rem;
+li {
+  padding: 4px;
 }
 
-.folder-tile {
-  padding: 1.25rem 1rem;
-  background: $surface-elevated;
-  border-width: 0px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  align-items: flex-start;
-  cursor: pointer;
-}
-
-.folder-tile--selected {
-  border-color: $accent;
-  background: $accent-soft;
-  box-shadow: 0 0 0 2px #38bdf838;
-}
-
-.folder-tile--loading {
-  border: 1px dashed $border-accent;
-  background: $surface-accent;
-  cursor: default;
-}
-
-.folder-tile--editing {
-  cursor: default;
-}
-
-.folder-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.folder-form input {
-  width: 85%;
-  background: $surface;
-  border: 1px solid $border-accent;
-  border-radius: 0.75rem;
-  padding: 0.7rem 0.9rem;
-  color: $text-dark;
-}
-
-.folder-form input:focus {
-  outline: none;
-  border-color: $accent;
-  box-shadow: 0 0 0 2px #38bdf840;
-}
-
-.folder-error {
+.directory-tip {
   margin: 0;
-  color: lighten($error, 25%);
-  font-size: 0.8rem;
-}
-
-.folder-edit-actions {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.folder-edit-actions button {
-  border: 1px solid $border-accent;
-  border-radius: 999px;
-  background: $surface-accent;
-  color: $text-dark;
-  padding: 0.6rem 1.2rem;
-  font-weight: 600;
-  cursor: pointer;
-
-}
-
-.folder-edit-actions button:first-child {
-  background: $accent;
-  color: $surface;
-  border-color: $accent;
-}
-
-.folder-edit-actions button:hover:not(:disabled) {
-  border-color: $accent;
-  background: $surface-accent;
-  transform: translateY(-1px);
-}
-
-.folder-edit-actions button:first-child:hover:not(:disabled) {
-  background: lighten($accent, 5%);
-  border-color: lighten($accent, 5%);
-  color: $surface;
-}
-
-.folder-edit-actions button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.folder-icon {
-  width: 128px;
-  height: 128px;
-}
-
-.folder-name {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.folder-count,
-.folder-meta {
-  text-align: left;
-  font-size: 0.85rem;
   color: $text-dark;
 }
 
-.directory-grid--loading .folder-icon.placeholder,
-.directory-grid--loading .folder-label.placeholder {
+.directory-browser hr {
+  color: #000000;
+  size: 3px;
   width: 100%;
-  height: 42px;
-  background: $surface-accent;
-  border-radius: 0.75rem;
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-.directory-grid--loading .folder-label.placeholder {
-  margin-top: 0.75rem;
-  height: 18px;
-}
-
-.directory-empty {
-  border: 1px dashed #94a3b84d;
-  border-radius: 1rem;
-  padding: 2.5rem 1.5rem;
-  text-align: center;
-  color: $text-dark;
-  display: grid;
-  place-items: center;
-  gap: 1rem;
 }
 
 .dropzone {
@@ -242,9 +126,9 @@ $error-soft: #f8717133;
 }
 
 .dropzone--active {
-  border-color: $accent;
+  border-color: $accent-green;
   background: $accent-soft;
-  box-shadow: 0 0 0 2px #38bdf833;
+  box-shadow: 0 0 0 2px $green-shadow;
 }
 
 .dropzone-title {
@@ -270,7 +154,7 @@ $error-soft: #f8717133;
   border: none;
   border-radius: 50px;
   padding: 0.8rem 1.8rem;
-  background: $accent;
+  background: $accent-green;
   color: $surface;
   font-weight: 600;
   cursor: pointer;
@@ -284,7 +168,7 @@ $error-soft: #f8717133;
 
 .dropzone-actions button:not(:disabled):hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 28px #38bdf84d;
+  box-shadow: 0 14px 28px $green-shadow;
 }
 
 .file-queue {
@@ -339,7 +223,7 @@ $error-soft: #f8717133;
 
 .status-uploading {
   background: #38bdf833;
-  color: $accent;
+  color: $accent-green;
 }
 
 .status-success {
@@ -348,11 +232,11 @@ $error-soft: #f8717133;
 }
 
 .status-error {
-  color: lighten($error, 20%);
+  color: color.adjust($error, $lightness: 20%);
 }
 
 .status-link {
-  color: $accent;
+  color: $accent-green;
   text-decoration: underline;
 }
 
@@ -366,7 +250,7 @@ $error-soft: #f8717133;
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, $accent 0%, $success 100%);
+  background: linear-gradient(90deg, $accent-green 0%, $success 100%);
   width: 0;
   transition: width 200ms ease;
 }
@@ -424,8 +308,8 @@ $error-soft: #f8717133;
 
 .field input:focus {
   outline: none;
-  border-color: $accent;
-  box-shadow: 0 0 0 2px #38bdf840;
+  border-color: $accent-green;
+  box-shadow: 0 0 0 2px $green-shadow;
 }
 
 .field small {
@@ -446,7 +330,7 @@ $error-soft: #f8717133;
   border-radius: 0.9rem;
   padding: 0.75rem 1rem;
   border: 1px solid color.adjust($error-soft, $lightness: 10%);
-  color: lighten($error, 25%);
+  color: color.adjust($error, $lightness: 25%);
 }
 
 .error--inline {
@@ -458,7 +342,7 @@ $error-soft: #f8717133;
   border-radius: 0.9rem;
   padding: 0.75rem 1rem;
   border: 1px solid #4ade804d;
-  color: lighten($success, 25%);
+  color: color.adjust($success, $lightness: 25%);
 }
 
 .actions {
@@ -477,7 +361,7 @@ $error-soft: #f8717133;
 }
 
 .actions button:first-child {
-  background: $accent;
+  background: $accent-green;
   color: $surface;
 }
 
@@ -493,19 +377,5 @@ $error-soft: #f8717133;
 
 .actions button:not(:disabled):hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 28px #38bdf838;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0.6;
-  }
-
-  50% {
-    opacity: 0.3;
-  }
-
-  100% {
-    opacity: 0.6;
-  }
+  box-shadow: 0 14px 28px $green-shadow;
 }

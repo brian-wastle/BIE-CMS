@@ -1,32 +1,44 @@
 <mat-sidenav-container class="app-container">
   <!-- Sidebar Menu -->
-  <mat-sidenav
-    #sidenav
-    class="app-sidenav"
-    [mode]="sidenavMode"
-    [opened]="sidenavOpened"
-  >
-    <mat-toolbar color="primary">{{title}}</mat-toolbar>
-    <p class="cms-tagline">powered by <span style="font-style:italic">BIE-CMS</span></p>
-    <mat-nav-list>
+  <mat-sidenav #sidenav class="app-sidenav" [mode]="sidenavMode" [opened]="sidenavOpened">
+    <div class="flex-title">
+      <div class="corner-title">
+        <mat-toolbar class="toolbar-title">{{title}}</mat-toolbar>
+        <p class="cms-tagline">powered by <span style="font-style:italic">BIE-CMS</span></p>
+      </div>
+      <button mat-icon-button class="sidenav-menu-toggle" (click)="toggleNavState(); sidenav.toggle()"
+        aria-label="Toggle sidebar">
+        <mat-icon>keyboard_arrow_left</mat-icon>
+      </button>
+    </div>
+    <mat-nav-list class="nav-list">
       <a mat-list-item href="author">Canvas</a>
       <a mat-list-item href="upload">Media Upload</a>
       <a mat-list-item href="#">Blog</a>
     </mat-nav-list>
   </mat-sidenav>
   <!-- Main Content -->
-  <mat-sidenav-content>
-    <!-- Sidebar Toggle -->
-    <mat-toolbar color="primary">
-      <button mat-icon-button (click)="sidenav.toggle()" aria-label="Toggle sidebar">
-        <mat-icon>menu</mat-icon>
-      </button>
-      <span class="spacer"></span>
-    </mat-toolbar>
+  <mat-sidenav-content class="sidenav-content">
+    <!-- Sidebar Toggle/ Top Toolbar -->
+
+    @if (!opened()) {
+    <button mat-icon-button class="sidenav-toggle" (click)="toggleNavState(); sidenav.toggle()"
+      aria-label="Toggle sidebar">
+      <mat-icon>menu</mat-icon>
+    </button>
+    <div class="spacer">
+      <h1 class="page-title">{{ pageTitle() }}</h1>
+    </div>
+    } @else {
+    <div class="spacer">
+      <h1 class="page-title sidenav-gap">{{ pageTitle() }}</h1>
+    </div>
+    }
+
 
     <!-- Content routes -->
     <div class="content">
-      <router-outlet></router-outlet>
+      <router-outlet (activate)="onActivate($event)"></router-outlet>
     </div>
   </mat-sidenav-content>
 </mat-sidenav-container>

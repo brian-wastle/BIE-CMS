@@ -1,85 +1,35 @@
 <div class="asset-manager-layout" [class.asset-manager-layout--drag]="dragActive()">
   <section class="directory-browser">
-    <header class="directory-header">
-      <div class="directory-title">
-        <h1>Media Browser</h1>
-        <p class="directory-subtitle">
-          Select a folder below or create a new one to control where uploads are stored.
-        </p>
-      </div>
-      <div class="browser-controls">
-        <button type="button" (click)="addTempDirectory()" [disabled]="disableButtons()">
-          New Folder
-        </button>
-        <button type="button" (click)="refreshDirectories()" [disabled]="disableButtons()">
-          Refresh
-        </button>
-      </div>
-    </header>
-
-    @if (directoryError()) {
-      <p class="error error--inline">{{ directoryError() }}</p>
-    }
-
-    @if (directoriesLoading()) {
-      <div class="directory-grid directory-grid--loading">
-        @for (tile of skeletonTiles; track tile) {
-          <div class="folder-tile folder-tile--loading">
-            <div class="folder-icon placeholder"></div>
-            <div class="folder-label placeholder"></div>
-          </div>
-        }
-      </div>
-    } @else if (hasDirectories()) {
-      <div class="directory-grid">
-        @for (entry of sessionDirectories(); track entry.directory ?? $index) {
-          @if (pendingDirectory() === entry) {
-            <div class="folder-tile folder-tile--editing folder-tile--selected">
-              <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
-              <form class="folder-form" (ngSubmit)="savePendingDirectory()" novalidate>
-                <input
-                  type="text"
-                  name="newDirName"
-                  [formControl]="dirNameFC"
-                  placeholder="e.g. blog-assets/headers"
-                  autofocus
-                  (keydown.escape)="cancelPendingDirectory()"
-                />
-                @if (pendingDirectoryError()) {
-                  <p class="folder-error">{{ pendingDirectoryError() }}</p>
-                }
-                <div class="folder-edit-actions">
-                  <button type="submit" [disabled]="pendingDirectoryError() !== null">Save</button>
-                  <button type="button" (click)="cancelPendingDirectory()">Cancel</button>
-                </div>
-              </form>
-            </div>
-          } @else {
-            <button
-              type="button"
-              class="folder-tile"
-              [class.folder-tile--selected]="isDirectorySelected(entry.directory)"
-              (click)="onDirectorySelect(entry)"
-              [disabled]="disableButtons()"
-            >
-              <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
-              <span class="folder-name">{{ entry.directory?.trim() }}</span>
-              <span class="folder-count">{{ itemCountLabel(entry.itemCount) }}</span>
-              @if (entry.lastUploaded) {
-                <span class="folder-meta">Updated {{ entry.lastUploaded | date }}</span>
-              } @else {
-                <span class="folder-meta ">Updated {{ dateObj | date }}</span>
-              }
-            </button>
-          }
-        }
-      </div>
-    } @else {
-      <div class="directory-empty">
-        <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
-        <p>No directories yet. Use “New Folder” to create one for your next upload.</p>
-      </div>
-    }
+    <div class="browser-top">
+      <ul>
+        <li class="directory-tip">
+          Choose a location for your media content, or create a new directory.
+        </li>
+        <li class="directory-tip">
+          Closing this tab will clear any empty directories.
+        </li>
+      </ul>
+      <app-browser-controls
+        [disabled]="browserControlsDisabled()"
+        [viewMode]="pageView()"
+        (viewModeChange)="onBrowserViewModeChange($event)"
+        (createFolder)="onCreateFolderRequested()"
+        (refreshRequested)="onRefreshFoldersRequested()">
+      </app-browser-controls>
+    </div>
+    <hr>
+    <app-directory-browser
+      [folderIcon]="folderIcon"
+      [selectedDirectory]="selectedDirectory()"
+      (selectedDirectoryChange)="onDirectorySelected($event)"
+      (controlsDisabledChange)="onDirectoryControlsDisabledChange($event)">
+    </app-directory-browser>
+    <hr>
+    <app-media-picker
+      [directory]="selectedDirectory()"
+      [allowDelete]="true"
+      (mediaDeleted)="onMediaDeleted()">
+    </app-media-picker>
   </section>
 
   <section class="uploader-panel">
@@ -88,8 +38,7 @@
       (dragover)="onDragOver($event)"
       (dragleave)="onDragLeave($event)"
       (drop)="onFileDrop($event)"
-      [class.dropzone--active]="dragActive()"
-    >
+      [class.dropzone--active]="dragActive()">
       <p class="dropzone-title">Drop media files to upload</p>
       <p class="dropzone-hint">Files will be stored under <strong>{{ activeDirectoryLabel() }}</strong>.</p>
       <div class="dropzone-actions">
@@ -123,8 +72,7 @@
               type="button"
               class="remove"
               (click)="removeFromQueue(item.id)"
-              [disabled]="loading() || item.status === 'uploading'"
-            >
+              [disabled]="loading() || item.status === 'uploading'">
               Remove
             </button>
           </li>
@@ -142,8 +90,7 @@
           name="mimetypes"
           [(ngModel)]="mimetypesInput"
           placeholder="Optional: image/*,video/mp4"
-          [disabled]="loading()"
-        />
+          [disabled]="loading()" />
         <small>Comma separated list. Leave blank to accept any type.</small>
       </label>
 

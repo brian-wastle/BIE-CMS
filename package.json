@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/bie-frontend",
-    "apps/bie-backend"
+    "apps/bie-backend",
+    "libs/bie-models"
   ],
   "scripts": {
     "ng": "ng",
@@ -12,10 +13,10 @@
     "test:front": "npm -w apps/bie-frontend run test",
     "serve:ssr": "npm -w apps/bie-frontend run serve:ssr",
     "start:back": "npm -w apps/bie-backend run start",
-    "dev": "npm-run-all -p dev:front dev:back",
+    "dev": "node tools/run-dev.cjs",
     "dev:front": "npm -w apps/bie-frontend run start",
     "dev:back": "npm -w apps/bie-backend run dev",
-    "dev:ssr": "npm-run-all -p serve:ssr dev:back",
+    "dev:ssr": "npm run dev -- --ssr",
     "build:front": "npm -w apps/bie-frontend run build",
     "build:back": "npm -w apps/bie-backend run build",
     "build": "npm-run-all -s build:front build:back",

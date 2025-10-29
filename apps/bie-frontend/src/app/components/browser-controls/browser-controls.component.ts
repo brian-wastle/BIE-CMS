@@ -14,7 +14,7 @@ export type BrowserViewMode = 'list' | 'grid' | 'details';
 })
 export class BrowserControlsComponent {
   @Input() disabled = false;
-  @Input() viewMode: BrowserViewMode = 'list';
+  @Input() viewMode: BrowserViewMode = 'grid';
 
   @Output() viewModeChange = new EventEmitter<BrowserViewMode>();
   @Output() createFolder = new EventEmitter<void>();

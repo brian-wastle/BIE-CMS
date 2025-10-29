@@ -1,4 +1,5 @@
 @use 'sass:color';
+@use '@angular/material' as mat;
 
 $surface-accent: #dad9de;
 $border-muted: #86b8ac40;
@@ -21,13 +22,20 @@ $green-shadow: #0e997938;
   justify-content: start;
   max-height: 48px;
   gap: 0.25rem;
+
+  @include mat.icon-button-overrides((
+    hover-state-layer-opacity: 0,
+    focus-state-layer-opacity: 0,
+    pressed-state-layer-opacity: 0,
+    state-layer-color: transparent,
+    ripple-color: transparent,
+  ));
 }
 
 .view-button {
   border: 1px solid $border-muted;
   background: transparent;
   color: $text-dark;
-  padding: 0.4rem 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
@@ -35,6 +43,7 @@ $green-shadow: #0e997938;
 
 .view-button-left {
   border-radius: 999px 0 0 999px;
+  padding-right: 1px;
 }
 
 .view-button-center {
@@ -43,6 +52,7 @@ $green-shadow: #0e997938;
 
 .view-button-right {
   border-radius: 0 999px 999px 0;
+  padding-left: 1px;
 }
 
 .view-button:hover {
@@ -51,7 +61,7 @@ $green-shadow: #0e997938;
   transform: translateY(-1px);
 }
 
-.view-button--active {
+.view-button-active {
   border-color: $accent-green;
   background: $accent-soft;
 }

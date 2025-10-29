@@ -79,21 +79,20 @@ $pale-green: #C1E3DD;
   margin-left: 56px;
 }
 
-.spacer {
-  display: flex;
-  align-items: center;
+.top-header {
+  display:inline-flex;
   justify-content: start;
-  max-height:64px;
-  min-height:64px;
- flex: 0 0 64px;
- margin-top: 3rem;
- padding-left: 0;
+  margin-right: 24px;
+}
+
+.header-open-nav {
+  justify-content: end;
 }
 
 .page-title {
   color: #3e4e5e;
   font-size: 2.5rem;
-  margin-top:0px;
+  margin-top:48px;
 }
 
 .content {

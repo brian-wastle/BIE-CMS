@@ -23,6 +23,10 @@ html {
   @include mat.icon-overrides((
     color: #3e4e5e,
   ));
+
+  @include mat.fab-overrides((
+    hover-state-layer-opacity: .5
+  ));
 }
 
 html, body { height: 100%; }

@@ -35,7 +35,8 @@ export class MediaUploadComponent {
   readonly queue = signal<UploadItem[]>([]);
   readonly selectedDirectory = signal<string | null>(null);
   readonly activeDirectoryLabel = computed(() => this.selectedDirectory()?.trim() || UNSORTED_LABEL);
-  readonly pageView = signal<ViewMode>('list');
+  readonly pageView = signal<ViewMode>('grid');
+  readonly viewScope = signal<ViewMode>('grid');
   readonly loading = signal(false);
   readonly dragActive = signal(false);
   readonly uploadError = signal<string | null>(null);

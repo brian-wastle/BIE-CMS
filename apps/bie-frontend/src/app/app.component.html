@@ -22,15 +22,15 @@
     <!-- Sidebar Toggle/ Top Toolbar -->
 
     @if (!opened()) {
-    <button mat-icon-button class="sidenav-toggle" (click)="toggleNavState(); sidenav.toggle()"
-      aria-label="Toggle sidebar">
-      <mat-icon>menu</mat-icon>
-    </button>
-    <div class="spacer">
+    <div class="top-header">
+      <button mat-icon-button class="sidenav-toggle" (click)="toggleNavState(); sidenav.toggle()"
+        aria-label="Toggle sidebar">
+        <mat-icon>menu</mat-icon>
+      </button>
       <h1 class="page-title">{{ pageTitle() }}</h1>
     </div>
     } @else {
-    <div class="spacer">
+    <div class="top-header header-open-nav">
       <h1 class="page-title sidenav-gap">{{ pageTitle() }}</h1>
     </div>
     }

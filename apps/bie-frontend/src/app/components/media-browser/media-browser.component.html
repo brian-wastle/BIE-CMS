@@ -1,0 +1,16 @@
+<app-directory-browser
+  [selectedDirectory]="selectedDirectory"
+  (selectedDirectoryChange)="onDirectorySelected($event)"
+  (controlsDisabledChange)="onDirectoryControlsDisabledChange($event)">
+</app-directory-browser>
+<hr>
+<app-media-picker
+  [directory]="selectedDirectory"
+  [allowDelete]="allowDelete"
+  [allowSelection]="allowSelection"
+  [selectedHandle]="selectedHandle"
+  [emptyMessage]="emptyMessage"
+  (mediaSelected)="onMediaSelected($event)"
+  (mediaDeleted)="onMediaDeleted($event)"
+  (filesLoaded)="onFilesLoaded($event)">
+</app-media-picker>

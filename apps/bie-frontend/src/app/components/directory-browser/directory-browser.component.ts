@@ -16,8 +16,7 @@ const SKELETON_TILE_COUNT = 6;
 })
 export class DirectoryBrowserComponent {
   private readonly mediaLibrary = inject(MediaLibraryService);
-
-  @Input() folderIcon = 'assets/foldericon.svg';
+  readonly folderIcon = 'assets/foldericon.svg';
 
   private readonly internalSelection = signal<string | null>(null);
 

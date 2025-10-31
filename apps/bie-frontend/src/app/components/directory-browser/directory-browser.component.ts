@@ -1,10 +1,8 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, Input, Output, EventEmitter, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, model, output, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import type { DirectoryMeta } from 'bie-models';
+import type { DirectoryMeta, ViewMode } from 'bie-models';
 import { MediaLibraryService } from '../../services/media-library/media-library.service';
-
-const SKELETON_TILE_COUNT = 6;
 
 @Component({
   selector: 'app-directory-browser',
@@ -18,19 +16,10 @@ export class DirectoryBrowserComponent {
   private readonly mediaLibrary = inject(MediaLibraryService);
   readonly folderIcon = 'assets/foldericon.svg';
 
-  readonly selectedDirSignal = signal<string | null>(null);
+  readonly selectedDirectory = model<string | null>(null);
+  readonly dirControlToggle = output<boolean>();
 
-  @Input()
-  set selectedDirectory(value: string | null) {
-    const normalized = this.normalizeSelection(value);
-    if (this.selectedDirSignal() !== normalized) {
-      this.selectedDirSignal.set(normalized);
-    }
-  }
-
-  @Output() selectedDirectoryChange = new EventEmitter<string | null>();
-  @Output() dirControlToggle = new EventEmitter<boolean>();
-
+  readonly viewMode = signal<ViewMode>('grid');
   readonly directories = signal<DirectoryMeta[]>([]);
   readonly directoriesLoading = signal(true);
   readonly directoryError = signal<string | null>(null);
@@ -38,7 +27,7 @@ export class DirectoryBrowserComponent {
   readonly sessionDirectories = computed(() => this.tempDirectories().concat(this.directories()));
   readonly pendingDirectory = signal<DirectoryMeta | null>(null);
   readonly dirNameFC = new FormControl<string>('', { nonNullable: true });
-  readonly skeletonTiles = Array.from({ length: SKELETON_TILE_COUNT }, (_, index) => index);
+  readonly skeletonTiles = Array.from({ length: 6 }, (_, index) => index);
   readonly hasDirectories = computed(() => this.sessionDirectories().length > 0);
   readonly controlsDisabled = computed(() => this.directoriesLoading() || this.pendingDirectory() !== null);
 
@@ -48,10 +37,14 @@ export class DirectoryBrowserComponent {
 
   constructor() {
     effect(() => {
-      this.dirControlToggle.emit(this.controlsDisabled());
+      const current = this.selectedDirectory();
+      const normalized = this.normalizeSelection(current);
+      if (current !== normalized) {
+        this.selectedDirectory.set(normalized);
+      }
     });
     effect(() => {
-      this.selectedDirectoryChange.emit(this.selectedDirSignal());
+      this.dirControlToggle.emit(this.controlsDisabled());
     });
     void this.refresh();
   }
@@ -73,14 +66,14 @@ export class DirectoryBrowserComponent {
         })
       );
 
-      const selected = this.selectedDirSignal();
+      const selected = this.selectedDirectory();
       if (selected !== null) {
         const knownKeys = new Set([
           ...serverKeys,
           ...this.tempDirectories().map((entry) => entry.directory ?? null)
         ]);
         if (!knownKeys.has(selected)) {
-          this.selectedDirSignal.set(null);
+          this.selectedDirectory.set(null);
         }
       }
     } catch (err) {
@@ -95,13 +88,13 @@ export class DirectoryBrowserComponent {
     if (this.pendingDirectory()) {
       return;
     }
-    this.lastSelectedDirectory = this.selectedDirSignal();
+    this.lastSelectedDirectory = this.selectedDirectory();
     const newDir: DirectoryMeta = { directory: '', itemCount: 0, lastUploaded: null };
     this.tempDirectories.update((dirs) => [newDir, ...dirs]);
     this.dirNameFC.setValue('');
     this.pendingDirectory.set(newDir);
     this.directoryError.set(null);
-    this.selectedDirSignal.set(null);
+    this.selectedDirectory.set(null);
   }
 
   savePendingDirectory() {
@@ -119,7 +112,7 @@ export class DirectoryBrowserComponent {
       dirs.map((entry) => (entry === pending ? { ...entry, directory: normalizedName, lastUploaded: null } : entry))
     );
     this.pendingDirectory.set(null);
-    this.selectedDirSignal.set(normalizedName);
+    this.selectedDirectory.set(normalizedName);
     this.lastSelectedDirectory = null;
     this.dirNameFC.setValue('');
   }
@@ -131,7 +124,7 @@ export class DirectoryBrowserComponent {
     }
     this.tempDirectories.update((dirs) => dirs.filter((entry) => entry !== pending));
     this.pendingDirectory.set(null);
-    this.selectedDirSignal.set(this.lastSelectedDirectory ?? null);
+    this.selectedDirectory.set(this.lastSelectedDirectory ?? null);
     this.lastSelectedDirectory = null;
     this.dirNameFC.setValue('');
   }
@@ -163,7 +156,7 @@ export class DirectoryBrowserComponent {
       return;
     }
     const selected = entry.directory?.trim();
-    this.selectedDirSignal.set(selected || null);
+    this.selectedDirectory.set(selected || null);
   }
 
   itemCountLabel(count: number) {
@@ -172,7 +165,7 @@ export class DirectoryBrowserComponent {
 
   isDirectorySelected(directory: string | null) {
     return (
-      this.mediaLibrary.normalizeDirectory(this.selectedDirSignal()) ===
+      this.mediaLibrary.normalizeDirectory(this.selectedDirectory()) ===
       this.mediaLibrary.normalizeDirectory(directory ?? null)
     );
   }

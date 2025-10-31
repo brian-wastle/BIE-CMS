@@ -1,11 +1,11 @@
 <div class="media-picker">
-  <header class="media-picker__toolbar">
-    <div class="media-picker__headline">
-      <h3 class="media-picker__title">Directory Contents</h3>
-      <p class="media-picker__subtitle">Viewing {{ directoryLabel }}</p>
+  <header class="media-picker-toolbar">
+    <div class="media-picker-headline">
+      <h3 class="media-picker-title">Directory Contents</h3>
+      <p class="media-picker-subtitle">Viewing {{ directoryLabel }}</p>
     </div>
-    <div class="media-picker__controls">
-      <label class="media-picker__sort">
+    <div class="media-picker-controls">
+      <label class="media-picker-sort">
         <span>Sort</span>
         <select #sortSelect [value]="sort()" (change)="onSortChange(sortSelect.value)">
           <option value="created_desc">Newest</option>
@@ -13,22 +13,22 @@
           <option value="filename">File name</option>
         </select>
       </label>
-      <button type="button" class="media-picker__refresh" (click)="reload()" [disabled]="loading()">
+      <button type="button" class="media-picker-refresh" (click)="reload()" [disabled]="loading()">
         Refresh
       </button>
     </div>
   </header>
 
   @if (error()) {
-    <p class="media-picker__error">{{ error() }}</p>
+    <p class="media-picker-error">{{ error() }}</p>
   }
 
   @if (loading() && !files().length) {
-    <div class="media-picker__grid media-picker__grid--skeleton">
+    <div class="media-picker-grid media-picker-grid-skeleton">
       @for (tile of skeletonTiles; track tile) {
-        <div class="media-picker__tile media-picker__tile--skeleton">
-          <div class="media-picker__thumb media-picker__thumb--skeleton"></div>
-          <div class="media-picker__meta media-picker__meta--skeleton">
+        <div class="media-picker-tile media-picker-tile-skeleton">
+          <div class="media-picker-thumb media-picker-thumb-skeleton"></div>
+          <div class="media-picker-meta media-picker-meta-skeleton">
             <span></span>
             <span></span>
           </div>
@@ -36,36 +36,36 @@
       }
     </div>
   } @else if (!files().length && hasAttemptedLoad()) {
-    <div class="media-picker__empty">
+    <div class="media-picker-empty">
       <p>{{ emptyMessage }}</p>
     </div>
   } @else {
-    <div class="media-picker__grid">
+    <div class="media-picker-grid">
       @for (item of files(); track item.handle) {
         <div
-          class="media-picker__tile"
-          [class.media-picker__tile--selected]="selection() === item.handle"
-          [attr.tabindex]="allowSelection ? 0 : -1"
+          class="media-picker-tile"
+          [class.media-picker-tile--selected]="selection() === item.handle"
+          [attr.tabindex]="allowSelection() ? 0 : -1"
           role="button"
           [attr.aria-pressed]="selection() === item.handle"
-          [attr.aria-disabled]="!allowSelection || loading() ? 'true' : null"
+          [attr.aria-disabled]="!allowSelection() || loading() ? 'true' : null"
           (click)="onSelect(item)"
           (keydown)="onTileKeydown($event, item)">
-          <div class="media-picker__thumb">
+          <div class="media-picker-thumb">
             @if (isImage(item) && item.cdnUrl) {
               <img [src]="item.cdnUrl" [alt]="displayName(item)" loading="lazy" />
             } @else {
               <mat-icon>insert_drive_file</mat-icon>
             }
           </div>
-          <div class="media-picker__meta">
-            <span class="media-picker__name" [title]="displayName(item)">{{ displayName(item) }}</span>
-            <span class="media-picker__size">{{ formatSize(item.size) }}</span>
+          <div class="media-picker-meta">
+            <span class="media-picker-name" [title]="displayName(item)">{{ displayName(item) }}</span>
+            <span class="media-picker-size">{{ formatSize(item.size) }}</span>
           </div>
-          @if (allowDelete) {
+          @if (allowDelete()) {
             <button
               type="button"
-              class="media-picker__delete"
+              class="media-picker-delete"
               (click)="onDelete(item, $event)"
               [disabled]="deleting().has(item.handle)">
               <mat-icon>delete</mat-icon>

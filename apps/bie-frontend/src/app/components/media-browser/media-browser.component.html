@@ -1,11 +1,13 @@
 <app-directory-browser
-  [selectedDirectory]="selectedDirSignal()">
+  [selectedDirectory]="selectedDirectory()"
+  (selectedDirectoryChange)="onBrowserDirectoryChange($event)"
+  (dirControlToggle)="onDirControlToggle($event)">
 </app-directory-browser>
 <hr>
 <app-media-picker
-  [directory]="selectedDirSignal()"
-  [allowDelete]="allowDelete"
+  [directory]="selectedDirectory()"
+  [allowDelete]="allowDelete()"
   [allowSelection]="true"
-  [selectedHandle]="selectedHandle"
+  [selectedHandle]="selectedHandle()"
   (mediaDeleted)="mediaDeleted.emit($event)">
 </app-media-picker>

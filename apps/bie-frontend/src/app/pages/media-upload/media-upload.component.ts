@@ -150,7 +150,7 @@ export class MediaUploadComponent {
     this.uploadError.set(null);
     this.success.set(null);
 
-    const directory = this.mediaBrowser?.selectedDirSignal() ?? null;
+    const directory = this.mediaBrowser?.selectedDirectory() ?? null;
 
     for (const item of this.queue()) {
       try {

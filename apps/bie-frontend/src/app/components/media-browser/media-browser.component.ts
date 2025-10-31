@@ -1,6 +1,7 @@
-import { Component, EventEmitter, Input, Output, ViewChild, computed, effect, signal } from '@angular/core';
+import { Component, ViewChild, computed, effect, input, model, output, signal } from '@angular/core';
 import { DirectoryBrowserComponent } from '../directory-browser/directory-browser.component';
 import { MediaPickerComponent } from '../media-picker/media-picker.component';
+import type { ViewMode } from 'bie-models';
 
 const UNSORTED_LABEL = 'Unsorted';
 
@@ -15,46 +16,34 @@ export class MediaBrowserComponent {
   @ViewChild(MediaPickerComponent) mediaPicker?: MediaPickerComponent;
   @ViewChild(DirectoryBrowserComponent) directoryBrowser?: DirectoryBrowserComponent;
 
-  readonly selectedDirSignal = signal<string | null>(null);
   readonly dirControlPrivilege = signal(false);
 
-  @Input() allowDelete = false;
-  @Input() selectedHandle: string | null = null;
-  @Input()
-  set selectedDirectory(value: string | null) {
-    const normalized = value?.trim() ?? null;
-    if (this.selectedDirSignal() !== normalized) {
-      this.selectedDirSignal.set(normalized);
-    }
-  }
+  readonly viewMode = input<ViewMode>('grid');
+  readonly allowDelete = input(false);
+  readonly selectedHandle = input<string | null>(null);
+  readonly selectedDirectory = model<string | null>(null);
+  readonly mediaDeleted = output<string>();
 
-  @Output() selectedDirectoryChange = new EventEmitter<string | null>();
-  @Output() mediaDeleted = new EventEmitter<string>();
-
-  readonly activeDirectoryLabel = computed(() => this.selectedDirSignal()?.trim() || UNSORTED_LABEL);
+  readonly activeDirectoryLabel = computed(() => this.selectedDirectory()?.trim() || UNSORTED_LABEL);
 
   constructor() {
     effect(() => {
-      const browser = this.directoryBrowser;
-      if (!browser) {
-        return;
-      }
-      const directory = browser.selectedDirSignal();
-      if (this.selectedDirSignal() !== directory) {
-        this.selectedDirSignal.set(directory);
-        this.selectedDirectoryChange.emit(directory);
+      const current = this.selectedDirectory();
+      const normalized = this.normalizeSelection(current);
+      if (current !== normalized) {
+        this.selectedDirectory.set(normalized);
       }
     });
-    effect(() => {
-      const browser = this.directoryBrowser;
-      if (!browser) {
-        return;
-      }
-      const disabled = browser.controlsDisabled();
-      if (this.dirControlPrivilege() !== disabled) {
-        this.dirControlPrivilege.set(disabled);
-      }
-    });
+  }
+
+  onBrowserDirectoryChange(directory: string | null) {
+    this.setSelectedDirectory(directory);
+  }
+
+  onDirControlToggle(disabled: boolean) {
+    if (this.dirControlPrivilege() !== disabled) {
+      this.dirControlPrivilege.set(disabled);
+    }
   }
 
   async refresh() {
@@ -67,6 +56,19 @@ export class MediaBrowserComponent {
   }
 
   clearDirSelect() {
-    this.selectedDirSignal.set(null);
+    this.setSelectedDirectory(null);
+  }
+
+  private setSelectedDirectory(value: string | null) {
+    const normalized = this.normalizeSelection(value);
+    if (this.selectedDirectory() !== normalized) {
+      this.selectedDirectory.set(normalized);
+    }
+  }
+
+  private normalizeSelection(value: string | null) {
+    const trimmed = value?.trim() ?? '';
+    return trimmed.length ? trimmed : null;
   }
 }
+

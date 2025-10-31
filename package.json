@@ -26,7 +26,7 @@
     "db:drop": "npm -w bie-backend run drop:db",
     "db:rebase": "npm run db:drop && npm run db:bootstrap && npm run db:migrate && npm run db:seed:admin",
     "db:all": "npm run db:bootstrap && npm run db:migrate && npm run db:seed:admin",
-    "postinstall": "patch-package"
+    "lib:build": "npm -w libs/bie-models run build"
   },
   "devDependencies": {
     "@angular/build": "^20.3.4",
@@ -45,7 +45,6 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "ng-packagr": "^20.3.0",
     "npm-run-all": "^4.1.5",
-    "patch-package": "^8.0.0",
     "typescript": "^5.8.3"
   },
   "dependencies": {

@@ -82,3 +82,5 @@ export interface DirectoryMeta {
   itemCount: number;
   lastUploaded: string | null;
 }
+
+export type ViewMode = 'list' | 'grid' | 'details';

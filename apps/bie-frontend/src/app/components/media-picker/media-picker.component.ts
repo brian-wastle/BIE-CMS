@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
+import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaItem, MediaLibraryService, MediaSort } from '../../services/media-library/media-library.service';
 
@@ -13,17 +13,17 @@ const SKELETON_TILE_COUNT = 8;
   templateUrl: './media-picker.component.html',
   styleUrl: './media-picker.component.scss',
 })
-export class MediaPickerComponent implements OnChanges {
+export class MediaPickerComponent {
   private readonly mediaLibrary = inject(MediaLibraryService);
 
-  @Input() directory: string | null = null;
-  @Input() selectedHandle: string | null = null;
-  @Input() allowDelete = false;
-  @Input() allowSelection = true;
+  readonly directory = input<string | null>(null);
+  readonly selectedHandle = input<string | null>(null);
+  readonly allowDelete = input(false);
+  readonly allowSelection = input(true);
 
-  @Output() mediaSelected = new EventEmitter<MediaItem>();
-  @Output() mediaDeleted = new EventEmitter<string>();
-  @Output() filesLoaded = new EventEmitter<MediaItem[]>();
+  readonly mediaSelected = output<MediaItem>();
+  readonly mediaDeleted = output<string>();
+  readonly filesLoaded = output<MediaItem[]>();
   
   readonly files = signal<MediaItem[]>([]);
   readonly loading = signal(false);
@@ -37,13 +37,16 @@ export class MediaPickerComponent implements OnChanges {
 
   private requestId = 0;
 
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['selectedHandle']) {
-      this.selection.set(this.selectedHandle ?? null);
-    }
-    if (changes['directory']) {
+  constructor() {
+    effect(() => {
+      this.selection.set(this.selectedHandle() ?? null);
+    });
+    effect(() => {
+      // Track both directory and sort; reloading will occur when either changes.
+      this.directory();
+      this.sort();
       void this.reload();
-    }
+    });
   }
 
   async reload() {
@@ -52,7 +55,7 @@ export class MediaPickerComponent implements OnChanges {
     this.error.set(null);
     this.hasAttemptedLoad.set(true);
     try {
-      const items = await this.mediaLibrary.fetchFiles(this.directory ?? null, this.sort());
+      const items = await this.mediaLibrary.fetchFiles(this.directory() ?? null, this.sort());
       if (this.requestId !== currentRequest) {
         return;
       }
@@ -82,11 +85,11 @@ export class MediaPickerComponent implements OnChanges {
       return;
     }
     this.sort.set(next);
-    void this.reload();
+    // Reload will run via the effect that tracks sort changes.
   }
 
   onSelect(item: MediaItem) {
-    if (!this.allowSelection || this.loading()) {
+    if (!this.allowSelection() || this.loading()) {
       return;
     }
     this.selection.set(item.handle);
@@ -103,7 +106,7 @@ export class MediaPickerComponent implements OnChanges {
 
   async onDelete(item: MediaItem, event: Event) {
     event.stopPropagation();
-    if (!this.allowDelete || this.deleting().has(item.handle)) {
+    if (!this.allowDelete() || this.deleting().has(item.handle)) {
       return;
     }
     this.error.set(null);
@@ -128,7 +131,8 @@ export class MediaPickerComponent implements OnChanges {
   }
 
   get directoryLabel(): string {
-    const label = typeof this.directory === 'string' ? this.directory.trim() : '';
+    const source = this.directory();
+    const label = typeof source === 'string' ? source.trim() : '';
     return label.length ? label : UNSORTED_LABEL;
   }
 

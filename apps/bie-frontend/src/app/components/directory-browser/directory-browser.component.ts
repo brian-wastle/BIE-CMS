@@ -18,21 +18,18 @@ export class DirectoryBrowserComponent {
   private readonly mediaLibrary = inject(MediaLibraryService);
   readonly folderIcon = 'assets/foldericon.svg';
 
-  private readonly internalSelection = signal<string | null>(null);
+  readonly selectedDirSignal = signal<string | null>(null);
 
   @Input()
   set selectedDirectory(value: string | null) {
     const normalized = this.normalizeSelection(value);
-    if (this.internalSelection() !== normalized) {
-      this.internalSelection.set(normalized);
+    if (this.selectedDirSignal() !== normalized) {
+      this.selectedDirSignal.set(normalized);
     }
-  }
-  get selectedDirectory() {
-    return this.internalSelection();
   }
 
   @Output() selectedDirectoryChange = new EventEmitter<string | null>();
-  @Output() controlsDisabledChange = new EventEmitter<boolean>();
+  @Output() dirControlToggle = new EventEmitter<boolean>();
 
   readonly directories = signal<DirectoryMeta[]>([]);
   readonly directoriesLoading = signal(true);
@@ -51,10 +48,10 @@ export class DirectoryBrowserComponent {
 
   constructor() {
     effect(() => {
-      this.controlsDisabledChange.emit(this.controlsDisabled());
+      this.dirControlToggle.emit(this.controlsDisabled());
     });
     effect(() => {
-      this.selectedDirectoryChange.emit(this.internalSelection());
+      this.selectedDirectoryChange.emit(this.selectedDirSignal());
     });
     void this.refresh();
   }
@@ -76,14 +73,14 @@ export class DirectoryBrowserComponent {
         })
       );
 
-      const selected = this.internalSelection();
+      const selected = this.selectedDirSignal();
       if (selected !== null) {
         const knownKeys = new Set([
           ...serverKeys,
           ...this.tempDirectories().map((entry) => entry.directory ?? null)
         ]);
         if (!knownKeys.has(selected)) {
-          this.internalSelection.set(null);
+          this.selectedDirSignal.set(null);
         }
       }
     } catch (err) {
@@ -94,17 +91,17 @@ export class DirectoryBrowserComponent {
     }
   }
 
-  startCreateDirectory() {
+  createNewDir() {
     if (this.pendingDirectory()) {
       return;
     }
-    this.lastSelectedDirectory = this.internalSelection();
+    this.lastSelectedDirectory = this.selectedDirSignal();
     const newDir: DirectoryMeta = { directory: '', itemCount: 0, lastUploaded: null };
     this.tempDirectories.update((dirs) => [newDir, ...dirs]);
     this.dirNameFC.setValue('');
     this.pendingDirectory.set(newDir);
     this.directoryError.set(null);
-    this.internalSelection.set(null);
+    this.selectedDirSignal.set(null);
   }
 
   savePendingDirectory() {
@@ -122,7 +119,7 @@ export class DirectoryBrowserComponent {
       dirs.map((entry) => (entry === pending ? { ...entry, directory: normalizedName, lastUploaded: null } : entry))
     );
     this.pendingDirectory.set(null);
-    this.internalSelection.set(normalizedName);
+    this.selectedDirSignal.set(normalizedName);
     this.lastSelectedDirectory = null;
     this.dirNameFC.setValue('');
   }
@@ -134,7 +131,7 @@ export class DirectoryBrowserComponent {
     }
     this.tempDirectories.update((dirs) => dirs.filter((entry) => entry !== pending));
     this.pendingDirectory.set(null);
-    this.internalSelection.set(this.lastSelectedDirectory ?? null);
+    this.selectedDirSignal.set(this.lastSelectedDirectory ?? null);
     this.lastSelectedDirectory = null;
     this.dirNameFC.setValue('');
   }
@@ -166,7 +163,7 @@ export class DirectoryBrowserComponent {
       return;
     }
     const selected = entry.directory?.trim();
-    this.internalSelection.set(selected || null);
+    this.selectedDirSignal.set(selected || null);
   }
 
   itemCountLabel(count: number) {
@@ -175,7 +172,7 @@ export class DirectoryBrowserComponent {
 
   isDirectorySelected(directory: string | null) {
     return (
-      this.mediaLibrary.normalizeDirectory(this.internalSelection()) ===
+      this.mediaLibrary.normalizeDirectory(this.selectedDirSignal()) ===
       this.mediaLibrary.normalizeDirectory(directory ?? null)
     );
   }

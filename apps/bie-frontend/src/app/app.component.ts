@@ -25,6 +25,7 @@ import { MatButtonModule } from '@angular/material/button';
 })
 export class AppComponent implements OnInit {
   title = 'BLOGKS';
+  readonly arrowImg = 'assets/dirarrow.webp';
   private bp = inject(BreakpointObserver);
   sidenavMode: 'side' | 'over' = 'side';
   sidenavOpened: boolean = true;

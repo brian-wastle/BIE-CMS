@@ -62,7 +62,7 @@ $pale-green: #C1E3DD;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 16px;
+  gap: 4px;
   padding: 0 16px 16px;
   box-sizing: border-box;
 }
@@ -75,24 +75,28 @@ $pale-green: #C1E3DD;
   position:sticky;
 }
 
-.sidenav-gap {
-  margin-left: 56px;
-}
-
 .top-header {
   display:inline-flex;
   justify-content: start;
   margin-right: 24px;
 }
 
-.header-open-nav {
+.menu-toggle-flex {
+  display:flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.menu-toggle-flex-extended {
+  margin-top:64px;
   justify-content: end;
 }
 
 .page-title {
   color: #3e4e5e;
   font-size: 2.5rem;
-  margin-top:48px;
+  margin-top:64px;
+  margin-bottom:0;
 }
 
 .content {

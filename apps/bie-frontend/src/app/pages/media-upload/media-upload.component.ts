@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, ViewChild, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BrowserControlsComponent } from '../../components/browser-controls/browser-controls.component';
-import { DirectoryBrowserComponent } from '../../components/directory-browser/directory-browser.component';
-import { MediaPickerComponent } from '../../components/media-picker/media-picker.component';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MediaBrowserComponent } from '../../components/media-browser/media-browser.component';
 
 type UploadStatus = 'pending' | 'uploading' | 'success' | 'error';
 type ViewMode = 'list' | 'grid' | 'details';
@@ -18,63 +18,46 @@ interface UploadItem {
   cdnUrl?: string;
 }
 
-const UNSORTED_LABEL = 'Unsorted';
-
 @Component({
   selector: 'app-media-upload',
   standalone: true,
-  imports: [CommonModule, FormsModule, BrowserControlsComponent, DirectoryBrowserComponent, MediaPickerComponent],
+  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MediaBrowserComponent],
   templateUrl: './media-upload.component.html',
   styleUrl: './media-upload.component.scss'
 })
 export class MediaUploadComponent {
-  @ViewChild(MediaPickerComponent) mediaPicker?: MediaPickerComponent;
-  @ViewChild(DirectoryBrowserComponent) directoryBrowser?: DirectoryBrowserComponent;
+  @ViewChild(MediaBrowserComponent) mediaBrowser?: MediaBrowserComponent;
 
-  readonly folderIcon = 'assets/foldericon.svg';
   readonly queue = signal<UploadItem[]>([]);
-  readonly selectedDirectory = signal<string | null>(null);
-  readonly activeDirectoryLabel = computed(() => this.selectedDirectory()?.trim() || UNSORTED_LABEL);
-  readonly pageView = signal<ViewMode>('grid');
-  readonly viewScope = signal<ViewMode>('grid');
+  readonly viewMode = signal<ViewMode>('grid');
   readonly loading = signal(false);
   readonly dragActive = signal(false);
   readonly uploadError = signal<string | null>(null);
   readonly success = signal<string | null>(null);
-  readonly directoryControlsDisabled = signal(false);
-  readonly browserControlsDisabled = computed(() => this.loading() || this.directoryControlsDisabled());
   readonly hasFiles = computed(() => this.queue().length > 0);
   readonly totalSize = computed(() => this.queue().reduce((sum, item) => sum + item.file.size, 0));
-  readonly selectedMimetypes = computed(() =>
-    this.mimetypesInput.split(',').map((value) => value.trim().toLowerCase()).filter(Boolean)
-  );
-
-  mimetypesInput = '';
-
+  
   async refreshDirectories() {
-    await this.directoryBrowser?.refresh();
-    await this.mediaPicker?.reload();
+    await this.mediaBrowser?.refresh();
   }
 
-  onDirectorySelected(directory: string | null) {
-    this.selectedDirectory.set(directory);
+  onDirectoryChanged(_directory: string | null) {
     this.uploadError.set(null);
     this.success.set(null);
   }
 
-  onDirectoryControlsDisabledChange(disabled: boolean) {
-    this.directoryControlsDisabled.set(disabled);
-  }
-
   onBrowserViewModeChange(mode: ViewMode) {
-    this.pageView.set(mode);
+    if (this.viewMode() === mode) {
+      return;
+    }
+    this.viewMode.set(mode);
   }
 
   onCreateFolderRequested() {
-    this.directoryBrowser?.startCreateDirectory();
+    this.mediaBrowser?.createNewDir();
   }
 
-  onRefreshFoldersRequested() {
+  refreshFolders() {
     void this.refreshDirectories();
   }
 
@@ -149,10 +132,6 @@ export class MediaUploadComponent {
     this.success.set(null);
   }
 
-  onMediaDeleted() {
-    void this.refreshDirectories();
-  }
-
   formatSize(bytes: number) {
     if (!bytes) {
       return '0 B';
@@ -171,24 +150,7 @@ export class MediaUploadComponent {
     this.uploadError.set(null);
     this.success.set(null);
 
-    const allowedTypes = this.selectedMimetypes();
-    if (allowedTypes.length) {
-      const disallowed = this.queue().filter((entry) => !this.matchesMimetype(entry.file.type, allowedTypes));
-      if (disallowed.length) {
-        for (const item of disallowed) {
-          this.updateQueue(item.id, {
-            status: 'error',
-            error: 'File type not permitted by the current filter.',
-            progress: 0
-          });
-        }
-        this.uploadError.set('Remove files that do not match the allowed MIME types.');
-        this.loading.set(false);
-        return;
-      }
-    }
-
-    const directory = this.resolveActiveDirectory();
+    const directory = this.mediaBrowser?.selectedDirSignal() ?? null;
 
     for (const item of this.queue()) {
       try {
@@ -208,7 +170,6 @@ export class MediaUploadComponent {
       this.success.set('Upload complete!');
       this.uploadError.set(null);
       void this.refreshDirectories();
-      void this.mediaPicker?.reload();
     }
   }
 
@@ -248,7 +209,7 @@ export class MediaUploadComponent {
           throw new Error(parsed.error);
         }
       } catch {
-        // Ignore JSON parse errors, fall back to raw text.
+        // Let error throw
       }
       throw new Error(text || 'Upload failed');
     }
@@ -262,44 +223,7 @@ export class MediaUploadComponent {
     });
   }
 
-  private resolveActiveDirectory(): string | null {
-    const selected = this.selectedDirectory();
-    if (!selected) {
-      return null;
-    }
-    const trimmed = selected.trim();
-    return trimmed || null;
-  }
-
-  private matchesMimetype(fileType: string | undefined, allowed: string[]) {
-    if (!allowed.length) {
-      return true;
-    }
-    const type = (fileType || '').toLowerCase();
-    if (!type.includes('/')) {
-      return allowed.includes(type);
-    }
-    const [major = '', minor = ''] = type.split('/');
-    for (const pattern of allowed) {
-      if (!pattern.includes('/')) {
-        if (type === pattern) {
-          return true;
-        }
-        continue;
-      }
-      const [allowedMajor = '', allowedMinor = ''] = pattern.split('/');
-      const majorMatches = allowedMajor === '*' || allowedMajor === major;
-      const minorMatches = allowedMinor === '*' || allowedMinor === minor;
-      if (majorMatches && minorMatches) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   private updateQueue(id: string, patch: Partial<UploadItem>) {
     this.queue.update((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }
-
-  
 }

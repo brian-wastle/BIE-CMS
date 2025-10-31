@@ -21,19 +21,24 @@
   <mat-sidenav-content class="sidenav-content">
     <!-- Sidebar Toggle/ Top Toolbar -->
 
-    @if (!opened()) {
     <div class="top-header">
-      <button mat-icon-button class="sidenav-toggle" (click)="toggleNavState(); sidenav.toggle()"
-        aria-label="Toggle sidebar">
-        <mat-icon>menu</mat-icon>
-      </button>
+      @if (!opened()) {
+      <div class="menu-toggle-flex">
+        <button mat-icon-button class="sidenav-toggle" (click)="toggleNavState(); sidenav.toggle()"
+          aria-label="Toggle sidebar">
+          <mat-icon>menu</mat-icon>
+        </button>
+        <div><img [src]="arrowImg" alt=""></div>
+      </div>
       <h1 class="page-title">{{ pageTitle() }}</h1>
-    </div>
-    } @else {
-    <div class="top-header header-open-nav">
+      } @else {
+      <div class="menu-toggle-flex menu-toggle-flex-extended">
+        <div><img [src]="arrowImg" alt=""></div>
+      </div>
       <h1 class="page-title sidenav-gap">{{ pageTitle() }}</h1>
+      }
     </div>
-    }
+
 
 
     <!-- Content routes -->

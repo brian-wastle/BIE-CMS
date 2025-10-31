@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input,OnChanges,Output,SimpleChanges,inject,signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaItem, MediaLibraryService, MediaSort } from '../../services/media-library/media-library.service';
 
@@ -20,12 +20,11 @@ export class MediaPickerComponent implements OnChanges {
   @Input() selectedHandle: string | null = null;
   @Input() allowDelete = false;
   @Input() allowSelection = true;
-  @Input() emptyMessage = 'No media files were found for this directory.';
 
   @Output() mediaSelected = new EventEmitter<MediaItem>();
   @Output() mediaDeleted = new EventEmitter<string>();
   @Output() filesLoaded = new EventEmitter<MediaItem[]>();
-
+  
   readonly files = signal<MediaItem[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -33,6 +32,7 @@ export class MediaPickerComponent implements OnChanges {
   readonly selection = signal<string | null>(null);
   readonly deleting = signal<Set<string>>(new Set());
   readonly hasAttemptedLoad = signal(false);
+  readonly emptyMessage = 'No media files were found for this directory.';
   readonly skeletonTiles = Array.from({ length: SKELETON_TILE_COUNT }, (_, index) => index);
 
   private requestId = 0;
@@ -103,7 +103,7 @@ export class MediaPickerComponent implements OnChanges {
 
   async onDelete(item: MediaItem, event: Event) {
     event.stopPropagation();
-    if (!this.allowDelete || this.isDeleting(item.handle)) {
+    if (!this.allowDelete || this.deleting().has(item.handle)) {
       return;
     }
     this.error.set(null);
@@ -127,21 +127,9 @@ export class MediaPickerComponent implements OnChanges {
     }
   }
 
-  isDeleting(handle: string) {
-    return this.deleting().has(handle);
-  }
-
-  directoryLabel(): string {
+  get directoryLabel(): string {
     const label = typeof this.directory === 'string' ? this.directory.trim() : '';
     return label.length ? label : UNSORTED_LABEL;
-  }
-
-  emptyStateMessage(): string {
-    const explicit = this.emptyMessage?.trim();
-    if (explicit) {
-      return explicit;
-    }
-    return `No media files were found in "${this.directoryLabel()}" yet.`;
   }
 
   displayName(item: MediaItem) {

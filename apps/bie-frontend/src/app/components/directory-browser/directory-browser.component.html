@@ -41,13 +41,13 @@
             class="folder-tile"
             [class.folder-tile--selected]="isDirectorySelected(entry.directory)"
             (click)="onDirectorySelect(entry)">
-            <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+            <img class="folder-icon" [src]="folderIcon" alt="folder icon" aria-hidden="true" />
             <span class="folder-name">{{ entry.directory?.trim() }}</span>
             <span class="folder-count">{{ itemCountLabel(entry.itemCount) }}</span>
             @if (entry.lastUploaded) {
-              <span class="folder-meta">Updated {{ entry.lastUploaded | date }}</span>
+              <span class="folder-meta">Last: {{ entry.lastUploaded | date }}</span>
             } @else {
-              <span class="folder-meta">Updated {{ today | date }}</span>
+              <span class="folder-meta">Last: {{ today | date }}</span>
             }
           </button>
         }
@@ -55,7 +55,7 @@
     </div>
   } @else {
     <div class="directory-empty">
-      <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
+      <img class="folder-icon" [src]="folderIcon" alt="folder icon" aria-hidden="true" />
       <p>No directories yet. Use “New Folder” to create one for your next upload.</p>
     </div>
   }

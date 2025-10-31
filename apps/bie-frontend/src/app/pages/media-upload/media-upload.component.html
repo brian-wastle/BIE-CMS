@@ -1,7 +1,7 @@
 <div class="asset-manager-layout" [class.asset-manager-layout--drag]="dragActive()">
   <section class="directory-browser">
     <div class="browser-top">
-      <ul>
+      <ul class="browser-top-tips">
         <li class="directory-tip">
           Choose a location for your media content, or create a new directory.
         </li>
@@ -9,38 +9,67 @@
           Closing this tab will clear any empty directories.
         </li>
       </ul>
-      <app-browser-controls
-        [disabled]="browserControlsDisabled()"
-        [viewMode]="pageView()"
-        (viewModeChange)="onBrowserViewModeChange($event)"
-        (createFolder)="onCreateFolderRequested()"
-        (refreshRequested)="onRefreshFoldersRequested()">
-      </app-browser-controls>
+      <div class="browser-controls">
+        <div class="view-controls">
+          <button
+            type="button"
+            class="view-button view-button-left"
+            mat-icon-button
+            aria-label="List view"
+            [class.view-button-active]="viewMode() === 'list'"
+            (click)="onBrowserViewModeChange('list')">
+            <mat-icon>view_list</mat-icon>
+          </button>
+          <button
+            type="button"
+            class="view-button view-button-center"
+            mat-icon-button
+            aria-label="Grid view"
+            [class.view-button-active]="viewMode() === 'grid'"
+            (click)="onBrowserViewModeChange('grid')">
+            <mat-icon>view_module</mat-icon>
+          </button>
+          <button
+            type="button"
+            class="view-button view-button-right"
+            mat-icon-button
+            aria-label="Details view"
+            [class.view-button-active]="viewMode() === 'details'"
+            (click)="onBrowserViewModeChange('details')">
+            <mat-icon>view_sidebar</mat-icon>
+          </button>
+        </div>
+        <button
+          type="button"
+          class="folder-button"
+          (click)="onCreateFolderRequested()"
+          [disabled]="loading() || (mediaBrowser?.dirControlPrivilege() ?? false)">
+          New Folder
+        </button>
+        <button
+          type="button"
+          class="folder-button"
+          (click)="refreshFolders()"
+          [disabled]="loading() || (mediaBrowser?.dirControlPrivilege() ?? false)">
+          Refresh Folders
+        </button>
+      </div>
     </div>
     <hr>
-    <app-directory-browser
-      [folderIcon]="folderIcon"
-      [selectedDirectory]="selectedDirectory()"
-      (selectedDirectoryChange)="onDirectorySelected($event)"
-      (controlsDisabledChange)="onDirectoryControlsDisabledChange($event)">
-    </app-directory-browser>
-    <hr>
-    <app-media-picker
-      [directory]="selectedDirectory()"
+    <app-media-browser
+      (selectedDirectoryChange)="onDirectoryChanged($event)"
       [allowDelete]="true"
-      (mediaDeleted)="onMediaDeleted()">
-    </app-media-picker>
+      (mediaDeleted)="refreshFolders()">
+    </app-media-browser>
   </section>
 
   <section class="uploader-panel">
-    <div
-      class="dropzone"
-      (dragover)="onDragOver($event)"
-      (dragleave)="onDragLeave($event)"
-      (drop)="onFileDrop($event)"
+    <div class="dropzone" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onFileDrop($event)"
       [class.dropzone--active]="dragActive()">
       <p class="dropzone-title">Drop media files to upload</p>
-      <p class="dropzone-hint">Files will be stored under <strong>{{ activeDirectoryLabel() }}</strong>.</p>
+      <p class="dropzone-hint">
+        Files will be stored under <strong>{{ mediaBrowser?.activeDirectoryLabel() ?? 'Unsorted' }}</strong>.
+      </p>
       <div class="dropzone-actions">
         <button type="button" (click)="triggerFileDialog(fileInput)" [disabled]="loading()">Browse files</button>
         <span>or drag &amp; drop</span>
@@ -49,50 +78,37 @@
     </div>
 
     @if (hasFiles()) {
-      <ul class="file-queue">
-        @for (item of queue(); track item.id) {
-          <li class="file-item">
-            <div class="file-meta">
-              <p class="file-name">{{ item.file.name }}</p>
-              <span class="file-size">{{ formatSize(item.file.size) }}</span>
-            </div>
-            <div class="file-status">
-              <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
-              @if (item.error) {
-                <span class="status-error">{{ item.error }}</span>
-              }
-              @if (item.cdnUrl) {
-                <a class="status-link" [href]="item.cdnUrl" target="_blank" rel="noopener">View</a>
-              }
-            </div>
-            <div class="progress">
-              <div class="progress-bar" [style.width.%]="item.progress"></div>
-            </div>
-            <button
-              type="button"
-              class="remove"
-              (click)="removeFromQueue(item.id)"
-              [disabled]="loading() || item.status === 'uploading'">
-              Remove
-            </button>
-          </li>
-        }
-      </ul>
+    <ul class="file-queue">
+      @for (item of queue(); track item.id) {
+      <li class="file-item">
+        <div class="file-meta">
+          <p class="file-name">{{ item.file.name }}</p>
+          <span class="file-size">{{ formatSize(item.file.size) }}</span>
+        </div>
+        <div class="file-status">
+          <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
+          @if (item.error) {
+          <span class="status-error">{{ item.error }}</span>
+          }
+          @if (item.cdnUrl) {
+          <a class="status-link" [href]="item.cdnUrl" target="_blank" rel="noopener">View</a>
+          }
+        </div>
+        <div class="progress">
+          <div class="progress-bar" [style.width.%]="item.progress"></div>
+        </div>
+        <button type="button" class="remove" (click)="removeFromQueue(item.id)"
+          [disabled]="loading() || item.status === 'uploading'">
+          Remove
+        </button>
+      </li>
+      }
+    </ul>
     } @else {
-      <p class="empty-state">Add files to begin uploading.</p>
+    <p class="empty-state">Add files to begin uploading.</p>
     }
 
     <form class="uploader-controls" (ngSubmit)="uploadAll()" novalidate>
-      <label class="field">
-        <span>Allowed MIME types</span>
-        <input
-          type="text"
-          name="mimetypes"
-          [(ngModel)]="mimetypesInput"
-          placeholder="Optional: image/*,video/mp4"
-          [disabled]="loading()" />
-        <small>Comma separated list. Leave blank to accept any type.</small>
-      </label>
 
       <div class="summary">
         <span>Total files: {{ queue().length }}</span>
@@ -100,11 +116,11 @@
       </div>
 
       @if (uploadError()) {
-        <p class="error">{{ uploadError() }}</p>
+      <p class="error">{{ uploadError() }}</p>
       }
 
       @if (success()) {
-        <p class="success">{{ success() }}</p>
+      <p class="success">{{ success() }}</p>
       }
 
       <div class="actions">

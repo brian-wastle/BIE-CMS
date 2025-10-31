@@ -2,7 +2,7 @@
   <header class="media-picker__toolbar">
     <div class="media-picker__headline">
       <h3 class="media-picker__title">Directory Contents</h3>
-      <p class="media-picker__subtitle">Viewing {{ directoryLabel() }}</p>
+      <p class="media-picker__subtitle">Viewing {{ directoryLabel }}</p>
     </div>
     <div class="media-picker__controls">
       <label class="media-picker__sort">
@@ -37,7 +37,7 @@
     </div>
   } @else if (!files().length && hasAttemptedLoad()) {
     <div class="media-picker__empty">
-      <p>{{ emptyStateMessage() }}</p>
+      <p>{{ emptyMessage }}</p>
     </div>
   } @else {
     <div class="media-picker__grid">
@@ -67,7 +67,7 @@
               type="button"
               class="media-picker__delete"
               (click)="onDelete(item, $event)"
-              [disabled]="isDeleting(item.handle)">
+              [disabled]="deleting().has(item.handle)">
               <mat-icon>delete</mat-icon>
             </button>
           }

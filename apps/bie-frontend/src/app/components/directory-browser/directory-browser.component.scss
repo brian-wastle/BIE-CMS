@@ -18,7 +18,7 @@ $success: #4ade80;
 
 .directory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 200px));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 150px));
   gap: 1.25rem;
 }
 
@@ -61,6 +61,13 @@ $success: #4ade80;
   cursor: default;
   margin: 1px;
 }
+
+.folder-icon {
+  width: 60px;
+  height: 60px;
+  filter: brightness(0) saturate(100%) invert(23%) sepia(6%) saturate(4164%) hue-rotate(116deg) brightness(92%) contrast(80%);
+}
+
 
 .folder-form {
   width: 100%;
@@ -118,28 +125,26 @@ $success: #4ade80;
   transform: translateY(-1px);
 }
 
-.folder-edit-actions button:first-child:hover:not(:disabled) {
-  background: color.adjust($accent-green, $lightness: 5%);
-  border-color: color.adjust($accent-green, $lightness: 5%);
-  color: $surface;
-}
-
 .folder-edit-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 .folder-name {
-  padding-left: 8px;
+  padding-left: 2px;
   font-weight: 600;
   font-size: 1rem;
 }
 
 .folder-count,
 .folder-meta {
-  padding-left: 8px;
+  padding-left: 4px;
   font-size: 0.85rem;
   color: $text-dark;
+}
+
+.folder-meta {
+  font-size: 0.65rem;
 }
 
 .directory-empty {

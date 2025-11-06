@@ -53,17 +53,19 @@ $green-shadow: #0e997938;
 
 .browser-controls {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 0.35rem;
   flex-wrap: wrap;
+  font-size: 0.9rem;
 }
 
 .view-controls {
   display: flex;
-  justify-content: start;
-  max-height: 48px;
-  gap: 0.25rem;
+  justify-content: flex-start;
+  max-height: 40px;
+  gap: 0.15rem;
+  flex: 0 1 auto;
 
   @include mat.icon-button-overrides((
     hover-state-layer-opacity: 0,
@@ -79,22 +81,38 @@ $green-shadow: #0e997938;
   background: transparent;
   color: $text-dark;
   font-weight: 600;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
 }
 
-.view-button-left {
-  border-radius: 999px 0 0 999px;
-  padding-right: 1px;
+.view-button.mat-mdc-icon-button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
 }
 
-.view-button-center {
-  border-radius: 0;
+.view-button .mat-mdc-button-touch-target {
+  width: 40px;
+  height: 40px;
+}
+
+.view-button mat-icon,
+.view-button .mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+}
+
+.view-button-left {
+  border-radius: 999px 0 0 999px;
+  padding-right: 0.25rem;
 }
 
 .view-button-right {
   border-radius: 0 999px 999px 0;
-  padding-left: 1px;
+  padding-left: 0.25rem;
 }
 
 .view-button:hover {
@@ -113,11 +131,13 @@ $green-shadow: #0e997938;
   border-radius: 999px;
   background: transparent;
   color: $text-dark;
-  margin: 0.2rem 0.2rem 0 0;
-  padding: 0.8rem 1.8rem;
+  margin: 0;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+  flex-shrink: 0;
 }
 
 .folder-button:hover:not(:disabled) {
@@ -162,17 +182,31 @@ ul {
     padding: 1.25rem;
   }
 
-  .browser-controls {
+  .browser-actions {
     justify-content: center;
   }
 
   .view-controls {
-    flex: 1 1 100%;
     justify-content: center;
   }
 
+}
+
+@media (max-width: 946px) {
+  .view-controls {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .browser-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
   .folder-button {
-    flex: 1 1 140px;
+    flex: 1 1 calc(50% - 0.35rem);
+    min-width: 150px;
     text-align: center;
   }
 }
@@ -474,4 +508,12 @@ li {
 .actions button:not(:disabled):hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 28px $green-shadow;
+}
+.browser-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  flex: 1 1 auto;
 }

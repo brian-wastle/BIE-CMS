@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject, input, output, signal } from '@angular/core';
+import { Component, OnDestroy, effect, inject, input, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaItem, MediaLibraryService, MediaSort } from '../../services/media-library/media-library.service';
 
@@ -13,7 +13,7 @@ const SKELETON_TILE_COUNT = 8;
   templateUrl: './media-picker.component.html',
   styleUrl: './media-picker.component.scss',
 })
-export class MediaPickerComponent {
+export class MediaPickerComponent implements OnDestroy {
   private readonly mediaLibrary = inject(MediaLibraryService);
 
   readonly directory = input<string | null>(null);
@@ -36,6 +36,7 @@ export class MediaPickerComponent {
   readonly skeletonTiles = Array.from({ length: SKELETON_TILE_COUNT }, (_, index) => index);
 
   private requestId = 0;
+  private destroyed = false;
 
   constructor() {
     effect(() => {
@@ -59,6 +60,9 @@ export class MediaPickerComponent {
       if (this.requestId !== currentRequest) {
         return;
       }
+      if (this.destroyed) {
+        return;
+      }
       this.files.set(items);
       this.filesLoaded.emit(items);
       const selected = this.selection();
@@ -69,11 +73,14 @@ export class MediaPickerComponent {
       if (this.requestId !== currentRequest) {
         return;
       }
+      if (this.destroyed) {
+        return;
+      }
       console.error('Failed to load media files', err);
       this.error.set((err as Error).message ?? 'Failed to load media files');
       this.files.set([]);
     } finally {
-      if (this.requestId === currentRequest) {
+      if (this.requestId === currentRequest && !this.destroyed) {
         this.loading.set(false);
       }
     }
@@ -93,7 +100,9 @@ export class MediaPickerComponent {
       return;
     }
     this.selection.set(item.handle);
-    this.mediaSelected.emit(item);
+    if (!this.destroyed) {
+      this.mediaSelected.emit(item);
+    }
   }
 
   onTileKeydown(event: KeyboardEvent, item: MediaItem) {
@@ -119,7 +128,9 @@ export class MediaPickerComponent {
       if (this.selection() === item.handle) {
         this.selection.set(null);
       }
-      this.mediaDeleted.emit(item.handle);
+      if (!this.destroyed) {
+        this.mediaDeleted.emit(item.handle);
+      }
     } catch (err) {
       console.error('Failed to delete media item', err);
       this.error.set((err as Error).message ?? 'Failed to delete media item');
@@ -153,5 +164,9 @@ export class MediaPickerComponent {
   isImage(item: MediaItem) {
     const type = item.mimetype?.toLowerCase() ?? '';
     return type.startsWith('image/');
+  }
+
+  ngOnDestroy() {
+    this.destroyed = true;
   }
 }

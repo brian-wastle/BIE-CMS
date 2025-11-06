@@ -98,10 +98,15 @@ export class MediaLibraryService {
     }
   }
 
-  // Trim directory names and remove special characters and spaces
   public normalizeDirectory(dirName: string | null) {
-    const value = dirName?.trim();
-    const normalizedValue = value?.replace(/[^a-zA-Z0-9]/g, "");
+    const value = dirName?.trim() ?? '';
+    if (!value) {
+      return UNSORTED_KEY;
+    }
+    const underscored = value.replace(/\s+/g, '_');
+    const sanitized = underscored.replace(/[^A-Za-z0-9_]/g, '');
+    const compressed = sanitized.replace(/_+/g, '_');
+    const normalizedValue = compressed.replace(/^_+|_+$/g, '');
     return normalizedValue || UNSORTED_KEY;
   }
 

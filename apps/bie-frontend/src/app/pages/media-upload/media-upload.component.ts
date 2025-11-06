@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MediaBrowserComponent } from '../../components/media-browser/media-browser.component';
 
 type UploadStatus = 'pending' | 'uploading' | 'success' | 'error';
-type ViewMode = 'list' | 'grid' | 'details';
+type ViewMode = 'list' | 'grid';
 
 interface UploadItem {
   id: string;
@@ -59,6 +59,10 @@ export class MediaUploadComponent {
 
   refreshFolders() {
     void this.refreshDirectories();
+  }
+
+  clearEmptyDirectories() {
+    this.mediaBrowser?.clearEmptyDirectories();
   }
 
   // Pop-up file picker on "dropzone" HTML input element

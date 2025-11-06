@@ -22,37 +22,37 @@
           </button>
           <button
             type="button"
-            class="view-button view-button-center"
+            class="view-button view-button-right"
             mat-icon-button
             aria-label="Grid view"
             [class.view-button-active]="viewMode() === 'grid'"
             (click)="onBrowserViewModeChange('grid')">
             <mat-icon>view_module</mat-icon>
           </button>
+        </div>
+        <div class="browser-actions">
           <button
             type="button"
-            class="view-button view-button-right"
-            mat-icon-button
-            aria-label="Details view"
-            [class.view-button-active]="viewMode() === 'details'"
-            (click)="onBrowserViewModeChange('details')">
-            <mat-icon>view_sidebar</mat-icon>
+            class="folder-button"
+            (click)="onCreateFolderRequested()"
+            [disabled]="loading() || (mediaBrowser?.dirControlPrivilege() ?? false)">
+            New Folder
+          </button>
+          <button
+            type="button"
+            class="folder-button"
+            (click)="refreshFolders()"
+            [disabled]="loading() || (mediaBrowser?.dirControlPrivilege() ?? false)">
+            Refresh Folders
+          </button>
+          <button
+            type="button"
+            class="folder-button"
+            (click)="clearEmptyDirectories()"
+            [disabled]="loading() || (mediaBrowser?.dirControlPrivilege() ?? false) || !(mediaBrowser?.hasEmptyDirectories() ?? false)">
+            Clear Empty
           </button>
         </div>
-        <button
-          type="button"
-          class="folder-button"
-          (click)="onCreateFolderRequested()"
-          [disabled]="loading() || (mediaBrowser?.dirControlPrivilege() ?? false)">
-          New Folder
-        </button>
-        <button
-          type="button"
-          class="folder-button"
-          (click)="refreshFolders()"
-          [disabled]="loading() || (mediaBrowser?.dirControlPrivilege() ?? false)">
-          Refresh Folders
-        </button>
       </div>
     </div>
     <hr>

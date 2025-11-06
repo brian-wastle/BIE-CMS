@@ -58,6 +58,14 @@ export class MediaBrowserComponent {
     this.setSelectedDirectory(null);
   }
 
+  hasEmptyDirectories() {
+    return this.directoryBrowser?.hasEmptyDirectories() ?? false;
+  }
+
+  clearEmptyDirectories() {
+    this.directoryBrowser?.clearEmptyDirectories();
+  }
+
   private setSelectedDirectory(value: string | null) {
     const normalized = this.normalizeSelection(value);
     if (this.selectedDirectory() !== normalized) {
@@ -70,4 +78,3 @@ export class MediaBrowserComponent {
     return trimmed.length ? trimmed : null;
   }
 }
-

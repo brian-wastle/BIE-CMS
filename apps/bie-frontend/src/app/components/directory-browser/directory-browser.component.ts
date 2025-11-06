@@ -34,11 +34,14 @@ export class DirectoryBrowserComponent {
   readonly dirNameFC = new FormControl<string>('', { nonNullable: true });
   readonly skeletonTiles = Array.from({ length: 6 }, (_, index) => index);
   readonly hasDirectories = computed(() => this.sessionDirectories().length > 0);
+  readonly hasEmptyDirectories = computed(() =>
+    this.sessionDirectories().some((entry) => (entry.itemCount ?? 0) === 0)
+  );
   readonly controlsDisabled = computed(() => this.directoriesLoading() || this.pendingDirectory() !== null);
   private lastSelectedDirectory: string | null = null;
   // List View
   readonly displayedColumns: string[] = ['Folder Name', 'Item Count', 'Last Update' ];
-  readonly dataSource = new MatTableDataSource(this.directories());
+  readonly listSource = new MatTableDataSource(this.directories());
 
   constructor() {
     effect(() => {
@@ -63,12 +66,7 @@ export class DirectoryBrowserComponent {
       const serverKeys = new Set(directories.map((entry) => entry.directory ?? null));
 
       this.tempDirectories.update((dirs) =>
-        dirs.filter((entry) => {
-          if (entry === this.pendingDirectory()) {
-            return true;
-          }
-          return !serverKeys.has(entry.directory);
-        })
+        dirs.filter((entry) => !serverKeys.has(entry.directory))
       );
 
       const selected = this.selectedDirectory();
@@ -95,7 +93,6 @@ export class DirectoryBrowserComponent {
     }
     this.lastSelectedDirectory = this.selectedDirectory();
     const newDir: DirectoryMeta = { directory: '', itemCount: 0, lastUploaded: null };
-    this.tempDirectories.update((dirs) => [newDir, ...dirs]);
     this.dirNameFC.setValue('');
     this.pendingDirectory.set(newDir);
     this.directoryError.set(null);
@@ -111,15 +108,20 @@ export class DirectoryBrowserComponent {
     if (error) {
       return;
     }
-    const dirName = this.dirNameFC.value;
+    const dirName = this.dirNameFC.value.trim();
     const normalizedName = this.mediaLibrary.normalizeDirectory(dirName);
-    this.tempDirectories.update((dirs) =>
-      dirs.map((entry) => (entry === pending ? { ...entry, directory: normalizedName, lastUploaded: null } : entry))
-    );
+    const newEntry: DirectoryMeta = { ...pending, directory: normalizedName, lastUploaded: null };
+    this.tempDirectories.update((dirs) => [newEntry, ...dirs]);
     this.pendingDirectory.set(null);
     this.selectedDirectory.set(normalizedName);
     this.lastSelectedDirectory = null;
     this.dirNameFC.setValue('');
+  }
+
+  onPendingDirectorySubmit(event: SubmitEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.savePendingDirectory();
   }
 
   cancelPendingDirectory() {
@@ -127,11 +129,34 @@ export class DirectoryBrowserComponent {
     if (!pending) {
       return;
     }
-    this.tempDirectories.update((dirs) => dirs.filter((entry) => entry !== pending));
     this.pendingDirectory.set(null);
     this.selectedDirectory.set(this.lastSelectedDirectory ?? null);
     this.lastSelectedDirectory = null;
     this.dirNameFC.setValue('');
+  }
+
+  clearEmptyDirectories() {
+    if (this.pendingDirectory()) {
+      this.cancelPendingDirectory();
+    }
+    const keepNonEmpty = (entry: DirectoryMeta) => (entry.itemCount ?? 0) > 0;
+    const previousTemp = this.tempDirectories();
+    const filteredTemp = previousTemp.filter(keepNonEmpty);
+    if (filteredTemp.length !== previousTemp.length) {
+      this.tempDirectories.set(filteredTemp);
+    }
+    this.directories.update((dirs) => dirs.filter(keepNonEmpty));
+
+    const selected = this.selectedDirectory();
+    if (selected !== null) {
+      const normalizedSelected = this.mediaLibrary.normalizeDirectory(selected);
+      const stillExists = this.sessionDirectories().some(
+        (entry) => this.mediaLibrary.normalizeDirectory(entry.directory ?? null) === normalizedSelected
+      );
+      if (!stillExists) {
+        this.selectedDirectory.set(null);
+      }
+    }
   }
 
   pendingDirectoryError(): string | null {
@@ -139,15 +164,12 @@ export class DirectoryBrowserComponent {
     if (!pending) {
       return null;
     }
-    const rawName = this.dirNameFC.value;
-    if (!rawName) {
+    const trimmedName = this.dirNameFC.value.trim();
+    if (!trimmedName) {
       return 'Folder name is required.';
     }
-    const key = this.mediaLibrary.normalizeDirectory(rawName);
+    const key = this.mediaLibrary.normalizeDirectory(trimmedName);
     const duplicate = this.sessionDirectories().some((entry) => {
-      if (entry === pending) {
-        return false;
-      }
       return this.mediaLibrary.normalizeDirectory(entry.directory ?? null) === key;
     });
     if (duplicate) {

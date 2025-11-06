@@ -1,7 +1,8 @@
 <app-directory-browser
   [selectedDirectory]="selectedDirectory()"
   (selectedDirectoryChange)="onBrowserDirectoryChange($event)"
-  (dirControlToggle)="onDirControlToggle($event)">
+  (dirControlToggle)="onDirControlToggle($event)"
+  [viewMode]="viewMode()">
 </app-directory-browser>
 <hr>
 <app-media-picker

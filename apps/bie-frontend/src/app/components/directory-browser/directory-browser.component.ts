@@ -1,25 +1,30 @@
-import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, model, output, signal } from '@angular/core';
+import { CommonModule, DatePipe} from '@angular/common';
+import { Component, computed, effect, inject, model, input, output, signal, ViewChild } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import {MatTableDataSource, MatTableModule} from '@angular/material/table';
+import {MatSort, Sort, MatSortModule} from '@angular/material/sort';
 import type { DirectoryMeta, ViewMode } from 'bie-models';
 import { MediaLibraryService } from '../../services/media-library/media-library.service';
 
 @Component({
   selector: 'app-directory-browser',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MatTableModule, MatSortModule],
   templateUrl: './directory-browser.component.html',
   styleUrl: './directory-browser.component.scss',
   providers: [DatePipe]
 })
 export class DirectoryBrowserComponent {
+  @ViewChild(MatSort) sortRow?: MatSort;
+  
   private readonly mediaLibrary = inject(MediaLibraryService);
   readonly folderIcon = 'assets/foldericon.svg';
+  readonly today = new Date();  // For new folders without a last updated date
 
   readonly selectedDirectory = model<string | null>(null);
   readonly dirControlToggle = output<boolean>();
 
-  readonly viewMode = signal<ViewMode>('grid');
+  readonly viewMode = input<ViewMode>('grid');
   readonly directories = signal<DirectoryMeta[]>([]);
   readonly directoriesLoading = signal(true);
   readonly directoryError = signal<string | null>(null);
@@ -30,10 +35,10 @@ export class DirectoryBrowserComponent {
   readonly skeletonTiles = Array.from({ length: 6 }, (_, index) => index);
   readonly hasDirectories = computed(() => this.sessionDirectories().length > 0);
   readonly controlsDisabled = computed(() => this.directoriesLoading() || this.pendingDirectory() !== null);
-
-  readonly today = new Date();
-
   private lastSelectedDirectory: string | null = null;
+  // List View
+  readonly displayedColumns: string[] = ['Folder Name', 'Item Count', 'Last Update' ];
+  readonly dataSource = new MatTableDataSource(this.directories());
 
   constructor() {
     effect(() => {

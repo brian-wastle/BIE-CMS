@@ -3,8 +3,6 @@ import { DirectoryBrowserComponent } from '../directory-browser/directory-browse
 import { MediaPickerComponent } from '../media-picker/media-picker.component';
 import type { ViewMode } from 'bie-models';
 
-const UNSORTED_LABEL = 'Unsorted';
-
 @Component({
   selector: 'app-media-browser',
   standalone: true,
@@ -24,7 +22,8 @@ export class MediaBrowserComponent {
   readonly selectedDirectory = model<string | null>(null);
   readonly mediaDeleted = output<string>();
 
-  readonly activeDirectoryLabel = computed(() => this.selectedDirectory()?.trim() || UNSORTED_LABEL);
+  // Lets page component know which folder is selected
+  readonly activeDirectoryLabel = computed(() => this.selectedDirectory()?.trim() || 'Unsorted');
 
   constructor() {
     effect(() => {

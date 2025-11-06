@@ -1,7 +1,7 @@
 <div class="asset-manager-layout" [class.asset-manager-layout--drag]="dragActive()">
   <section class="directory-browser">
     <div class="browser-top">
-      <ul class="browser-top-tips">
+      <ul>
         <li class="directory-tip">
           Choose a location for your media content, or create a new directory.
         </li>
@@ -59,6 +59,7 @@
     <app-media-browser
       (selectedDirectoryChange)="onDirectoryChanged($event)"
       [allowDelete]="true"
+      [viewMode]="viewMode()"
       (mediaDeleted)="refreshFolders()">
     </app-media-browser>
   </section>

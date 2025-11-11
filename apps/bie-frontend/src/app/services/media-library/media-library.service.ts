@@ -1,7 +1,7 @@
 import { Injectable, effect, signal } from '@angular/core';
 import type { DirectoryMeta } from 'bie-models';
 
-const UNSORTED_KEY = '__unsorted__';
+const UNSORTED_KEY = 'unsorted';
 const TEMP_DIRECTORY_STORAGE_KEY = 'media-upload:temp-directories';
 
 export type MediaSort = 'created_desc' | 'created_asc' | 'filename';

@@ -10,5 +10,6 @@
   [allowDelete]="allowDelete()"
   [allowSelection]="true"
   [selectedHandle]="selectedHandle()"
-  (mediaDeleted)="mediaDeleted.emit($event)">
+  (mediaDeleted)="mediaDeleted.emit($event)"
+  (mediaSelected)="onMediaSelected($event)">
 </app-media-picker>

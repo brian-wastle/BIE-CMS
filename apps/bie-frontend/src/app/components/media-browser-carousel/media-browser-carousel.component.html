@@ -1,0 +1,35 @@
+<div class="media-carousel" [class.media-carousel-picker]="viewState() === 'picker'">
+  <div class="media-carousel-track" [style.transform]="viewState() === 'picker' ? 'translateX(-50%)' : 'translateX(0)'">
+    <section class="media-panel media-panel-directories">
+      <div class="media-panel-header">
+        <h4>Directories</h4>
+      </div>
+      <app-directory-browser
+        [selectedDirectory]="selectedDirectory()"
+        (selectedDirectoryChange)="onDirectoryChange($event)"
+        (dirControlToggle)="onDirControlToggle($event)"
+        [viewMode]="viewMode()">
+      </app-directory-browser>
+    </section>
+
+    <section class="media-panel media-panel-picker">
+      <div class="media-panel-header media-panel-header-picker">
+        <button type="button" class="media-carousel-back" (click)="showDirectories()">
+          ← Directories
+        </button>
+        <div class="media-carousel-heading">
+          <span>Viewing</span>
+          <strong>{{ activeDirectoryLabel() }}</strong>
+        </div>
+      </div>
+      <app-media-picker
+        [directory]="selectedDirectory()"
+        [allowDelete]="allowDelete()"
+        [allowSelection]="true"
+        [selectedHandle]="selectedHandle()"
+        (mediaSelected)="onMediaSelected($event)"
+        (mediaDeleted)="onMediaDeleted($event)">
+      </app-media-picker>
+    </section>
+  </div>
+</div>

@@ -1,4 +1,4 @@
-import { Component, TrackByFunction, computed, signal, HostListener, effect, inject } from '@angular/core';
+import { Component, TrackByFunction, computed, signal, HostListener, effect, inject, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDrag, CdkDropList, CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -9,6 +9,9 @@ import { BlogTitleComponent } from '../../components/blog-title/blog-title.compo
 import { BlogBylineComponent } from '../../components/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/textbox/textbox.component';
 import { ImageBoxComponent } from '../../components/imagebox/imagebox.component';
+import { MediaBrowserCarouselComponent } from '../../components/media-browser-carousel/media-browser-carousel.component';
+import type { MediaItem } from '../../services/media-library/media-library.service';
+
 @Component({
   selector: 'app-canvas',
   standalone: true,
@@ -23,11 +26,12 @@ import { ImageBoxComponent } from '../../components/imagebox/imagebox.component'
     ImageBoxComponent,
     BlogTitleComponent,
     BlogBylineComponent,
+    MediaBrowserCarouselComponent,
   ],
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.scss'],
 })
-export class CanvasComponent {
+export class CanvasComponent implements AfterViewInit {
   authorMode = true;
   columns = 12;
   gapPx = 16;
@@ -69,9 +73,20 @@ export class CanvasComponent {
 
   selectedId = signal<string | null>(null);
   selected = computed(() => this.blocks().find(b => b.id === this.selectedId()) ?? null);
+  inspectorOpen = signal(true);
+  inspectorCollapsible = signal(true);
 
   @HostListener('document:keydown.escape')
   onEsc() { this.clearSelection(); }
+
+  @HostListener('window:resize')
+  onViewportResize() {
+    this.updateInspectorCollapsible();
+  }
+
+  ngAfterViewInit() {
+    this.updateInspectorCollapsible();
+  }
 
   // Help the canvas id which block types to render
   isTitleBlock(block: AnyBlock): block is TitleBlock { return block.type === 'title'; }
@@ -101,7 +116,18 @@ export class CanvasComponent {
 
   addImage() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
-    this.blocks.update(arr => [...arr, { id, type: 'image', order: arr.length, layout: { colStart: 1, colSpan: 6 }, src: '', alt: '' } as ImageBlock]);
+    this.blocks.update(arr => [
+      ...arr,
+      {
+        id,
+        type: 'image',
+        order: arr.length,
+        layout: { colStart: 1, colSpan: 6 },
+        src: '',
+        alt: '',
+        mediaHandle: null
+      } as ImageBlock
+    ]);
     this.selectedId.set(id);
   }
 
@@ -163,6 +189,39 @@ export class CanvasComponent {
     }
   }
 
+  toggleInspector() {
+    if (!this.inspectorCollapsible()) {
+      return;
+    }
+    this.inspectorOpen.update((open) => !open);
+  }
+
+  onInspectorMediaSelected(item: MediaItem) {
+    const target = this.selected();
+    if (!target || !this.isImageBlock(target)) {
+      return;
+    }
+    const nextSrc = this.resolveMediaSource(item);
+    if (!nextSrc) {
+      return;
+    }
+    const patch: BlockUpdate = {
+      src: nextSrc,
+      mediaHandle: item.handle
+    };
+    if (!target.alt?.trim()) {
+      patch.alt = this.buildAltSuggestion(item.filename);
+    }
+    this.onBlockUpdate(target, patch);
+  }
+
+  clearImageBlock(block: ImageBlock) {
+    if (!this.isImageBlock(block)) {
+      return;
+    }
+    this.onBlockUpdate(block, { src: '', alt: '', mediaHandle: null });
+  }
+
   onBlockUpdate(block: AnyBlock, patch: BlockUpdate) {
     this.blocks.update(arr => arr.map(b => {
       if (b.id !== block.id) return b;
@@ -178,6 +237,7 @@ export class CanvasComponent {
           ...base,
           ...('src' in patch ? { src: patch.src ?? '' } : {}),
           ...('alt' in patch ? { alt: patch.alt } : {}),
+          ...('mediaHandle' in patch ? { mediaHandle: patch.mediaHandle ?? null } : {}),
         } as ImageBlock;
       }
       if (this.isBylineBlock(base)) {
@@ -191,7 +251,30 @@ export class CanvasComponent {
     }));
   }
 
+  private resolveMediaSource(item: MediaItem) {
+    const cdn = item.cdnUrl?.trim() ?? '';
+    const storage = item.storagePath?.trim() ?? '';
+    return cdn || storage;
+  }
+
+  private buildAltSuggestion(filename: string | null | undefined) {
+    if (!filename) {
+      return '';
+    }
+    return filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  }
+
+  private updateInspectorCollapsible() {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const canCollapse = window.innerWidth > 1024;
+    if (!canCollapse && !this.inspectorOpen()) {
+      this.inspectorOpen.set(true);
+    }
+    this.inspectorCollapsible.set(canCollapse);
+  }
+
   trackByBlockId: TrackByFunction<AnyBlock> = (_i, block) => block.id;
 }
-
 

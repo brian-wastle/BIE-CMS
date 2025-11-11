@@ -1,43 +1,34 @@
-﻿<app-block-shell-template
+<app-block-shell-template
   editClass="img-author"
   previewClass="img-preview">
 
   <ng-container blockAuthor>
-    <label class="field">
-      <span>Image URL</span>
-      <input class="input"
-             type="url"
-             [ngModel]="block().src"
-             (ngModelChange)="onSrcChange($event)"
-             pasteUrl
-             (pasteUrl)="onSrcChange($event)"
-             placeholder="https://example.com/image.jpg" />
-    </label>
-
-    <label class="field">
-      <span>Alt text</span>
-      <input class="input"
-             type="text"
-             [ngModel]="block().alt"
-             (ngModelChange)="onAltChange($event)"
-             placeholder="Describe the image" />
-    </label>
-
     @if (block().src) {
       <div class="preview-wrap">
-        <img class="media"
-             [src]="block().src"
-             [alt]="block().alt || ''"
-             (error)="broken = true"
-             [class.broken]="broken" />
+        <img
+          class="media"
+          [src]="block().src"
+          [alt]="block().alt || ''"
+          (load)="onImageLoad()"
+          (error)="onImageError()"
+          [class.broken]="broken" />
         @if (broken) {
-          <div class="broken-note">{{ block().alt || '' }}</div>
+        <div class="broken-note">{{ block().alt || 'Image failed to load' }}</div>
         }
+      </div>
+    } @else {
+      <div class="media-placeholder">
+        <p>No image selected.</p>
+        <p class="media-placeholder-hint">Use the Inspector to choose media from your library.</p>
       </div>
     }
   </ng-container>
 
   <ng-container blockPreview>
-    <img class="media" [src]="block().src" [alt]="block().alt || ''" />
+    @if (block().src) {
+      <img class="media" [src]="block().src" [alt]="block().alt || ''" />
+    } @else {
+      <div class="media-placeholder media-placeholder-muted">Image placeholder</div>
+    }
   </ng-container>
 </app-block-shell-template>

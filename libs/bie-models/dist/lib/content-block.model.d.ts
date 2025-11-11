@@ -45,12 +45,14 @@ export interface ImageBlock extends ContentBlockBase {
     type: 'image';
     src: string;
     alt?: string;
+    mediaHandle?: string | null;
 }
 export type BlockUpdate = {
     layout?: GridPlacement;
     text?: string;
     src?: string;
     alt?: string;
+    mediaHandle?: string | null;
     author?: string;
     format?: string;
     publishedAt?: string;

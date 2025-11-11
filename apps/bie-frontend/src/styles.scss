@@ -62,8 +62,8 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   }
 }
 
-.directory-grid--loading .folder-icon.placeholder,
-.directory-grid--loading .folder-label.placeholder {
+.directory-grid-loading .folder-icon.placeholder,
+.directory-grid-loading .folder-label.placeholder {
   width: 100%;
   height: 42px;
   background: #dad9de;
@@ -71,7 +71,7 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   animation: placeholder-pulse 1.4s ease-in-out infinite;
 }
 
-.directory-grid--loading .folder-label.placeholder {
+.directory-grid-loading .folder-label.placeholder {
   margin-top: 0.75rem;
   height: 18px;
 }

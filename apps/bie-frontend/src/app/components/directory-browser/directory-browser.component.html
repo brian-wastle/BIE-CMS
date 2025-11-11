@@ -1,11 +1,12 @@
 <div class="browser-window">
+  <h3 class="browser-title">Current Folders</h3>
   @if (directoryError()) {
-  <p class="error error--inline">{{ directoryError() }}</p>
+  <p class="error error-inline">{{ directoryError() }}</p>
   }
   @if (directoriesLoading()) {
-  <div class="directory-grid directory-grid--loading">
+  <div class="directory-grid directory-grid-loading">
     @for (tile of skeletonTiles; track tile) {
-    <div class="folder-tile folder-tile--loading">
+    <div class="folder-tile folder-tile-loading">
       <div class="folder-icon placeholder"></div>
       <div class="folder-label placeholder"></div>
     </div>
@@ -15,7 +16,7 @@
   <div [ngClass]="{'directory-grid': viewMode()==='grid',
     'directory-rows': viewMode()==='list'}">
     @if (viewMode() === 'list') {
-    <div class="folder-row folder-row--header" role="presentation">
+    <div class="folder-row folder-row-header" role="presentation">
       <div style="width:30px"></div>
       <span class="directory-name">Folder</span>
       <span class="directory-count">Items</span>
@@ -25,7 +26,7 @@
     @for (entry of sessionDirectories(); track entry.directory ?? $index) {
     @switch (viewMode()) {
     @case ('grid') {
-    <button type="button" class="folder-tile" [class.folder-tile--selected]="isDirectorySelected(entry.directory)"
+    <button type="button" class="folder-tile" [class.folder-tile-selected]="isDirectorySelected(entry.directory)"
       (click)="onDirectorySelect(entry)">
       <img class="folder-icon" [src]="folderIcon" alt="" aria-hidden="true" />
       <span class="folder-name">{{ entry.directory?.trim() }}</span>
@@ -34,7 +35,7 @@
     </button>
     }
     @case ('list') {
-    <div class="folder-row" [class.folder-row--selected]="isDirectorySelected(entry.directory)"
+    <div class="folder-row" [class.folder-row-selected]="isDirectorySelected(entry.directory)"
       (click)="onDirectorySelect(entry)">
       <img class="folder-icon-small" [src]="folderIcon" alt="" aria-hidden="true" />
       <span class="directory-name">{{ entry.directory?.trim() }}</span>
@@ -63,7 +64,7 @@
           [attr.aria-invalid]="pendingDirectoryError() !== null"
           [attr.aria-describedby]="pendingDirectoryError() ? 'folder-name-help folder-name-error' : 'folder-name-help'"
           (keydown.escape)="cancelPendingDirectory()" />
-        <p class="folder-help" id="folder-name-help">Provide a unique name before saving.</p>
+        <p class="folder-help" id="folder-name-help">Tip: stick with letters, numbers and underscores</p>
         @if (pendingDirectoryError()) {
         <p class="folder-error" id="folder-name-error">{{ pendingDirectoryError() }}</p>
         }

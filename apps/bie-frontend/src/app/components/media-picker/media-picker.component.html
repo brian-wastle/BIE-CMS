@@ -44,7 +44,7 @@
       @for (item of files(); track item.handle) {
         <div
           class="media-picker-tile"
-          [class.media-picker-tile--selected]="selection() === item.handle"
+          [class.media-picker-tile-selected]="selection() === item.handle"
           [attr.tabindex]="allowSelection() ? 0 : -1"
           role="button"
           [attr.aria-pressed]="selection() === item.handle"

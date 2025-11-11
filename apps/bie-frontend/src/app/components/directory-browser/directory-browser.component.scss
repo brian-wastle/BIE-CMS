@@ -12,27 +12,64 @@ $error: #f87171;
 $error-soft: #f8717133;
 $success: #4ade80;
 
+$browser-padding-inline: clamp(1.5rem, 4vw, 2rem);
+$browser-padding-block-end: clamp(1.5rem, 4vw, 2rem);
+
 .browser-window {
+  background: $surface-elevated;
   position: relative;
-  padding: 0 clamp(1.5rem, 4vw, 2rem) clamp(1.5rem, 4vw, 2rem) clamp(1.5rem, 4vw, 2rem);
+  padding: 0 $browser-padding-inline $browser-padding-block-end $browser-padding-inline;
+  max-width: 100%;
+  overflow: hidden;
 }
 
+.browser-title {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+:host-context(.media-panel-directories) {
+  .browser-window {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .browser-title {
+    margin-bottom: 0.25rem;
+  }
+}
+/* TODO: Add mixin for idential media-picker-grid/directory-grid and tile classes (1 of 2) */
 .directory-grid {
+  padding-left: 1rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 150px));
+  grid-template-columns: repeat(auto-fill, minmax(100px, 150px));
   gap: 1.25rem;
+  border: hidden;
+  border-radius: 0.75rem;
+  background: $surface;
+
+  @media (max-width: 900px) {
+    padding-left: 0.5rem;
+    gap: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    padding-left: 0;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
 }
 
 .folder-tile {
+  border-radius:0px;
   padding: 1.25rem 1rem;
-  background: $surface-elevated;
+  background: $surface;
   border-style: hidden;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   align-items: flex-start;
   cursor: pointer;
-  margin: 1px;
+  margin: 11px;
   text-align: left;
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
 }
@@ -43,24 +80,21 @@ $success: #4ade80;
   transform: translateY(-1px);
 }
 
-.folder-tile--selected {
-  border: 1px solid $accent-green;
-  border-radius: 0.25rem;
+.folder-tile-selected {
   background: $accent-soft;
-  margin: 0;
+  margin: 10;
 }
 
-.folder-tile--loading {
-  border: 1px dashed $border-accent;
+.folder-tile-loading {
   border-radius: 0.75rem;
   background: $surface-accent;
   cursor: default;
-  margin: 0;
+  margin: 10;
 }
 
-.folder-tile--editing {
+.folder-tile-editing {
   cursor: default;
-  margin: 1px;
+  margin: 11px;
 }
 
 .directory-rows {
@@ -80,6 +114,17 @@ $success: #4ade80;
   cursor: pointer;
   margin: 1px;
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-areas:
+      "icon name"
+      "icon count"
+      "icon last";
+    column-gap: 0.75rem;
+    row-gap: 0.35rem;
+    align-items: flex-start;
+  }
 }
 
 .folder-row:hover {
@@ -88,14 +133,14 @@ $success: #4ade80;
   transform: translateY(-1px);
 }
 
-.folder-row--selected {
+.folder-row-selected {
   border: 1px solid $accent-green;
   border-radius: 0.25rem;
   background: $accent-soft;
   margin: 0;
 }
 
-.folder-row--loading {
+.folder-row-loading {
   border: 1px dashed $border-accent;
   border-radius: 0.75rem;
   background: $surface-accent;
@@ -103,14 +148,14 @@ $success: #4ade80;
   margin: 0;
 }
 
-.folder-row--editing {
+.folder-row-editing {
   cursor: default;
   display:flex;
   margin: 1px;
   gap: 2vw;
 }
 
-.folder-row--header {
+.folder-row-header {
   background: transparent;
   border: none;
   margin: 0;
@@ -122,11 +167,15 @@ $success: #4ade80;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   transition: none;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
-.folder-row--header .directory-name,
-.folder-row--header .directory-count,
-.folder-row--header .directory-last {
+.folder-row-header .directory-name,
+.folder-row-header .directory-count,
+.folder-row-header .directory-last {
   font-size: 0.75rem;
 }
 
@@ -134,18 +183,28 @@ $success: #4ade80;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: block;
+  max-width: 100%;
+
+  @media (max-width: 768px) {
+    grid-area: name;
+  }
 }
 
 .folder-icon {
   width: 60px;
   height: 60px;
-  filter: brightness(0) saturate(100%) invert(23%) sepia(6%) saturate(4164%) hue-rotate(116deg) brightness(92%) contrast(80%);
+  filter: brightness(0) saturate(100%) invert(23%) sepia(24%) saturate(4164%) hue-rotate(116deg) brightness(100%) contrast(50%);
 }
 
 .folder-icon-small {
   width: 30px;
   height: 30px;
-  filter: brightness(0) saturate(100%) invert(23%) sepia(6%) saturate(4164%) hue-rotate(116deg) brightness(92%) contrast(80%);
+  filter: brightness(0) saturate(100%) invert(23%) sepia(24%) saturate(4164%) hue-rotate(116deg) brightness(100%) contrast(50%);
+
+  @media (max-width: 768px) {
+    grid-area: icon;
+  }
 }
 
 
@@ -271,6 +330,11 @@ $success: #4ade80;
   padding-left: 2px;
   font-weight: 600;
   font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  max-width: 100%;
 }
 
 .folder-count,
@@ -289,6 +353,22 @@ $success: #4ade80;
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+
+  @media (max-width: 768px) {
+    text-align: left;
+  }
+}
+
+.directory-count {
+  @media (max-width: 768px) {
+    grid-area: count;
+  }
+}
+
+.directory-last {
+  @media (max-width: 768px) {
+    grid-area: last;
+  }
 }
 
 .directory-empty {
@@ -310,6 +390,6 @@ $success: #4ade80;
   color: color.adjust($error, $lightness: 25%);
 }
 
-.error--inline {
+.error-inline {
   margin: 0;
 }

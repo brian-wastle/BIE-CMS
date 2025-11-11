@@ -1,13 +1,8 @@
-﻿<app-block-shell-template
-  editClass="title-author"
-  previewClass="title-view"
-  controlsClass="title-controls">
+﻿<app-block-shell-template editClass="title-author" previewClass="title-view" controlsClass="title-controls">
 
   <ng-container blockAuthor>
     <div class="title-content">
-      <input type="text"
-             [value]="titleContent()"
-             (input)="onInput($any($event.target).value)" />
+      <input type="text" [value]="titleContent()" (input)="onInput($any($event.target).value)" />
     </div>
   </ng-container>
 

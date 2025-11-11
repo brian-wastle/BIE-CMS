@@ -1,4 +1,4 @@
-<div class="asset-manager-layout" [class.asset-manager-layout--drag]="dragActive()">
+<div class="asset-manager-layout" [class.asset-manager-layout-drag]="dragActive()">
   <section class="directory-browser">
     <div class="browser-top">
       <ul>
@@ -66,7 +66,7 @@
 
   <section class="uploader-panel">
     <div class="dropzone" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onFileDrop($event)"
-      [class.dropzone--active]="dragActive()">
+      [class.dropzone-active]="dragActive()">
       <p class="dropzone-title">Drop media files to upload</p>
       <p class="dropzone-hint">
         Files will be stored under <strong>{{ mediaBrowser?.activeDirectoryLabel() ?? 'Unsorted' }}</strong>.

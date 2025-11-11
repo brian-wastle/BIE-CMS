@@ -2,6 +2,7 @@ import { Component, ViewChild, computed, effect, input, model, output, signal } 
 import { DirectoryBrowserComponent } from '../directory-browser/directory-browser.component';
 import { MediaPickerComponent } from '../media-picker/media-picker.component';
 import type { ViewMode } from 'bie-models';
+import type { MediaItem } from '../../services/media-library/media-library.service';
 
 @Component({
   selector: 'app-media-browser',
@@ -21,6 +22,7 @@ export class MediaBrowserComponent {
   readonly selectedHandle = input<string | null>(null);
   readonly selectedDirectory = model<string | null>(null);
   readonly mediaDeleted = output<string>();
+  readonly mediaSelected = output<MediaItem>();
 
   // Lets page component know which folder is selected
   readonly activeDirectoryLabel = computed(() => this.selectedDirectory()?.trim() || 'Unsorted');
@@ -43,6 +45,9 @@ export class MediaBrowserComponent {
     if (this.dirControlPrivilege() !== disabled) {
       this.dirControlPrivilege.set(disabled);
     }
+  }
+  onMediaSelected(item: MediaItem) {
+    this.mediaSelected.emit(item);
   }
 
   async refresh() {

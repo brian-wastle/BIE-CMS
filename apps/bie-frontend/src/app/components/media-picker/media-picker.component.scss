@@ -77,7 +77,7 @@ $error-soft: #f8717133;
 .media-picker-refresh {
   border: 1px solid $border-muted;
   border-radius: 999px;
-  background: transparent;
+  background: $surface;
   color: $text-dark;
   padding: 0.5rem 1.25rem;
   font-weight: 600;
@@ -104,30 +104,35 @@ $error-soft: #f8717133;
   background: $error-soft;
   color: color.adjust($error, $lightness: 25%);
 }
-
+/* TODO: Add mixin for idential media-picker-grid/directory-grid and tile classes (2 of 2) */
 .media-picker-grid {
+  padding-left: 1rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 150px));
+  gap: 1.25rem;
+  border: hidden;
+  border-radius: 0.75rem;
+  background: $surface;
 }
 
 .media-picker-tile {
-  position: relative;
+  border-radius:0px;
+  padding: 1.25rem 1rem;
+  background: $surface;
+  border-style: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.75rem;
-  border: 1px solid $border-muted;
-  border-radius: 0.75rem;
-  background: $surface;
-  color: $text-dark;
+  gap: 0.35rem;
+  align-items: flex-start;
   cursor: pointer;
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
-  outline: none;
+  margin: 11px;
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
 }
 
 .media-picker-tile:hover {
   border-color: $border-accent;
+  background: $surface-accent;
   transform: translateY(-1px);
 }
 
@@ -141,9 +146,9 @@ $error-soft: #f8717133;
   opacity: 0.7;
 }
 
-.media-picker-tile--selected {
-  border-color: $accent-green;
-  box-shadow: 0 0 0 2px $accent-soft;
+.media-picker-tile-selected {
+  background: $accent-soft;
+  margin: 10;
 }
 
 .media-picker-thumb {

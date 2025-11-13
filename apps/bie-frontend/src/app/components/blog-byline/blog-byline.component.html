@@ -1,25 +1,10 @@
-﻿<app-block-shell-template
-  editClass="byline-author"
-  previewClass="byline-view"
-  controlsClass="byline-controls">
-
-  <ng-container blockAuthor>
-    <div class="byline-content">
-      <span class="byline-label">Published by </span>
-      <span class="name">{{ authorName() }}</span>
-      <span class="dot"> &bull;</span>
-      <time [attr.datetime]="displayIso()" [title]="displayIso()">
-        {{ displayDate() | date: displayFormat }}
-      </time>
-    </div>
-  </ng-container>
-
-  <ng-container blockPreview>
+<div class="byline-view">
+  <div class="byline-content" [style.fontSize.px]="block().fontSize ?? null">
     <span class="byline-label">Published by </span>
     <span class="name">{{ authorName() }}</span>
     <span class="dot"> &bull;</span>
     <time [attr.datetime]="displayIso()" [title]="displayIso()">
       {{ displayDate() | date: displayFormat }}
     </time>
-  </ng-container>
-</app-block-shell-template>
+  </div>
+</div>

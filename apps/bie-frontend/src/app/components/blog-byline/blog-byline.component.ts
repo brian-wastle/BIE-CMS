@@ -1,16 +1,14 @@
 import { Component, computed, forwardRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { BylineBlock } from 'bie-models';
-import { BlockShell } from '../block-shell/block-shell';
-import { BlockShellTemplateComponent } from '../block-shell/block-shell-template.component';
-import { BLOCK_SHELL } from '../block-shell/block-shell';
+import { BlockShell, BLOCK_SHELL } from '../block-shell/block-shell';
 const DISPLAY_FORMAT = 'MMMM d, y';
 
 @Component({
   selector: 'app-byline-block',
   standalone: true,
   providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => BlogBylineComponent) }],
-  imports: [CommonModule, DatePipe, BlockShellTemplateComponent],
+  imports: [CommonModule, DatePipe],
   templateUrl: './blog-byline.component.html',
   styleUrls: ['./blog-byline.component.scss'],
 })

@@ -1,34 +1,17 @@
-<app-block-shell-template
-  editClass="img-author"
-  previewClass="img-preview">
-
-  <ng-container blockAuthor>
-    @if (block().src) {
-      <div class="preview-wrap">
-        <img
-          class="media"
-          [src]="block().src"
-          [alt]="block().alt || ''"
-          (load)="onImageLoad()"
-          (error)="onImageError()"
-          [class.broken]="broken" />
-        @if (broken) {
-        <div class="broken-note">{{ block().alt || 'Image failed to load' }}</div>
-        }
-      </div>
-    } @else {
-      <div class="media-placeholder">
-        <p>No image selected.</p>
-        <p class="media-placeholder-hint">Use the Inspector to choose media from your library.</p>
-      </div>
-    }
-  </ng-container>
-
-  <ng-container blockPreview>
-    @if (block().src) {
-      <img class="media" [src]="block().src" [alt]="block().alt || ''" />
-    } @else {
-      <div class="media-placeholder media-placeholder-muted">Image placeholder</div>
-    }
-  </ng-container>
-</app-block-shell-template>
+<div class="img-preview">
+  @if (block().src) {
+    <div class="preview-wrap">
+      <img class="media" [src]="block().src" [alt]="block().alt || ''" [style.width]="resolvedWidth()"
+        [style.object-fit]="imageStyle().objectFit || 'cover'" (load)="onImageLoad()" (error)="onImageError()"
+        [class.broken]="broken" />
+      @if (broken) {
+        <div class="broken-note">{{ block().alt || 'Failed to load image.' }}</div>
+      }
+    </div>
+  } @else {
+    <div class="media-placeholder">
+      <p>No image selected.</p>
+      <p class="media-placeholder-hint">Choose an image in the Inspector panel.</p>
+    </div>
+  }
+</div>

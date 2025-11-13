@@ -1,5 +1,16 @@
 <fieldset class="layout-controls" [attr.aria-disabled]="!editable || null">
-  <legend>Layout</legend>
+  <label class="row-control">
+    <span>Row</span>
+    <input
+      type="number"
+      min="1"
+      step="1"
+      [disabled]="!editable"
+      [ngModel]="layout.row"
+      (ngModelChange)="onRowChange($event)"
+      (focus)="onFocus()" (blur)="onBlur()"
+    />
+  </label>
 
   <label>
     <span>Start</span>
@@ -18,11 +29,24 @@
     <span>Span</span>
     <input
       type="number"
-      [min]="2"
+      [min]="1"
       [max]="maxSpan"
       [disabled]="!editable"
       [ngModel]="layout.colSpan"
       (ngModelChange)="onSpanChange($event)"
+      (focus)="onFocus()" (blur)="onBlur()"
+    />
+  </label>
+
+  <label>
+    <span>Height</span>
+    <input
+      type="number"
+      [min]="1"
+      [max]="maxRows"
+      [disabled]="!editable"
+      [ngModel]="resolvedRowSpan"
+      (ngModelChange)="onRowSpanChange($event)"
       (focus)="onFocus()" (blur)="onBlur()"
     />
   </label>

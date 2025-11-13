@@ -1,34 +1,20 @@
-/**
- * Shared content model + read API contract
- * ---------------------------------------
- * The SSR renderer and the canvas editor both consume page content through the
- * "read" API. The endpoint returns a JSON payload that conforms to the
- * interfaces defined in this file, which keeps authoring, preview, and public
- * rendering in sync.
- *
- * GET /api/pages/:id  ->  PageContentResponse
- *
- * Required guarantees for consumers:
- * - `blocks` is ordered ascending by `order`; no additional client-side sort is
- *   necessary before rendering.
- * - `layout` values are always 1-based column indices compatible with CSS grid
- *   `grid-column`. SSR must respect these values when building HTML.
- * - Any new block type added to {@link BlockType} must extend
- *   {@link ContentBlockBase} and be included in {@link AnyBlock} so all clients
- *   can render it.
- */
-
 export type BlockType = 'text' | 'image' | 'video' | 'title' | 'byline';
+export type AlignType = 'flex-start' | 'center' | 'flex-end';
+
 
 export interface GridPlacement {
-  colStart: number; // Starting column
-  colSpan: number; // Width in columns
+  row: number;         // Starting row
+  colStart: number;    // Starting column
+  colSpan: number;     // Width in columns
+  rowSpan?: number;    // Height in rows
 }
 export interface ContentBlockBase {
   id: string;
   type: BlockType;
-  order: number;
   layout: GridPlacement;
+  fontSize?: number;
+  hAlign: AlignType;
+  vAlign: AlignType;
 }
 
 export interface BylineBlock extends ContentBlockBase {
@@ -44,7 +30,7 @@ export interface TitleBlock extends ContentBlockBase {
 
 export interface TextBlock extends ContentBlockBase {
   type: 'text';
-  text: string; // HTML string from Quill
+  text: string; // TODO: HTML string from Quill
 }
 
 export interface ImageBlock extends ContentBlockBase {
@@ -52,6 +38,7 @@ export interface ImageBlock extends ContentBlockBase {
   src: string;
   alt?: string;
   mediaHandle?: string | null;
+  imageStyle?: ImageStyle;
 }
 
 export type BlockUpdate = {
@@ -60,9 +47,13 @@ export type BlockUpdate = {
   src?: string;
   alt?: string;
   mediaHandle?: string | null;
+  imageStyle?: ImageStyle;
   author?: string;
   format?: string;
   publishedAt?: string;
+  fontSize?: number | null;
+  hAlign?: AlignType;
+  vAlign?: AlignType;
 };
 
 export type AnyBlock = TextBlock | ImageBlock | BylineBlock | TitleBlock;    // Used during component creation/editing
@@ -74,8 +65,8 @@ export interface PageContentResponse {
   title: string;          // Page/browser title
   status: 'draft' | 'published'; // Drives visibility in the public renderer
   updatedAt: string;      // ISO timestamp for cache invalidation
-  version: number;        // Monotonic schema/content version
-  blocks: AnyBlock[];     // Inline-ordered block payload
+  version: number;        // Schema/content version
+  blocks: AnyBlock[];     // Ordered by layout.row/colStart
 }
 
 // Used for tracking user's directories in media browser
@@ -85,4 +76,12 @@ export interface DirectoryMeta {
   lastUploaded: string | null;
 }
 
-export type ViewMode = 'list' | 'grid' | 'details';
+// Media upload view modes
+export type ViewMode = 'list' | 'grid';
+
+export interface ImageStyle {
+  width?: number;        
+  widthUnit?: 'px' | '%' | 'vw' | 'auto';
+  height?: number;
+  objectFit?: 'cover' | 'contain';
+}

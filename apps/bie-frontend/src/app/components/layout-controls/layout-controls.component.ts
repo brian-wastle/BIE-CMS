@@ -1,7 +1,7 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { GridPlacement } from 'bie-models';
+import { GridPlacement, AlignType } from 'bie-models';
 
 @Component({
   selector: 'app-layout-controls',
@@ -11,11 +11,21 @@ import { GridPlacement } from 'bie-models';
   styleUrls: ['./layout-controls.component.scss'],
 })
 export class LayoutControlsComponent {
-  @Input({ required: true }) layout!: GridPlacement;
-  @Input() totalColumns = 12;
-  @Input() editable = true;
-  @Output() editingChange = new EventEmitter<boolean>();
-  @Output() layoutChange = new EventEmitter<GridPlacement>();
+  readonly layoutSignal = input.required<GridPlacement>();
+  readonly hAlign = input<AlignType>();
+  readonly vAlign = input<AlignType>();
+  readonly totalColumnsSignal = input(12);
+  readonly editableSignal = input(true);
+  readonly maxRowsSignal = input(24);
+  readonly editingChange = output<boolean>();
+  readonly layoutChange = output<GridPlacement>();
+  readonly hAlignChange = output<AlignType>();
+  readonly vAlignChange = output<AlignType>();
+
+  get layout(): GridPlacement { return this.layoutSignal(); }
+  get totalColumns(): number { return this.totalColumnsSignal(); }
+  get editable(): boolean { return this.editableSignal(); }
+  get maxRows(): number { return this.maxRowsSignal(); }
 
   private clamp(n: number, min: number, max: number) {
     return Math.max(min, Math.min(max, n));
@@ -23,20 +33,45 @@ export class LayoutControlsComponent {
 
   get maxSpan(): number {
     const start = this.layout?.colStart ?? 1;
-    return this.totalColumns - start + 1;
+    return Math.max(1, this.totalColumns - start + 1);
+  }
+
+  get resolvedRowSpan(): number {
+    return this.layout?.rowSpan ?? 1;
+  }
+
+  onRowChange(val: number) {
+    const raw = Math.floor(+val || 1);
+    const row = this.clamp(raw, 1, Number.MAX_SAFE_INTEGER);
+    const colStart = this.layout?.colStart ?? 1;
+    const colSpan = this.layout?.colSpan ?? 12;
+    const rowSpan = this.layout?.rowSpan ?? 1;
+    this.layoutChange.emit({ row, colStart, colSpan, rowSpan });
   }
 
   onStartChange(val: number) {
+    const row = this.layout?.row ?? 1;
     const colStart = this.clamp(+val, 1, this.totalColumns);
-    const colSpan = Math.min(this.layout.colSpan ?? 2, this.totalColumns - colStart + 1);
-    this.layoutChange.emit({ colStart, colSpan });
+    const colSpan = Math.min(this.layout.colSpan ?? 1, this.totalColumns - colStart + 1);
+    const rowSpan = this.layout?.rowSpan ?? 1;
+    this.layoutChange.emit({ row, colStart, colSpan, rowSpan });
   }
 
   onSpanChange(val: number) {
+    const row = this.layout?.row ?? 1;
     const colStart = this.layout?.colStart ?? 1;
     const maxSpan = this.totalColumns - colStart + 1;
-    const colSpan = this.clamp(+val, 2, maxSpan);
-    this.layoutChange.emit({ colStart, colSpan });
+    const colSpan = this.clamp(+val, 1, maxSpan);
+    const rowSpan = this.layout?.rowSpan ?? 1;
+    this.layoutChange.emit({ row, colStart, colSpan, rowSpan });
+  }
+
+  onRowSpanChange(val: number) {
+    const row = this.layout?.row ?? 1;
+    const colStart = this.layout?.colStart ?? 1;
+    const colSpan = this.layout?.colSpan ?? 1;
+    const rowSpan = this.clamp(Math.floor(+val || 1), 1, this.maxRows);
+    this.layoutChange.emit({ row, colStart, colSpan, rowSpan });
   }
 
   onFocus() { this.editingChange.emit(true); }

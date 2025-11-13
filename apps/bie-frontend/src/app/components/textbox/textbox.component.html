@@ -1,21 +1,3 @@
-﻿<app-block-shell-template
-  editClass="textbox-author"
-  previewClass="textbox-view"
-  [editAriaLabel]="'Textbox editing block'">
-
-  <ng-container blockAuthor>
-    <div #textContent
-         class="textbox"
-         dir="ltr"
-         [attr.contenteditable]="editable() ? 'true' : null"
-         data-placeholder="Type your text..."
-         (input)="onInput($event)"
-         (keydown.enter)="onEnter($event)"
-         aria-label="Text editor">
-    </div>
-  </ng-container>
-
-  <ng-container blockPreview>
-    <span [textContent]="block().text"></span>
-  </ng-container>
-</app-block-shell-template>
+<div class="textbox-view">
+  <span [textContent]="block().text" [style.fontSize.px]="block().fontSize ?? null"></span>
+</div>

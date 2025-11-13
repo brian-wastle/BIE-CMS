@@ -1,102 +1,76 @@
-<div class="canvas-layout"
-  [class.author-mode]="authorMode"
-  [class.preview-mode]="!authorMode"
-  [class.inspector-collapsed]="!inspectorOpen()">
+<div class="canvas-layout" [class.inspector-collapsed]="!inspectorOpen()">
 
   <div class="canvas-main">
-    <header class="toolbar">
-      <div class="toolbar-group">
-        <button type="button" class="inspector-toggle" (click)="authorMode = !authorMode">
-          {{ authorMode ? 'Preview' : 'Back to Edit' }}
-        </button>
-      </div>
-    </header>
-
     <div class="canvas-area">
-      <div class="grid"
-        [style.-cols]="columns"
-        [style.-gap.px]="gapPx"
-        cdkDropList
-        (click)="clearSelection()"
-        (cdkDropListDropped)="onDrop($event)">
+      <section class="primary-preview">
+        <div class="preview-toolbar">
+          <label class="preview-field">
+            <span>Display</span>
+            <select [ngModel]="previewModeId()" (ngModelChange)="setPreviewMode($event ?? 'responsive')">
+              @for (preset of previewPresets; track preset.id) {
+              <option [ngValue]="preset.id">
+                {{ preset.label }}
+              </option>
+              }
+            </select>
+          </label>
 
-        @for (block of pageBlocks(); track trackByBlockId($index, block)) {
-          @if (authorMode) {
-            <div class="block"
-              [ngClass]="{selected: selectedId() === block.id}"
-              [ngStyle]="gridStyle(block)"
-              (click)="toggleSelect(block.id); $event.stopPropagation()"
-              [cdkDragDisabled]="!authorMode || selectedId() === block.id"
-              cdkDrag>
+          <div class="preview-zoom-controls">
+            <label class="preview-field preview-zoom-slider">
+              <span>Zoom</span>
+              <input type="range" min="25" max="200" step="5" [ngModel]="previewZoom()"
+                (ngModelChange)="setPreviewZoom(+($event ?? previewZoom()))">
+            </label>
+            <span class="preview-zoom-value">{{ previewZoom() }}%</span>
+            <button type="button" class="preview-reset" (click)="resetPreviewZoom()" [disabled]="previewZoom() === 100">
+              Reset
+            </button>
+          </div>
+        </div>
 
-              <div class="chrome">
-                <div class="block-title">
-                  <span class="handle" cdkDragHandle title="Drag to reorder">
-                    <mat-icon fontIcon="drag_handle"></mat-icon>
-                  </span>
-                  <p>{{ block.type | titlecase }}</p>
-                </div>
-                <button type="button" (click)="remove(block.id); $event.stopPropagation()" title="Remove">
-                  <mat-icon fontIcon="delete"></mat-icon>
-                </button>
-              </div>
-              <hr>
-
-              @if (isTextBlock(block)) {
-                <app-textbox
-                  [block]="block"
-                  [editable]="true"
-                  [totalColumns]="columns"
-                  (editingChange)="onEditing(block.id, $event)"
-                  (update)="onBlockUpdate(block, $event)">
-                </app-textbox>
-              }
-              @if (isImageBlock(block)) {
-                <app-imagebox
-                  [block]="block"
-                  [editable]="true"
-                  [totalColumns]="columns"
-                  (editingChange)="onEditing(block.id, $event)"
-                  (update)="onBlockUpdate(block, $event)">
-                </app-imagebox>
-              }
-              @if (isBylineBlock(block)) {
-                <app-byline-block
-                  [block]="block"
-                  [editable]="true"
-                  [totalColumns]="columns"
-                  (editingChange)="onEditing(block.id, $event)"
-                  (update)="onBlockUpdate(block, $event)">
-                </app-byline-block>
-              }
-              @if (isTitleBlock(block)) {
-                <app-title-block
-                  [block]="block"
-                  [editable]="true"
-                  [totalColumns]="columns"
-                  (editingChange)="onEditing(block.id, $event)"
-                  (update)="onBlockUpdate(block, $event)">
-                </app-title-block>
-              }
-            </div>
-          } @else {
-            <div class="block" [ngStyle]="gridStyle(block)">
-              @if (isTextBlock(block)) {
-                <app-textbox [block]="block" [editable]="false"></app-textbox>
-              }
-              @if (isImageBlock(block)) {
-                <app-imagebox [block]="block" [editable]="false"></app-imagebox>
-              }
-              @if (isBylineBlock(block)) {
-                <app-byline-block [block]="block" [editable]="false"></app-byline-block>
-              }
-              @if (isTitleBlock(block)) {
-                <app-title-block [block]="block" [editable]="false"></app-title-block>
-              }
-            </div>
+        <p class="preview-hint">
+          {{ previewPreset().description }}
+          @if (previewWidthPx(); as widthPx) {
+          - {{ widthPx }}px
           }
-        }
-      </div>
+        </p>
+
+        <div class="preview-stage">
+          <div class="preview-scroll">
+            <div class="preview-frame" [class.preview-frame-fluid]="!previewWidthPx()"
+              [style.--previewWidth.px]="previewWidthPx() ?? null" [style.--previewScale]="previewScale()">
+              <div class="preview-frame-content">
+                <div class="grid" [style.--cols]="columns" [style.--gap.px]="gapPx"
+                  [style.--rowHeight.px]="tileRowHeight" (click)="onPreviewCanvasClick($event)">
+
+                  @for (block of pageBlocks(); track trackByBlockId($index, block)) {
+                  <div class="block" [ngClass]="{ selected: selectedId() === block.id }" [ngStyle]="blockStyle(block)"
+                    (click)="onPreviewBlockClick(block.id, $event)">
+
+                    @if (isTextBlock(block)) {
+                    <app-textbox [block]="block">
+                    </app-textbox>
+                    }
+                    @if (isImageBlock(block)) {
+                    <app-imagebox [block]="block">
+                    </app-imagebox>
+                    }
+                    @if (isBylineBlock(block)) {
+                    <app-byline-block [block]="block">
+                    </app-byline-block>
+                    }
+                    @if (isTitleBlock(block)) {
+                    <app-title-block [block]="block">
+                    </app-title-block>
+                    }
+                  </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <aside class="component-palette">
@@ -112,71 +86,111 @@
     <div class="inspector-header">
       <h3>Inspector</h3>
       @if (inspectorCollapsible()) {
-        <button type="button" class="inspector-toggle" (click)="toggleInspector()">
-          {{ inspectorOpen() ? 'Collapse' : 'Expand' }}
-        </button>
+      <button type="button" class="inspector-toggle" (click)="toggleInspector()">
+        {{ inspectorOpen() ? 'Collapse' : 'Expand' }}
+      </button>
       }
     </div>
 
     @if (inspectorOpen()) {
-      <div class="inspector-body">
-        @if (selected(); as block) {
-          <div class="inspector-section">
-            <label>Start
-              <input
-                type="number"
-                [min]="1"
-                [max]="columns"
-                [ngModel]="block.layout.colStart"
-                (ngModelChange)="setColStart(block, +$event)">
-            </label>
 
-            <label>Span
-              <input
-                type="number"
-                [min]="2"
-                [max]="columns - block.layout.colStart + 1"
-                [ngModel]="block.layout.colSpan"
-                (ngModelChange)="setColSpan(block, +$event)">
-            </label>
+    <div class="inspector-body">
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <h4>Grid settings</h4>
+        </mat-expansion-panel-header>
+
+        <div class="inspector-section inspector-grid-settings">
+
+          <label>
+            <span>Columns</span>
+            <input type="number" [min]="1" [max]="maxColumns" [ngModel]="columns"
+              (ngModelChange)="setColumns(+($event ?? columns))">
+          </label>
+          <label>
+            <span>Gap (px)</span>
+            <input type="number" [min]="0" [max]="64" [ngModel]="gapPx" (ngModelChange)="setGap(+($event ?? gapPx))">
+          </label>
+          <label>
+            <span>Row height (px)</span>
+            <select [ngModel]="tileRowHeight" (ngModelChange)="setRowHeight(+($event ?? tileRowHeight))">
+              @for (size of rowHeightPresets; track size) {
+              <option [ngValue]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+          <p class="inspector-note">
+            Adjust row height to change tile proportions.
+          </p>
+        </div>
+      </mat-expansion-panel>
+
+      @if (selected(); as block) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <h4>Block Layout</h4>
+        </mat-expansion-panel-header>
+        <app-layout-controls class="inspector-layout-controls" [layoutSignal]="block.layout" [hAlign]="block.hAlign"
+          [vAlign]="block.vAlign" [totalColumnsSignal]="columns"
+          (layoutChange)="onInspectorLayoutChange(block, $event)">
+        </app-layout-controls>
+      </mat-expansion-panel>
+      @if (supportsFontSize(block)) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <h4>Font Settings</h4>
+        </mat-expansion-panel-header>
+        <div class="inspector-section inspector-typography">
+          <label>
+            <span>Font size (px)</span>
+            <input type="number" min="12" max="96" placeholder="Auto" [ngModel]="block.fontSize ?? ''"
+              (ngModelChange)="onFontSizeInput(block, $event)">
+          </label>
+          <button type="button" class="inspector-link" (click)="resetFontSize(block)"
+            [disabled]="block.fontSize == null">Reset font</button>
+        </div>
+      </mat-expansion-panel>
+      }
+
+
+
+      @if (isImageBlock(block)) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <h4>Image settings</h4>
+        </mat-expansion-panel-header>
+        <label>Alt text
+          <input type="text" [ngModel]="block.alt" (ngModelChange)="onBlockUpdate(block, { alt: $event })">
+        </label>
+
+        <div class="inspector-section inspector-section-media">
+          <div class="inspector-section-header">
+            <h5>Media Library</h5>
+            <button type="button" class="inspector-link" (click)="clearImageBlock(block)" [disabled]="!block.src">
+              Clear image
+            </button>
           </div>
-
-          @if (isImageBlock(block)) {
-            <label>Alt text
-              <input type="text" [ngModel]="block.alt" (ngModelChange)="onBlockUpdate(block, { alt: $event })">
-            </label>
-
-            <div class="inspector-section inspector-section-media">
-              <div class="inspector-section-header">
-                <h4>Media Library</h4>
-                <button
-                  type="button"
-                  class="inspector-link"
-                  (click)="clearImageBlock(block)"
-                  [disabled]="!block.src">
-                  Clear image
-                </button>
-              </div>
-              <div class="inspector-media-browser">
-                <app-media-browser-carousel
-                  [allowDelete]="false"
-                  [viewMode]="'grid'"
-                  [selectedHandle]="block.mediaHandle ?? null"
-                  (mediaSelected)="onInspectorMediaSelected($event)">
-                </app-media-browser-carousel>
-              </div>
-            </div>
-          }
-        } @else {
-          <p class="inspector-empty">Select a block to edit.</p>
-        }
-      </div>
+          <div class="inspector-media-browser">
+            <app-media-browser-carousel [allowDelete]="false" [viewMode]="'grid'"
+              [selectedHandle]="block.mediaHandle ?? null" (mediaSelected)="onInspectorMediaSelected($event)">
+            </app-media-browser-carousel>
+          </div>
+        </div>
+      </mat-expansion-panel>
+      }
+      <button type="button" class="inspector-link remove-link" (click)="remove(block.id)">
+        Remove block
+      </button>
+      } @else {
+      <p class="inspector-empty">Select a block to edit.</p>
+      }
+    </div>
     } @else if (inspectorCollapsible()) {
-      <div class="inspector-collapsed-panel">
-        <button type="button" class="inspector-expand-button" (click)="toggleInspector()">
-          <mat-icon>build_circle</mat-icon>
-        </button>
-      </div>
+    <div class="inspector-collapsed-panel">
+      <button type="button" class="inspector-expand-button" (click)="toggleInspector()">
+        <mat-icon>build_circle</mat-icon>
+      </button>
+    </div>
     }
   </aside>
 </div>

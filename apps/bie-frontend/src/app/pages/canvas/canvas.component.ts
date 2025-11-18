@@ -1,4 +1,4 @@
-import { Component, TrackByFunction, computed, signal, HostListener, effect, inject, AfterViewInit } from '@angular/core';
+import { Component, TrackByFunction, computed, signal, HostListener, effect, inject, AfterViewInit, ElementRef, ViewChild, forwardRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,8 +10,10 @@ import { TextBoxComponent } from '../../components/textbox/textbox.component';
 import { ImageBoxComponent } from '../../components/imagebox/imagebox.component';
 import { MediaBrowserCarouselComponent } from '../../components/media-browser-carousel/media-browser-carousel.component';
 import { LayoutControlsComponent } from '../../components/layout-controls/layout-controls.component';
+import { RichTextEditorComponent } from '../../components/rich-text-editor/rich-text-editor.component';
 import type { MediaItem } from '../../services/media-library/media-library.service';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { BLOCK_SHELL } from '../../components/block-shell/block-shell';
 
 type PreviewModeId = 'responsive' | 'mobile' | 'tablet' | 'desktop' | 'hd';
 
@@ -21,6 +23,8 @@ interface PreviewPreset {
   widthPx: number | null;
   description: string;
 }
+
+const BLOCK_VERTICAL_PADDING = 16; // matches .block padding (8px top + 8px bottom)
 
 @Component({
   selector: 'app-canvas',
@@ -35,8 +39,10 @@ interface PreviewPreset {
     BlogBylineComponent,
     MediaBrowserCarouselComponent,
     LayoutControlsComponent,
-    MatExpansionModule
+    MatExpansionModule,
+    RichTextEditorComponent
   ],
+  providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => CanvasComponent) }],
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.scss'],
 })
@@ -47,6 +53,7 @@ export class CanvasComponent implements AfterViewInit {
   readonly maxColumns = 24;
   tileRowHeight = 48;
   readonly rowHeightPresets = [24, 32, 40, 48, 56, 64];
+
   // View settings
   readonly previewPresets: PreviewPreset[] = [
     { id: 'responsive', label: 'Fit to Window', widthPx: null, description: 'Responsive (fluid)' },
@@ -55,13 +62,32 @@ export class CanvasComponent implements AfterViewInit {
     { id: 'desktop', label: 'Desktop (1440px)', widthPx: 1440, description: 'Desktop monitor' },
     { id: 'hd', label: 'HD (1920px)', widthPx: 1920, description: 'HD monitor' },
   ];
-  previewModeId = signal<PreviewModeId>('responsive');
-  previewZoom = signal(100);
+  previewModeId = signal<PreviewModeId>('desktop');
+  previewZoom = signal(70);
   readonly previewPreset = computed(() => {
     return this.previewPresets.find(preset => preset.id === this.previewModeId()) ?? this.previewPresets[0];
   });
   readonly previewWidthPx = computed(() => this.previewPreset().widthPx);
   readonly previewScale = computed(() => this.previewZoom() / 100);
+  @ViewChild('scroller') set scrollerRef(ref: ElementRef<HTMLElement> | undefined) {
+    this.scrollerEl = ref?.nativeElement ?? null;
+    this.observeScroller();
+  }
+  @ViewChild('scrollerContent') set scrollerContentRef(ref: ElementRef<HTMLElement> | undefined) {
+    this.scrollerContentEl = ref?.nativeElement ?? null;
+    this.observeScroller();
+  }
+  private scrollerEl: HTMLElement | null = null;
+  private scrollerContentEl: HTMLElement | null = null;
+  private scrollerObserver: ResizeObserver | null = null;
+  private viewReady = false;
+  private readonly recenterEffect = effect(() => {
+    this.previewWidthPx();
+    if (!this.viewReady || !this.scrollerEl || typeof window === 'undefined') {
+      return;
+    }
+    requestAnimationFrame(() => this.centerIfScrollable());
+  });
 
   // Get current username and generate initial byline block
   private readonly currentUserService = inject(CurrentUserService);
@@ -95,7 +121,7 @@ export class CanvasComponent implements AfterViewInit {
     { id: 't1', type: 'title', layout: { row: 1, colStart: 1, colSpan: 12, rowSpan: 2 }, text: '' } as TitleBlock,
     { id: 'b1', type: 'byline', layout: { row: 3, colStart: 1, colSpan: 12, rowSpan: 2 }, author: '', publishedAt: '' } as BylineBlock
   ]);
-  // Read-only version of blocks, sorted by row then column
+  // Read-only version of blocks, sorted by row then column, for page flow
   pageBlocks = computed(() => [...this.blocks()].sort((a, b) => this.compareByLayout(a, b)));
 
   selectedId = signal<string | null>(null);
@@ -113,6 +139,8 @@ export class CanvasComponent implements AfterViewInit {
 
   ngAfterViewInit() {
     this.updateInspectorView();
+    this.viewReady = true;
+    this.centerIfScrollable();
   }
 
   setPreviewMode(id: PreviewModeId | string) {
@@ -121,6 +149,9 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     this.previewModeId.set(nextId);
+    if (this.viewReady) {
+      requestAnimationFrame(() => this.centerIfScrollable());
+    }
   }
 
   setPreviewZoom(percent: number) {
@@ -130,6 +161,27 @@ export class CanvasComponent implements AfterViewInit {
 
   resetPreviewZoom() {
     this.previewZoom.set(100);
+  }
+
+  private observeScroller(): void {
+    this.scrollerObserver?.disconnect();
+    if (!this.scrollerContentEl || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    this.scrollerObserver = new ResizeObserver(() => this.centerIfScrollable());
+    this.scrollerObserver.observe(this.scrollerContentEl);
+  }
+
+  private centerIfScrollable(): void {
+    if (typeof window === 'undefined' || !this.scrollerEl) {
+      return;
+    }
+    const scrollableWidth = this.scrollerEl.scrollWidth;
+    const visibleWidth = this.scrollerEl.clientWidth;
+    if (scrollableWidth <= visibleWidth) {
+      return;
+    }
+    this.scrollerEl.scrollLeft = (scrollableWidth - visibleWidth) / 2;
   }
 
   // Help the canvas id which block types to render
@@ -239,14 +291,47 @@ export class CanvasComponent implements AfterViewInit {
   // Live preview styles
   blockStyle(block: AnyBlock) {
     const layout = block.layout ?? { row: 1, colStart: 1, colSpan: this.columns, rowSpan: 1 };
-    const hAlign = block.hAlign;
-    const vAlign = block.vAlign;
+    const hAlign = block.hAlign ?? 'flex-start';
+    const vAlign = block.vAlign ?? 'flex-start';
+    const isText = this.isTextBlock(block);
+    const alignItems = isText ? 'stretch' : hAlign;
     return {
       'grid-column': `${layout.colStart} / span ${layout.colSpan}`,
       'grid-row': `${layout.row} / span ${layout.rowSpan ?? 1}`,
-      'justify-content': `${hAlign}`,
-      'align-items': `${vAlign}`
+      'align-items': alignItems,
+      'justify-content': vAlign
     };
+  }
+
+  autoSize(blockId: string, contentHeight: number) {
+    if (!Number.isFinite(contentHeight) || contentHeight <= 0) {
+      return;
+    }
+    const targetRows = this.rowsForContentHeight(contentHeight);
+    this.blocks.update(blocks => {
+      let changed = false;
+      const resized = blocks.map(block => {
+        if (block.id !== blockId || !this.isTextBlock(block) || !block.layout) {
+          return block;
+        }
+        const currentSpan = Math.max(1, block.layout.rowSpan ?? 1);
+        if (currentSpan === targetRows) {
+          return block;
+        }
+        changed = true;
+        return {
+          ...block,
+          layout: { ...block.layout, rowSpan: targetRows },
+        };
+      });
+      if (!changed) {
+        return blocks;
+      }
+      const sorted = [...resized].sort((a, b) => this.compareByLayout(a, b));
+      const normalized = this.reindexRows(sorted);
+      const byId = new Map(normalized.map(entry => [entry.id, entry]));
+      return resized.map(block => byId.get(block.id) ?? block);
+    });
   }
 
   setColumns(val: number) {
@@ -323,7 +408,7 @@ export class CanvasComponent implements AfterViewInit {
     if (!Number.isFinite(value)) {
       return;
     }
-    const next = Math.min(96, Math.max(12, Math.round(value)));
+    const next = Math.max(1, Math.round(value));
     this.onBlockUpdate(block, { fontSize: next });
   }
 
@@ -332,6 +417,20 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     this.onBlockUpdate(block, { fontSize: null });
+  }
+
+  onFontSizeBlur(block: AnyBlock) {
+    if (!this.supportsFontSize(block)) {
+      return;
+    }
+    const current = block.fontSize;
+    if (current == null) {
+      return;
+    }
+    const clamped = Math.min(96, Math.max(12, Math.round(current)));
+    if (clamped !== current) {
+      this.onBlockUpdate(block, { fontSize: clamped });
+    }
   }
 
   onHAlignChange(block: AnyBlock, align: AlignType) {
@@ -372,6 +471,17 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     this.onBlockUpdate(block, { src: '', alt: '', mediaHandle: null });
+  }
+
+  onTextContentChange(block: TextBlock, html: string | null | undefined) {
+    if (!this.isTextBlock(block)) {
+      return;
+    }
+    const next = this.normalizeEditorHtml(html);
+    if ((block.text ?? '') === next) {
+      return;
+    }
+    this.onBlockUpdate(block, { text: next });
   }
 
   onBlockUpdate(block: AnyBlock, patch: BlockUpdate) {
@@ -435,6 +545,11 @@ export class CanvasComponent implements AfterViewInit {
     }));
   }
 
+  private normalizeEditorHtml(value: string | null | undefined) {
+    const trimmed = (value ?? '').trim();
+    return trimmed === '<p><br></p>' ? '' : trimmed;
+  }
+
   // Strip file extension, and replace underscores/dashes with spaces
   private buildAltSuggestion(filename: string | null | undefined) {
     if (!filename) {
@@ -466,6 +581,13 @@ export class CanvasComponent implements AfterViewInit {
       return Math.max(max, rowEnd);
     }, 0);
     return lastRow + 1;
+  }
+
+  private rowsForContentHeight(contentHeight: number) {
+    const rowHeight = Math.max(1, this.tileRowHeight);
+    const rowGap = Math.max(0, this.gapPx);
+    const paddedHeight = Math.max(0, contentHeight + BLOCK_VERTICAL_PADDING);
+    return Math.max(1, Math.ceil((paddedHeight + rowGap) / (rowHeight + rowGap)));
   }
 
   // Stack each block's rows without gaps

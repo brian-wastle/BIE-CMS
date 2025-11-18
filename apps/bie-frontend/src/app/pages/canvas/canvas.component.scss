@@ -18,9 +18,8 @@ $green-shadow: #0e997938;
 
 .inspector-collapsed-panel {
 
-  @include mat.icon-overrides((
-    color: #e9eef3,
-  ));
+  @include mat.icon-overrides((color: #e9eef3,
+    ));
 
 }
 
@@ -141,8 +140,9 @@ $green-shadow: #0e997938;
 
 .preview-scroll {
   width: 100%;
-  overflow-x: auto;
-  padding-bottom: 8px;
+  overflow: auto;
+  padding: 24px 0 32px;
+  background: #dad9de;
 }
 
 .preview-frame {
@@ -153,16 +153,20 @@ $green-shadow: #0e997938;
   display: flex;
   justify-content: center;
   transition: width 120ms ease;
+
 }
 
 .preview-frame-content {
   width: var(--previewWidth, 100%);
   transform: scale(var(--previewScale, 1));
   transform-origin: top center;
+  border-radius: 0px;
+  container-type: inline-size;
 }
 
 .preview-frame-fluid {
   width: 100%;
+
 }
 
 .preview-frame-fluid .preview-frame-content {
@@ -178,8 +182,6 @@ $green-shadow: #0e997938;
   min-height: 100px;
   padding: 8px;
   background: $white;
-  border: 1px dashed #ddd;
-  border-radius: .75rem;
   margin: 0 auto;
   width: 100%;
   max-width: 100%;
@@ -188,12 +190,22 @@ $green-shadow: #0e997938;
 .block {
   position: relative;
   display: flex;
-  flex-direction: column;  // keeps multi-line blocks stacked naturally
-  background: $white;
+  flex-direction: column; // keeps multi-line blocks stacked naturally
+  background: transparent;
   border: 1px solid transparent;
   padding: 8px;
-  min-width: 280px;
+  min-width: 0;
   transition: border-color 120ms ease;
+}
+
+.block>* {
+  width: 100%;
+}
+
+.block app-textbox {
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
 }
 
 .block.selected {
@@ -305,6 +317,29 @@ $green-shadow: #0e997938;
   gap: 12px;
 }
 
+.inspector-richtext {
+  gap: 8px;
+}
+
+.inspector-text-editor {
+  width: 100%;
+}
+
+// Make Quill panel match typical panel styling
+:host ::ng-deep .inspector-text-editor .ql-toolbar {
+  border-radius: 10px 10px 0 0;
+  border-color: #cbd5f5;
+  background: $white;
+}
+
+:host ::ng-deep .inspector-text-editor .ql-container {
+  min-height: 220px;
+  border: 1px solid #cbd5f5;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  background: $white;
+}
+
 .inspector-typography {
   align-items: flex-start;
 }
@@ -382,7 +417,6 @@ $green-shadow: #0e997938;
   display: grid;
   place-items: center;
   gap: 8px;
-
   text-align: center;
 }
 
@@ -397,6 +431,7 @@ $green-shadow: #0e997938;
 }
 
 @media (max-width: 1024px) {
+
   .canvas-layout,
   .canvas-layout.inspector-collapsed {
     grid-template-columns: 1fr;

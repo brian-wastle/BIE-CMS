@@ -72,13 +72,14 @@ $browser-padding-block-end: clamp(1.5rem, 4vw, 2rem);
   margin: 11px;
   text-align: left;
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+
+  &:hover {
+    border-color: $border-accent;
+    background: $surface-accent;
+    transform: translateY(-1px);
+  }
 }
 
-.folder-tile:hover {
-  border-color: $border-accent;
-  background: $surface-accent;
-  transform: translateY(-1px);
-}
 
 .folder-tile-selected {
   background: $accent-soft;
@@ -125,13 +126,14 @@ $browser-padding-block-end: clamp(1.5rem, 4vw, 2rem);
     row-gap: 0.35rem;
     align-items: flex-start;
   }
+
+  :hover {
+    border-color: $border-accent;
+    background: $surface-accent;
+    transform: translateY(-1px);
+  }
 }
 
-.folder-row:hover {
-  border-color: $border-accent;
-  background: $surface-accent;
-  transform: translateY(-1px);
-}
 
 .folder-row-selected {
   border: 1px solid $accent-green;
@@ -171,13 +173,13 @@ $browser-padding-block-end: clamp(1.5rem, 4vw, 2rem);
   @media (max-width: 768px) {
     display: none;
   }
+  &.directory-name,
+  &.directory-count,
+  &.directory-last {
+    font-size: 0.75rem;
+  }
 }
 
-.folder-row-header .directory-name,
-.folder-row-header .directory-count,
-.folder-row-header .directory-last {
-  font-size: 0.75rem;
-}
 
 .directory-name {
   overflow: hidden;
@@ -257,12 +259,12 @@ $browser-padding-block-end: clamp(1.5rem, 4vw, 2rem);
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  span {
+    color: $error;
+    font-size: 0.9em;
+  }
 }
 
-.folder-edit-label span {
-  color: $error;
-  font-size: 0.9em;
-}
 
 .folder-edit-form input {
   background: $surface;
@@ -270,13 +272,14 @@ $browser-padding-block-end: clamp(1.5rem, 4vw, 2rem);
   border-radius: 0.75rem;
   padding: 0.7rem 0.9rem;
   color: $text-dark;
+
+  &:focus {
+    outline: none;
+    border-color: $accent-green;
+    box-shadow: 0 0 0 2px $accent-soft;
+  }
 }
 
-.folder-edit-form input:focus {
-  outline: none;
-  border-color: $accent-green;
-  box-shadow: 0 0 0 2px $accent-soft;
-}
 
 .folder-help {
   margin: 0;
@@ -294,36 +297,36 @@ $browser-padding-block-end: clamp(1.5rem, 4vw, 2rem);
   display: flex;
   gap: 0.6rem;
   justify-content: flex-end;
-}
 
-.folder-edit-actions button {
-  border: 1px solid $border-accent;
-  border-radius: 999px;
-  background: $surface-accent;
-  color: $text-dark;
-  padding: 0.35rem 0.95rem;
-  line-height: 1.3;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
-}
+  button {
+    border: 1px solid $border-accent;
+    border-radius: 999px;
+    background: $surface-accent;
+    color: $text-dark;
+    padding: 0.35rem 0.95rem;
+    line-height: 1.3;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+    
+    &:first-child {
+      background: $accent-green;
+      color: $surface;
+      border-color: $accent-green;
+    }
 
-.folder-edit-actions button:first-child {
-  background: $accent-green;
-  color: $surface;
-  border-color: $accent-green;
-}
-
-.folder-edit-actions button:hover:not(:disabled) {
-  border-color: $accent-green;
-  background: $surface;
-  transform: translateY(-1px);
-}
-
-.folder-edit-actions button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+    &:hover:not(:disabled) {
+      border-color: $accent-green;
+      background: $surface;
+      transform: translateY(-1px);
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
 }
 
 .folder-name {

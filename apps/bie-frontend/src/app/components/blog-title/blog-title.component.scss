@@ -4,4 +4,21 @@
 
 .title-line {
   margin: 0;
+  font-size: var(--title-font-desktop, 48px);
+}
+
+@media (max-width: 1024px) {
+  .title-line { font-size: var(--title-font-tablet, 38px); }
+}
+
+@media (max-width: 600px) {
+  .title-line { font-size: var(--title-font-mobile, 30px); }
+}
+
+@container (max-width: 1024px) {
+  .title-line { font-size: var(--title-font-tablet, 38px); }
+}
+
+@container (max-width: 600px) {
+  .title-line { font-size: var(--title-font-mobile, 30px); }
 }

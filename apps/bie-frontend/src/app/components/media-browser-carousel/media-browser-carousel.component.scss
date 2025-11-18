@@ -34,7 +34,7 @@ $accent-soft: #0e997929;
   box-sizing: border-box;
 }
 
-.media-panel + .media-panel {
+.media-panel+.media-panel {
   border-left: 1px solid $border-muted;
 }
 
@@ -43,16 +43,17 @@ $accent-soft: #0e997929;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-dark;
+  }
 }
 
-.media-panel-header h4 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: $text-dark;
-}
 
 .media-carousel-action,
 .media-carousel-back {
@@ -96,12 +97,13 @@ $accent-soft: #0e997929;
   flex-direction: column;
   font-size: 0.85rem;
   color: color.adjust($text-dark, $lightness: 5%);
+
+  strong {
+    font-size: 1rem;
+    color: $text-dark;
+  }
 }
 
-.media-carousel-heading strong {
-  font-size: 1rem;
-  color: $text-dark;
-}
 
 .media-carousel app-directory-browser,
 .media-carousel app-media-picker {

@@ -2,6 +2,8 @@
 // Custom Theming for Angular Material
 // For more information: https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+@import 'quill/dist/quill.core.css';
+@import 'quill/dist/quill.snow.css';
 
 html {
   @include mat.theme((
@@ -62,17 +64,128 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   }
 }
 
-.directory-grid-loading .folder-icon.placeholder,
-.directory-grid-loading .folder-label.placeholder {
-  width: 100%;
-  height: 42px;
-  background: #dad9de;
-  border-radius: 0.75rem;
-  animation: placeholder-pulse 1.4s ease-in-out infinite;
+.directory-grid-loading {
+  .folder-icon.placeholder,
+  .folder-label.placeholder {
+    width: 100%;
+    height: 42px;
+    background: #dad9de;
+    border-radius: 0.75rem;
+    animation: placeholder-pulse 1.4s ease-in-out infinite;
+  }
+
+  .folder-label.placeholder {
+    margin-top: 0.75rem;
+    height: 18px;
+  }
 }
 
-.directory-grid-loading .folder-label.placeholder {
-  margin-top: 0.75rem;
-  height: 18px;
+.view-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.15rem;
+  flex: 0 1 auto;
+  max-height: 40px;
+
+  @include mat.icon-button-overrides((
+    hover-state-layer-opacity: 0,
+    focus-state-layer-opacity: 0,
+    pressed-state-layer-opacity: 0,
+    state-layer-color: transparent,
+    ripple-color: transparent,
+  ));
+  .view-button {
+    border: 1px solid #86b8ac40;
+    background: transparent;
+    color: #3e4e5e;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+
+    &.view-button-middle {
+      border-radius: 0;
+    }
+
+    &.view-button-left,
+    &:first-child {
+      border-radius: 999px 0 0 999px;
+    }
+
+    &.view-button-right,
+    &:last-child {
+      border-radius: 0 999px 999px 0;
+    }
+
+    &.mat-mdc-icon-button {
+      width: 38px;
+      height: 38px;
+    }
+
+    .mat-mdc-button-touch-target {
+      width: 40px;
+      height: 40px;
+    }
+
+    mat-icon,
+    .mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+    }
+
+    &.view-button-left {
+      mat-icon {
+        padding-left: 0.25rem;
+      }
+    }
+
+    &.view-button-right {
+      mat-icon {
+        padding-right: 0.25rem;
+      }
+    }
+
+    &:hover:not(:disabled) {
+      border-color: #7ba09733;
+      background: #dad9de;
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    &.view-button-active {
+      border-color: #419970;
+      background: #0e997929;
+      color: #419970;
+
+      mat-icon,
+      .mat-icon {
+        color: inherit;
+      }
+    }
+  }
 }
 
+@media (max-width: 946px) {
+  .view-controls {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .view-controls {
+    justify-content: center;
+  }
+}

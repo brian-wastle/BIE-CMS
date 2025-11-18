@@ -27,3 +27,19 @@ input {
 h4 {
   margin:0px;
 }
+
+.align-controls {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+}
+
+.align-group {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.align-group .view-controls {
+  justify-content: flex-start;
+}

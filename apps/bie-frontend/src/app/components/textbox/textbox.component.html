@@ -1,3 +1,6 @@
-<div class="textbox-view">
-  <span [textContent]="block().text" [style.fontSize.px]="block().fontSize ?? null"></span>
+<div #textboxRoot class="textbox-view"
+  [style.--text-font-desktop.px]="fontSizes().desktop"
+  [style.--text-font-tablet.px]="fontSizes().tablet"
+  [style.--text-font-mobile.px]="fontSizes().mobile">
+  <div class="textbox-content" [style.text-align]="textAlign()" [innerHTML]="richContent()"></div>
 </div>

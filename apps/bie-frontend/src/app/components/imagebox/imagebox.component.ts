@@ -1,13 +1,12 @@
 // imagebox.component.ts
-import { Component, computed, forwardRef } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ImageBlock, ImageStyle } from 'bie-models';
-import { BlockShell, BLOCK_SHELL } from '../block-shell/block-shell';
+import { BlockShell } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-imagebox',
   standalone: true,
-  providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => ImageBoxComponent) }],
   imports: [CommonModule],
   templateUrl: './imagebox.component.html',
   styleUrls: ['./imagebox.component.scss'],

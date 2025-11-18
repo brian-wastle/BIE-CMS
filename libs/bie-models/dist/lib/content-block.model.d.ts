@@ -1,5 +1,12 @@
 export type BlockType = 'text' | 'image' | 'video' | 'title' | 'byline';
 export type AlignType = 'flex-start' | 'center' | 'flex-end';
+type BreakpointId = 'mobile' | 'tablet' | 'desktop';
+type ResponsiveOverrides = Partial<Record<BreakpointId, {
+    fontSize?: number;
+    layout?: GridPlacement;
+    hAlign?: AlignType;
+    vAlign?: AlignType;
+}>>;
 export interface GridPlacement {
     row: number;
     colStart: number;
@@ -13,15 +20,16 @@ export interface ContentBlockBase {
     fontSize?: number;
     hAlign: AlignType;
     vAlign: AlignType;
+    responsive?: ResponsiveOverrides;
+}
+export interface TitleBlock extends ContentBlockBase {
+    type: 'title';
+    text: string;
 }
 export interface BylineBlock extends ContentBlockBase {
     type: 'byline';
     author: string;
     publishedAt?: string;
-}
-export interface TitleBlock extends ContentBlockBase {
-    type: 'title';
-    text: string;
 }
 export interface TextBlock extends ContentBlockBase {
     type: 'text';
@@ -47,6 +55,7 @@ export type BlockUpdate = {
     fontSize?: number | null;
     hAlign?: AlignType;
     vAlign?: AlignType;
+    responsive?: ResponsiveOverrides | null;
 };
 export type AnyBlock = TextBlock | ImageBlock | BylineBlock | TitleBlock;
 export interface PageContentResponse {
@@ -70,4 +79,5 @@ export interface ImageStyle {
     height?: number;
     objectFit?: 'cover' | 'contain';
 }
+export {};
 //# sourceMappingURL=content-block.model.d.ts.map

@@ -7,4 +7,5 @@ export const BLOCK_SHELL = new InjectionToken<BlockShell<unknown>>('BlockShell')
 })
 export abstract class BlockShell<TBlock> {
   readonly block = input.required<TBlock>();
+  autoSize?(blockId: string, contentHeight: number): void;
 }

@@ -50,4 +50,84 @@
       (focus)="onFocus()" (blur)="onBlur()"
     />
   </label>
+
+  <div class="align-controls">
+    <div class="align-group">
+      <span>Horizontal Align</span>
+      <div class="view-controls" role="group" aria-label="Horizontal alignment">
+        <button
+          type="button"
+          mat-icon-button
+          class="view-button view-button-left"
+          [disabled]="!editable"
+          [class.view-button-active]="currentHAlign === 'flex-start'"
+          (click)="onHAlignSelect('flex-start')"
+          (focus)="onFocus()" (blur)="onBlur()"
+          aria-label="Align left">
+          <mat-icon>format_align_left</mat-icon>
+        </button>
+        <button
+          type="button"
+          mat-icon-button
+          class="view-button view-button-middle"
+          [disabled]="!editable"
+          [class.view-button-active]="currentHAlign === 'center'"
+          (click)="onHAlignSelect('center')"
+          (focus)="onFocus()" (blur)="onBlur()"
+          aria-label="Align center">
+          <mat-icon>format_align_center</mat-icon>
+        </button>
+        <button
+          type="button"
+          mat-icon-button
+          class="view-button view-button-right"
+          [disabled]="!editable"
+          [class.view-button-active]="currentHAlign === 'flex-end'"
+          (click)="onHAlignSelect('flex-end')"
+          (focus)="onFocus()" (blur)="onBlur()"
+          aria-label="Align right">
+          <mat-icon>format_align_right</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <div class="align-group">
+      <span>Vertical Align</span>
+      <div class="view-controls" role="group" aria-label="Vertical alignment">
+        <button
+          type="button"
+          mat-icon-button
+          class="view-button view-button-left"
+          [disabled]="!editable"
+          [class.view-button-active]="currentVAlign === 'flex-start'"
+          (click)="onVAlignSelect('flex-start')"
+          (focus)="onFocus()" (blur)="onBlur()"
+          aria-label="Align top">
+          <mat-icon>vertical_align_top</mat-icon>
+        </button>
+        <button
+          type="button"
+          mat-icon-button
+          class="view-button view-button-middle"
+          [disabled]="!editable"
+          [class.view-button-active]="currentVAlign === 'center'"
+          (click)="onVAlignSelect('center')"
+          (focus)="onFocus()" (blur)="onBlur()"
+          aria-label="Align middle">
+          <mat-icon>vertical_align_center</mat-icon>
+        </button>
+        <button
+          type="button"
+          mat-icon-button
+          class="view-button view-button-right"
+          [disabled]="!editable"
+          [class.view-button-active]="currentVAlign === 'flex-end'"
+          (click)="onVAlignSelect('flex-end')"
+          (focus)="onFocus()" (blur)="onBlur()"
+          aria-label="Align bottom">
+          <mat-icon>vertical_align_bottom</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
 </fieldset>

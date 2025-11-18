@@ -1,12 +1,14 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { GridPlacement, AlignType } from 'bie-models';
 
 @Component({
   selector: 'app-layout-controls',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
   templateUrl: './layout-controls.component.html',
   styleUrls: ['./layout-controls.component.scss'],
 })
@@ -26,6 +28,8 @@ export class LayoutControlsComponent {
   get totalColumns(): number { return this.totalColumnsSignal(); }
   get editable(): boolean { return this.editableSignal(); }
   get maxRows(): number { return this.maxRowsSignal(); }
+  get currentHAlign(): AlignType { return this.hAlign() ?? 'flex-start'; }
+  get currentVAlign(): AlignType { return this.vAlign() ?? 'flex-start'; }
 
   private clamp(n: number, min: number, max: number) {
     return Math.max(min, Math.min(max, n));
@@ -76,4 +80,18 @@ export class LayoutControlsComponent {
 
   onFocus() { this.editingChange.emit(true); }
   onBlur()  { this.editingChange.emit(false); }
+
+  onHAlignSelect(align: AlignType) {
+    if (!this.editable || this.hAlign() === align) {
+      return;
+    }
+    this.hAlignChange.emit(align);
+  }
+
+  onVAlignSelect(align: AlignType) {
+    if (!this.editable || this.vAlign() === align) {
+      return;
+    }
+    this.vAlignChange.emit(align);
+  }
 }

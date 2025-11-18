@@ -5,8 +5,8 @@
       <section class="primary-preview">
         <div class="preview-toolbar">
           <label class="preview-field">
-            <span>Display</span>
-            <select [ngModel]="previewModeId()" (ngModelChange)="setPreviewMode($event ?? 'responsive')">
+            <span>Preview</span>
+            <select [ngModel]="previewModeId()" (ngModelChange)="setPreviewMode($event ?? 'desktop')">
               @for (preset of previewPresets; track preset.id) {
               <option [ngValue]="preset.id">
                 {{ preset.label }}
@@ -36,10 +36,10 @@
         </p>
 
         <div class="preview-stage">
-          <div class="preview-scroll">
+          <div #scroller class="preview-scroll">
             <div class="preview-frame" [class.preview-frame-fluid]="!previewWidthPx()"
               [style.--previewWidth.px]="previewWidthPx() ?? null" [style.--previewScale]="previewScale()">
-              <div class="preview-frame-content">
+              <div #scrollerContent class="preview-frame-content">
                 <div class="grid" [style.--cols]="columns" [style.--gap.px]="gapPx"
                   [style.--rowHeight.px]="tileRowHeight" (click)="onPreviewCanvasClick($event)">
 
@@ -132,7 +132,9 @@
         </mat-expansion-panel-header>
         <app-layout-controls class="inspector-layout-controls" [layoutSignal]="block.layout" [hAlign]="block.hAlign"
           [vAlign]="block.vAlign" [totalColumnsSignal]="columns"
-          (layoutChange)="onInspectorLayoutChange(block, $event)">
+          (layoutChange)="onInspectorLayoutChange(block, $event)"
+          (hAlignChange)="onHAlignChange(block, $event)"
+          (vAlignChange)="onVAlignChange(block, $event)">
         </app-layout-controls>
       </mat-expansion-panel>
       @if (supportsFontSize(block)) {
@@ -141,13 +143,27 @@
           <h4>Font Settings</h4>
         </mat-expansion-panel-header>
         <div class="inspector-section inspector-typography">
-          <label>
-            <span>Font size (px)</span>
-            <input type="number" min="12" max="96" placeholder="Auto" [ngModel]="block.fontSize ?? ''"
-              (ngModelChange)="onFontSizeInput(block, $event)">
-          </label>
+            <label>
+              <span>Font size (px)</span>
+              <input type="number" min="12" max="96" placeholder="Auto" [ngModel]="block.fontSize ?? ''"
+                (ngModelChange)="onFontSizeInput(block, $event)" (blur)="onFontSizeBlur(block)">
+            </label>
           <button type="button" class="inspector-link" (click)="resetFontSize(block)"
             [disabled]="block.fontSize == null">Reset font</button>
+        </div>
+      </mat-expansion-panel>
+      }
+
+      @if (isTextBlock(block)) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <h4>Text Content</h4>
+        </mat-expansion-panel-header>
+        <div class="inspector-section inspector-richtext">
+          <app-rich-text-editor class="inspector-text-editor" [value]="block.text"
+            (valueChange)="onTextContentChange(block, $event)" [placeholder]="'Start writing...'"
+            [debounceTime]="150">
+          </app-rich-text-editor>
         </div>
       </mat-expansion-panel>
       }

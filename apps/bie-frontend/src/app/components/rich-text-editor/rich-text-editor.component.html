@@ -1,0 +1,5 @@
+<div class="rich-text-quill">
+  <quill-editor class="rich-text-editor" [ngModel]="value()" (ngModelChange)="onEditorChange($event)"
+    [modules]="modules" [placeholder]="placeholder()" [debounceTime]="debounceTime()" [readOnly]="disabled()">
+  </quill-editor>
+</div>

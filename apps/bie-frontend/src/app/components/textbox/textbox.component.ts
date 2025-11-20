@@ -52,9 +52,11 @@ export class TextBoxComponent extends BlockShell<TextBlock> implements AfterView
     const element = this.textboxRoot.nativeElement;
     this.resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
-      const height = entry.borderBoxSize?.[0]?.blockSize
+      const renderedHeight = entry.borderBoxSize?.[0]?.blockSize
         ?? entry.contentRect.height
         ?? element.offsetHeight;
+      const scrollHeight = element.scrollHeight || renderedHeight;
+      const height = Math.max(renderedHeight, scrollHeight);
       this.queueAutoSize(height);
     });
     this.resizeObserver.observe(element);

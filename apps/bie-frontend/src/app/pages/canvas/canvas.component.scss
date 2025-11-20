@@ -28,23 +28,29 @@ $green-shadow: #0e997938;
   grid-template-columns: minmax(0, 1fr) 420px;
   gap: 24px;
   align-items: start;
+  position: relative;
 }
 
 .canvas-layout.inspector-collapsed {
   grid-template-columns: minmax(0, 1fr) 72px;
 }
 
+.canvas-layout.inspector-overlap {
+  grid-template-columns: 1fr;
+}
+
 .canvas-main {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .inspector-toggle {
   border: 1px solid #cbd5f5;
   border-radius: 999px;
   padding: 6px 12px;
-  background: $accent-green;
+  background: #0f766e;
   color: #fff;
   font-size: 13px;
   cursor: pointer;
@@ -59,12 +65,14 @@ $green-shadow: #0e997938;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
 }
 
 .primary-preview {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .preview-toolbar {
@@ -136,11 +144,14 @@ $green-shadow: #0e997938;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .preview-scroll {
   width: 100%;
+  min-width: 0;
   overflow: auto;
+  max-height: clamp(360px, 50vh, 960px);
   padding: 24px 0 32px;
   background: #dad9de;
 }
@@ -148,12 +159,12 @@ $green-shadow: #0e997938;
 .preview-frame {
   --previewWidth: 100%;
   --previewScale: 1;
-  width: calc(var(--previewScale, 1) * var(--previewWidth, 100%));
+  width: var(--previewWidth, 100%);
   margin: 0 auto;
   display: flex;
   justify-content: center;
   transition: width 120ms ease;
-
+  padding-top: 80px;
 }
 
 .preview-frame-content {
@@ -196,10 +207,6 @@ $green-shadow: #0e997938;
   padding: 8px;
   min-width: 0;
   transition: border-color 120ms ease;
-}
-
-.block>* {
-  width: 100%;
 }
 
 .block app-textbox {
@@ -274,14 +281,28 @@ $green-shadow: #0e997938;
   overflow: hidden;
 }
 
-.inspector-collapsed {
+.inspector.inspector-collapsed {
   max-height: none;
   border: 0px;
   position: sticky;
 }
 
-.inspector-collapsed .inspector-header {
+.inspector.inspector-collapsed .inspector-header {
   display: none;
+}
+
+.inspector.inspector-overlap {
+  position: fixed;
+  top: 128px;
+  right: 16px;
+  width: min(420px, calc(100% - 32px));
+  z-index: 5;
+  max-height: calc(100vh - 48px);
+  box-shadow: 0 5px 10px rgba(15, 23, 42, 0.35);
+}
+
+.inspector.inspector-overlap .inspector-body {
+  padding-right: 8px;
 }
 
 .inspector-header {
@@ -431,16 +452,6 @@ $green-shadow: #0e997938;
 }
 
 @media (max-width: 1024px) {
-
-  .canvas-layout,
-  .canvas-layout.inspector-collapsed {
-    grid-template-columns: 1fr;
-  }
-
-  .inspector {
-    position: static;
-    max-height: none;
-  }
 
   .preview-toolbar {
     flex-direction: column;

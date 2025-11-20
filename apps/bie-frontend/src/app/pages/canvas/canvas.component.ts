@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { CurrentUserService } from '../../services/current-user/current-user.service';
-import { AnyBlock, TextBlock, ImageBlock, BylineBlock, TitleBlock, BlockUpdate, GridPlacement, AlignType } from 'bie-models';
+import { AnyBlock, TextBlock, ImageBlock, BylineBlock, TitleBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/textbox/textbox.component';
@@ -25,6 +25,7 @@ interface PreviewPreset {
 }
 
 const BLOCK_VERTICAL_PADDING = 16; // matches .block padding (8px top + 8px bottom)
+const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
 
 @Component({
   selector: 'app-canvas',
@@ -63,12 +64,13 @@ export class CanvasComponent implements AfterViewInit {
     { id: 'hd', label: 'HD (1920px)', widthPx: 1920, description: 'HD monitor' },
   ];
   previewModeId = signal<PreviewModeId>('desktop');
-  previewZoom = signal(70);
+  previewZoom = signal(50);
   readonly previewPreset = computed(() => {
     return this.previewPresets.find(preset => preset.id === this.previewModeId()) ?? this.previewPresets[0];
   });
   readonly previewWidthPx = computed(() => this.previewPreset().widthPx);
   readonly previewScale = computed(() => this.previewZoom() / 100);
+  // Preview frame observers
   @ViewChild('scroller') set scrollerRef(ref: ElementRef<HTMLElement> | undefined) {
     this.scrollerEl = ref?.nativeElement ?? null;
     this.observeScroller();
@@ -127,7 +129,7 @@ export class CanvasComponent implements AfterViewInit {
   selectedId = signal<string | null>(null);
   selected = computed(() => this.blocks().find(b => b.id === this.selectedId()) ?? null);
   inspectorOpen = signal(true);
-  inspectorCollapsible = signal(true);
+  inspectorOverlaps = signal(false);
 
   @HostListener('document:keydown.escape')
   onEsc() { this.clearSelection(); }
@@ -365,13 +367,10 @@ export class CanvasComponent implements AfterViewInit {
   }
 
   toggleInspector() {
-    if (!this.inspectorCollapsible()) {
-      return;
-    }
     this.inspectorOpen.update((open) => !open);
   }
 
-  onInspectorLayoutChange(block: AnyBlock, layout: GridPlacement) {
+  onLayoutChange(block: AnyBlock, layout: GridPlacement) {
     const current = this.blocks();
     const validated = this.tryPlace(block.id, layout, current);
     if (!validated) {
@@ -405,11 +404,11 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     const value = typeof raw === 'number' ? raw : Number(raw);
-    if (!Number.isFinite(value)) {
+    const parsed = FontSizePatchSchema.safeParse({ fontSize: value });
+    if (!parsed.success) {
       return;
     }
-    const next = Math.max(1, Math.round(value));
-    this.onBlockUpdate(block, { fontSize: next });
+    this.onBlockUpdate(block, parsed.data);
   }
 
   resetFontSize(block: AnyBlock) {
@@ -428,21 +427,29 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     const clamped = Math.min(96, Math.max(12, Math.round(current)));
+    const parsed = FontSizePatchSchema.safeParse({ fontSize: clamped });
+    if (!parsed.success) {
+      return;
+    }
     if (clamped !== current) {
-      this.onBlockUpdate(block, { fontSize: clamped });
+      this.onBlockUpdate(block, parsed.data);
     }
   }
 
   onHAlignChange(block: AnyBlock, align: AlignType) {
-    if (typeof align === 'string' && ['flex-start', 'center', 'flex-end'].includes(align)) {
-      this.onBlockUpdate(block, { hAlign: align });
+    const parsed = AlignTypeSchema.safeParse(align);
+    if (!parsed.success) {
+      return;
     }
+    this.onBlockUpdate(block, { hAlign: parsed.data });
   }
 
   onVAlignChange(block: AnyBlock, align: AlignType) {
-    if (typeof align === 'string' && ['flex-start', 'center', 'flex-end'].includes(align)) {
-      this.onBlockUpdate(block, { vAlign: align });
+    const parsed = AlignTypeSchema.safeParse(align);
+    if (!parsed.success) {
+      return;
     }
+    this.onBlockUpdate(block, { vAlign: parsed.data });
   }
 
   onInspectorMediaSelected(item: MediaItem) {
@@ -484,64 +491,66 @@ export class CanvasComponent implements AfterViewInit {
     this.onBlockUpdate(block, { text: next });
   }
 
+  private readonly ParsedPatchSchema = BlockUpdateSchema.partial();
+  private normalizePatch = (input: BlockUpdate | null) => {
+    const parsed = this.ParsedPatchSchema.safeParse(input);
+    return parsed.success ? parsed.data : null;
+  };
+
   onBlockUpdate(block: AnyBlock, patch: BlockUpdate) {
+    const normalized = this.normalizePatch(patch);
+    if (!normalized) {
+      return;
+    }
+
     this.blocks.update(arr => arr.map(b => {
-      if (b.id !== block.id) return b;
-      let base: AnyBlock = b;
-      if (patch.layout) {
-        const layout = this.tryPlace(b.id, patch.layout, arr);
+      if (b.id !== block.id) {
+        return b;
+      }
+      let next = { ...b };
+
+      if (normalized.layout) {
+        const layout = this.tryPlace(b.id, normalized.layout, arr);
         if (layout) {
-          base = { ...base, layout };
+          next.layout = layout;
         }
-      }
-      if ('fontSize' in patch) {
-        const updated = { ...base };
-        if (typeof patch.fontSize === 'number' && Number.isFinite(patch.fontSize)) {
-          updated.fontSize = patch.fontSize;
-        } else {
-          delete updated.fontSize;
-        }
-        base = updated;
-      }
-      if ('hAlign' in patch) {
-        const updated = { ...base };
-        if (typeof patch.hAlign === 'string') {
-          updated.hAlign = patch.hAlign as AlignType;
-        } 
-        base = updated;
-      }
-      if ('vAlign' in patch) {
-        const updated = { ...base };
-        if (typeof patch.vAlign === 'string') {
-          updated.vAlign = patch.vAlign as AlignType;
-        }
-        base = updated;
       }
 
-      // Component specific changes
-      if (this.isTitleBlock(base)) {
-        return ('text' in patch) ? { ...base, text: patch.text ?? '' } as TitleBlock : base;
+      if (Object.prototype.hasOwnProperty.call(normalized, 'fontSize')) {
+        if (normalized.fontSize === null) {
+          delete next.fontSize;
+        } else {
+          next.fontSize = normalized.fontSize;
+        }
       }
-      if (this.isTextBlock(base)) {
-        return ('text' in patch) ? { ...base, text: patch.text ?? '' } as TextBlock : base;
+      if (normalized.hAlign) {
+        next.hAlign = normalized.hAlign;
       }
-      if (this.isImageBlock(base)) {
-        return {
-          ...base,
-          ...('src' in patch ? { src: patch.src ?? '' } : {}),
-          ...('alt' in patch ? { alt: patch.alt } : {}),
-          ...('mediaHandle' in patch ? { mediaHandle: patch.mediaHandle ?? null } : {}),
-          ...('imageStyle' in patch ? { imageStyle: patch.imageStyle ?? null } : {})
-        } as ImageBlock;
+      if (normalized.vAlign) {
+        next.vAlign = normalized.vAlign;
       }
-      if (this.isBylineBlock(base)) {
-        return {
-          ...base,
-          ...('author' in patch ? { author: patch.author ?? base.author } : {}),
-          ...('publishedAt' in patch ? { publishedAt: patch.publishedAt } : {}),
-        } as BylineBlock;
+
+      if (this.isTitleBlock(next) || this.isTextBlock(next)) {
+        if (Object.prototype.hasOwnProperty.call(normalized, 'text')) {
+          next = { ...next, text: normalized.text ?? '' };
+        }
+      } else if (this.isImageBlock(next)) {
+        next = {
+          ...next,
+          ...(normalized.src !== undefined ? { src: normalized.src ?? '' } : {}),
+          ...(normalized.alt !== undefined ? { alt: normalized.alt } : {}),
+          ...(normalized.mediaHandle !== undefined ? { mediaHandle: normalized.mediaHandle ?? null } : {}),
+          ...(normalized.imageStyle !== undefined ? { imageStyle: normalized.imageStyle ?? undefined } : {}),
+        };
+      } else if (this.isBylineBlock(next)) {
+        next = {
+          ...next,
+          ...(normalized.author !== undefined ? { author: normalized.author ?? next.author } : {}),
+          ...(normalized.publishedAt !== undefined ? { publishedAt: normalized.publishedAt ?? undefined } : {}),
+        };
       }
-      return base;
+
+      return next;
     }));
   }
 
@@ -562,11 +571,8 @@ export class CanvasComponent implements AfterViewInit {
     if (typeof window === 'undefined') {
       return;
     }
-    const canCollapse = window.innerWidth > 1024;
-    if (!canCollapse && !this.inspectorOpen()) {
-      this.inspectorOpen.set(true);
-    }
-    this.inspectorCollapsible.set(canCollapse);
+    const shouldOverlap = window.innerWidth <= 1024;
+    this.inspectorOverlaps.set(shouldOverlap);
   }
 
   // Find last empty row

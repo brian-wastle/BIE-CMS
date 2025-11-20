@@ -1,0 +1,8 @@
+.rich-text-quill {
+  display: block;
+  width: 100%;
+}
+
+.rich-text-quill ::ng-deep .rich-text-editor {
+  width: 100%;
+}

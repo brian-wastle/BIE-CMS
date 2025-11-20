@@ -1,4 +1,4 @@
-<div class="canvas-layout" [class.inspector-collapsed]="!inspectorOpen()">
+<div class="canvas-layout" [class.inspector-collapsed]="!inspectorOpen()" [class.inspector-overlap]="inspectorOpen() && inspectorOverlaps()">
 
   <div class="canvas-main">
     <div class="canvas-area">
@@ -82,14 +82,12 @@
     </aside>
   </div>
 
-  <aside class="inspector" [class.inspector-collapsed]="!inspectorOpen()">
+  <aside class="inspector" [class.inspector-collapsed]="!inspectorOpen()" [class.inspector-overlap]="inspectorOpen() && inspectorOverlaps()">
     <div class="inspector-header">
       <h3>Inspector</h3>
-      @if (inspectorCollapsible()) {
       <button type="button" class="inspector-toggle" (click)="toggleInspector()">
         {{ inspectorOpen() ? 'Collapse' : 'Expand' }}
       </button>
-      }
     </div>
 
     @if (inspectorOpen()) {
@@ -132,7 +130,7 @@
         </mat-expansion-panel-header>
         <app-layout-controls class="inspector-layout-controls" [layoutSignal]="block.layout" [hAlign]="block.hAlign"
           [vAlign]="block.vAlign" [totalColumnsSignal]="columns"
-          (layoutChange)="onInspectorLayoutChange(block, $event)"
+          (layoutChange)="onLayoutChange(block, $event)"
           (hAlignChange)="onHAlignChange(block, $event)"
           (vAlignChange)="onVAlignChange(block, $event)">
         </app-layout-controls>
@@ -201,7 +199,7 @@
       <p class="inspector-empty">Select a block to edit.</p>
       }
     </div>
-    } @else if (inspectorCollapsible()) {
+    } @else {
     <div class="inspector-collapsed-panel">
       <button type="button" class="inspector-expand-button" (click)="toggleInspector()">
         <mat-icon>build_circle</mat-icon>

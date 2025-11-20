@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS pages(
   status page_status NOT NULL DEFAULT 'draft',
   blocks JSONB NOT NULL,
   meta JSONB NOT NULL DEFAULT '{}',
-  html TEXT,
   published_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

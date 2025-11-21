@@ -10,9 +10,6 @@ export type AlignType = z.infer<typeof AlignTypeSchema>;
 export const BreakpointIdSchema = z.enum(['mobile', 'tablet', 'desktop']);
 export type BreakpointId = z.infer<typeof BreakpointIdSchema>;
 
-export const PageStatusSchema = z.enum(['draft', 'published']);
-export type PageStatus = z.infer<typeof PageStatusSchema>;
-
 export const ViewModeSchema = z.enum(['list', 'grid']);
 export type ViewMode = z.infer<typeof ViewModeSchema>;
 
@@ -115,19 +112,98 @@ export const BlockUpdateSchema = z.object({
 export type BlockUpdate = z.infer<typeof BlockUpdateSchema>;
 
 /** Page + ancillary models **************************************************/
-export const PageContentResponseSchema = z.object({
-  id: z.string(), // Stable document identifier (UUID or slug)
-  slug: z.string(), // Public-facing slug used by the blog route
-  title: z.string(), // Page/browser title
-  status: PageStatusSchema, // Drives visibility in the public renderer
-  updatedAt: z.string(), // ISO timestamp for cache invalidation
-  blocks: z.array(AnyBlockSchema), // Ordered by layout.row/colStart
-});
-export type PageContentResponse = z.infer<typeof PageContentResponseSchema>;
-
 export const DirectoryMetaSchema = z.object({
   directory: z.string().nullable(),
   itemCount: z.number().int(),
   lastUploaded: z.string().nullable(),
 });
 export type DirectoryMeta = z.infer<typeof DirectoryMetaSchema>;
+
+export const PageMetaSchema = z.record(z.string(), z.unknown()).catch({});
+export type PageMeta = z.infer<typeof PageMetaSchema>;
+
+export const PageStatusSchema = z.enum(['draft', 'published']);
+export type PageStatus = z.infer<typeof PageStatusSchema>;
+
+export const PageVersionSummarySchema = z.object({
+  id: z.string(),
+  pageId: z.string(),
+  version: z.coerce.number().int().positive(),
+  status: PageStatusSchema,
+  title: z.string(),
+  createdBy: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  publishedAt: z.string().nullable().optional(),
+});
+export type PageVersionSummary = z.infer<typeof PageVersionSummarySchema>;
+
+export const PageVersionSchema = PageVersionSummarySchema.extend({
+  blocks: z.array(AnyBlockSchema),
+  meta: PageMetaSchema.optional(),
+});
+export type PageVersion = z.infer<typeof PageVersionSchema>;
+
+export const PageIdentitySchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  latestVersionId: z.string().nullable().optional(),
+  publishedVersionId: z.string().nullable().optional(),
+});
+export type PageIdentity = z.infer<typeof PageIdentitySchema>;
+
+// Page authoring payloads (shared front/back)
+export const PageWriteSchema = z.object({
+  slug: z.string().min(1),
+  title: z.string().min(1),
+  status: PageStatusSchema.optional(),
+  blocks: z.array(AnyBlockSchema).nonempty('At least one block is required'),
+  meta: PageMetaSchema.optional(),
+  publishedAt: z.string().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+});
+export type PageWrite = z.infer<typeof PageWriteSchema>;
+
+export const PageVersionWriteSchema = PageWriteSchema.omit({ slug: true });
+export type PageVersionWrite = z.infer<typeof PageVersionWriteSchema>;
+
+export const PageUpdateSchema = PageVersionWriteSchema.extend({
+  slug: z.string().min(1).optional(),
+});
+export type PageUpdate = z.infer<typeof PageUpdateSchema>;
+
+export const PageSummarySchema = z.object({
+  page: PageIdentitySchema,
+  latestVersion: PageVersionSummarySchema.nullable(),
+  publishedVersion: PageVersionSummarySchema.nullable(),
+});
+export type PageSummary = z.infer<typeof PageSummarySchema>;
+
+export const PageDetailSchema = z.object({
+  page: PageIdentitySchema,
+  draftVersion: PageVersionSchema.nullable(),
+  publishedVersion: PageVersionSchema.nullable(),
+  latestVersion: PageVersionSchema.nullable(),
+  history: z.array(PageVersionSummarySchema),
+});
+export type PageDetail = z.infer<typeof PageDetailSchema>;
+
+export const PageContentResponseSchema = z.object({
+  id: z.string(), // Page id
+  versionId: z.string(), // Version id used to render
+  slug: z.string(),
+  title: z.string(),
+  status: PageStatusSchema,
+  updatedAt: z.string(),
+  blocks: z.array(AnyBlockSchema),
+  publishedAt: z.string().nullable().optional(),
+});
+export type PageContentResponse = z.infer<typeof PageContentResponseSchema>;
+
+// Page payload returned by the API (authoring + meta)
+export const PageWithMetaSchema = PageContentResponseSchema.extend({
+  meta: PageMetaSchema.optional(),
+});
+export type PageWithMeta = z.infer<typeof PageWithMetaSchema>;

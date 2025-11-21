@@ -549,7 +549,6 @@ export class CanvasComponent implements AfterViewInit {
           ...(normalized.publishedAt !== undefined ? { publishedAt: normalized.publishedAt ?? undefined } : {}),
         };
       }
-
       return next;
     }));
   }

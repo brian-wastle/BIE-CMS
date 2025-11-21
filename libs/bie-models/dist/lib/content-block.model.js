@@ -7,13 +7,13 @@ export const PageStatusSchema = z.enum(['draft', 'published']);
 export const ViewModeSchema = z.enum(['list', 'grid']);
 /** Layout + responsive helpers **********************************************/
 export const GridPlacementSchema = z.object({
-    row: z.number().int().nonnegative(), // Starting row
-    colStart: z.number().int().nonnegative(), // Starting column
-    colSpan: z.number().int().positive(), // Width in columns
-    rowSpan: z.number().int().positive().optional(), // Height in rows
+    row: z.coerce.number().int().nonnegative(), // Starting row
+    colStart: z.coerce.number().int().nonnegative(), // Starting column
+    colSpan: z.coerce.number().int().positive(), // Width in columns
+    rowSpan: z.coerce.number().int().positive().optional(), // Height in rows
 });
 export const ResponsiveOverrideSchema = z.object({
-    fontSize: z.number().optional(),
+    fontSize: z.coerce.number().nullable().optional(),
     layout: GridPlacementSchema.partial().optional(),
     hAlign: AlignTypeSchema.optional(),
     vAlign: AlignTypeSchema.optional(),
@@ -26,9 +26,9 @@ export const ResponsiveOverridesSchema = z
 })
     .partial();
 export const ImageStyleSchema = z.object({
-    width: z.number().optional(),
+    width: z.coerce.number().optional(),
     widthUnit: z.enum(['px', '%', 'vw', 'auto']).optional(),
-    height: z.number().optional(),
+    height: z.coerce.number().optional(),
     objectFit: z.enum(['cover', 'contain']).optional(),
 });
 /** Block base + variants ****************************************************/
@@ -36,7 +36,7 @@ const ContentBlockBaseSchema = z.object({
     id: z.string(),
     type: BlockTypeSchema,
     layout: GridPlacementSchema,
-    fontSize: z.number().optional(),
+    fontSize: z.coerce.number().nullable().optional(),
     hAlign: AlignTypeSchema,
     vAlign: AlignTypeSchema,
     responsive: ResponsiveOverridesSchema.optional(),
@@ -52,7 +52,7 @@ export const BylineBlockSchema = ContentBlockBaseSchema.extend({
 });
 export const TextBlockSchema = ContentBlockBaseSchema.extend({
     type: z.literal('text'),
-    text: z.string(), // TODO: HTML string from Quill
+    text: z.string(),
 });
 export const ImageBlockSchema = ContentBlockBaseSchema.extend({
     type: z.literal('image'),
@@ -77,7 +77,7 @@ export const BlockUpdateSchema = z.object({
     author: z.string().optional(),
     format: z.string().optional(),
     publishedAt: z.string().optional(),
-    fontSize: z.number().nullable().optional(),
+    fontSize: z.coerce.number().nullable().optional(),
     hAlign: AlignTypeSchema.optional(),
     vAlign: AlignTypeSchema.optional(),
     responsive: ResponsiveOverridesSchema.nullable().optional(),
@@ -95,4 +95,19 @@ export const DirectoryMetaSchema = z.object({
     directory: z.string().nullable(),
     itemCount: z.number().int(),
     lastUploaded: z.string().nullable(),
+});
+// Page authoring payload (shared front/back)
+export const PageMetaSchema = z.record(z.string(), z.unknown()).catch({});
+export const PageWriteSchema = z.object({
+    slug: z.string().min(1),
+    title: z.string().min(1),
+    status: PageStatusSchema.optional(),
+    blocks: z.array(AnyBlockSchema).nonempty('At least one block is required'),
+    meta: PageMetaSchema.optional(),
+    publishedAt: z.string().nullable().optional(),
+});
+// Page payload returned by the API (authoring + meta)
+export const PageWithMetaSchema = PageContentResponseSchema.extend({
+    meta: PageMetaSchema.optional(),
+    publishedAt: z.string().nullable().optional(),
 });

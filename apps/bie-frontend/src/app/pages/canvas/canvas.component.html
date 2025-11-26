@@ -216,23 +216,6 @@
           <input type="text" [ngModel]="block.alt" (ngModelChange)="onBlockUpdate(block, { alt: $event })">
         </label>
 
-        <div class="inspector-section inspector-image-sizing">
-          <div class="inspector-section-header">
-            <h5>Image width</h5>
-            <span class="inspector-note">Select how many columns this image spans.</span>
-          </div>
-
-          <label>
-            <span>Columns</span>
-            <select [ngModel]="getImageColumnSpan(block)" (ngModelChange)="onImageColumnSpanChange(block, $event)">
-              @for (size of imageColumnOptions; track size) {
-              <option [ngValue]="size">{{ size }} column{{ size === 1 ? '' : 's' }}</option>
-              }
-            </select>
-          </label>
-
-          <p class="inspector-note">Use smaller sizes to place multiple images on the same row.</p>
-        </div>
         <mat-expansion-panel>
           <mat-expansion-panel-header>
             <h5>Media Library</h5>

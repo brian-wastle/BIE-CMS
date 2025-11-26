@@ -149,6 +149,8 @@ router.post('/', async (req, res) => {
   const payload: PageWrite = parseResult.data;
   const status = payload.status ?? 'draft';
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
+  const blocksJson = JSON.stringify(payload.blocks);
+  const metaJson = JSON.stringify(payload.meta ?? {});
 
   try {
     const pageId = await withTransaction(async (client) => {
@@ -174,7 +176,7 @@ router.post('/', async (req, res) => {
         VALUES ($1, 1, $2::page_version_status, $3, $4::jsonb, $5::jsonb, $6, $7::timestamptz)
         RETURNING id, page_id, version, status, title, blocks, meta, created_by, created_at, updated_at, published_at
         `,
-        [pageId, status, payload.title, payload.blocks, payload.meta ?? {}, payload.createdBy ?? null, publishedAt]
+        [pageId, status, payload.title, blocksJson, metaJson, payload.createdBy ?? null, publishedAt]
       );
 
       const version = versionInsert.rows[0];
@@ -224,6 +226,8 @@ router.put('/:id', async (req, res) => {
   const status = payload.status ?? 'draft';
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
   const ref = req.params.id;
+  const blocksJson = JSON.stringify(payload.blocks);
+  const metaJson = JSON.stringify(payload.meta ?? {});
 
   try {
     const pageId = await withTransaction(async (client) => {
@@ -253,8 +257,8 @@ router.put('/:id', async (req, res) => {
           nextVersion,
           status,
           payload.title,
-          payload.blocks,
-          payload.meta ?? {},
+          blocksJson,
+          metaJson,
           payload.createdBy ?? null,
           publishedAt,
         ]

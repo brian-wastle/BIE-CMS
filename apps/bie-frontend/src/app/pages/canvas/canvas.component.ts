@@ -384,11 +384,6 @@ export class CanvasComponent implements AfterViewInit {
   selected = computed(() => this.blocks().find(b => b.id === this.selectedId()) ?? null);
   inspectorOpen = signal(true);
   inspectorOverlaps = signal(false);
-  private readonly imageColumnPresetMax = 12;
-  get imageColumnOptions(): number[] {
-    const max = Math.min(this.imageColumnPresetMax, this.columns);
-    return Array.from({ length: max }, (_, idx) => idx + 1);
-  }
 
   @HostListener('document:keydown.escape')
   onEsc() { this.clearSelection(); }
@@ -593,7 +588,8 @@ export class CanvasComponent implements AfterViewInit {
     const layout = block.layout ?? { row: 1, colStart: 1, colSpan: this.columns, rowSpan: 1 };
     const hAlign = block.hAlign ?? 'flex-start';
     const vAlign = block.vAlign ?? 'flex-start';
-    const stretchContent = this.isTextBlock(block) || this.isBackgroundBlock(block);
+    const stretchContent =
+      this.isTextBlock(block) || this.isBackgroundBlock(block) || this.isImageBlock(block);
     const alignItems = stretchContent ? 'stretch' : hAlign;
     const justifyContent = stretchContent ? 'stretch' : vAlign;
     return {
@@ -797,12 +793,6 @@ export class CanvasComponent implements AfterViewInit {
     this.onBlockUpdate(block, { color: '' });
   }
 
-  getImageColumnSpan(block: ImageBlock) {
-    const stored = block.imageStyle?.columns;
-    const fallback = block.layout?.colSpan ?? 1;
-    return this.clampImageColumnValue(stored ?? fallback);
-  }
-
   onBackgroundColorChange(block: BGBlock, raw: string | null | undefined) {
     if (!this.isBackgroundBlock(block)) {
       return;
@@ -828,39 +818,6 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     this.onBlockUpdate(block, { bgStyle: parsed.data });
-  }
-
-  onImageColumnSpanChange(block: ImageBlock, raw: string | number | null | undefined) {
-    if (!this.isImageBlock(block) || raw === null || raw === undefined || raw === '') {
-      return;
-    }
-    const numeric = typeof raw === 'number' ? raw : Number(raw);
-    if (!Number.isFinite(numeric)) {
-      return;
-    }
-    const desired = this.clampImageColumnValue(numeric);
-    const applied = Math.min(desired, this.columns);
-    const layoutSource: GridPlacement = block.layout
-      ? { ...block.layout }
-      : {
-        row: this.nextRow(this.blocks()),
-        colStart: 1,
-        colSpan: applied,
-        rowSpan: 1,
-      };
-    const layout: GridPlacement = { ...layoutSource, colSpan: applied };
-    this.onBlockUpdate(block, {
-      layout,
-      imageStyle: { columns: applied },
-    });
-  }
-
-  private clampImageColumnValue(value: number) {
-    if (!Number.isFinite(value)) {
-      return 1;
-    }
-    const rounded = Math.round(value);
-    return Math.min(this.imageColumnPresetMax, Math.max(1, rounded));
   }
 
   onTextContentChange(block: TextBlock, html: string | null | undefined) {
@@ -925,6 +882,13 @@ export class CanvasComponent implements AfterViewInit {
           ...(normalized.mediaHandle !== undefined ? { mediaHandle: normalized.mediaHandle ?? null } : {}),
           ...(normalized.imageStyle !== undefined ? { imageStyle: normalized.imageStyle ?? undefined } : {}),
         };
+        const layoutColSpan = next.layout?.colSpan;
+        if (typeof layoutColSpan === 'number' && Number.isFinite(layoutColSpan)) {
+          next = {
+            ...next,
+            imageStyle: { ...(next.imageStyle ?? {}), columns: layoutColSpan },
+          };
+        }
       } else if (this.isBylineBlock(next)) {
         next = {
           ...next,

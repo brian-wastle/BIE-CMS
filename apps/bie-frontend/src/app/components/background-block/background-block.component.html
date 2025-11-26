@@ -1,0 +1,10 @@
+<div class="background-block" [style.background-color]="block().color || 'transparent'">
+  @if (backgroundImageStyle(); as imageStyle) {
+    <div class="background-block__image" [ngStyle]="imageStyle"></div>
+  }
+  <div class="background-block__content">
+    @if (!block().color && !hasImage()) {
+      <p class="background-block__empty">Set a color or image in the inspector.</p>
+    }
+  </div>
+</div>

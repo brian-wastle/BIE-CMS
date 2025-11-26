@@ -1,8 +1,7 @@
 <div class="img-preview">
   @if (block().src) {
     <div class="preview-wrap">
-      <img class="media" [src]="block().src" [alt]="block().alt || ''" [style.width]="resolvedWidth()"
-        [style.object-fit]="imageStyle().objectFit || 'cover'" (load)="onImageLoad()" (error)="onImageError()"
+      <img class="media" [src]="block().src" [alt]="block().alt || ''" (load)="onImageLoad()" (error)="onImageError()"
         [class.broken]="broken" />
       @if (broken) {
         <div class="broken-note">{{ block().alt || 'Failed to load image.' }}</div>

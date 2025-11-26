@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, ViewChild, computed, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaBrowserComponent } from '../../components/media-browser/media-browser.component';
@@ -21,7 +21,7 @@ interface UploadItem {
 @Component({
   selector: 'app-media-upload',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MediaBrowserComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MediaBrowserComponent],
   templateUrl: './media-upload.component.html',
   styleUrl: './media-upload.component.scss'
 })

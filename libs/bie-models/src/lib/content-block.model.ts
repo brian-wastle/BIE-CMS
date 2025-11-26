@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-/** Common enums *************************************************************/
-export const BlockTypeSchema = z.enum(['text', 'image', 'video', 'title', 'byline']);
+// Enums
+export const BlockTypeSchema = z.enum(['text', 'image', 'video', 'title', 'byline', 'background']);
 export type BlockType = z.infer<typeof BlockTypeSchema>;
 
 export const AlignTypeSchema = z.enum(['flex-start', 'center', 'flex-end']);
@@ -13,7 +13,10 @@ export type BreakpointId = z.infer<typeof BreakpointIdSchema>;
 export const ViewModeSchema = z.enum(['list', 'grid']);
 export type ViewMode = z.infer<typeof ViewModeSchema>;
 
-/** Layout + responsive helpers **********************************************/
+export const BGStyleSchema = z.enum(['stretch', 'tile']);
+export type BGStyle = z.infer<typeof BGStyleSchema>;
+
+// Layout
 export const GridPlacementSchema = z.object({
   row: z.coerce.number().int().nonnegative(), // Starting row
   colStart: z.coerce.number().int().nonnegative(), // Starting column
@@ -22,32 +25,32 @@ export const GridPlacementSchema = z.object({
 });
 export type GridPlacement = z.infer<typeof GridPlacementSchema>;
 
-export const ResponsiveOverrideSchema = z.object({
+export const OverrideSchema = z.object({
   fontSize: z.coerce.number().nullable().optional(),
   layout: GridPlacementSchema.partial().optional(),
   hAlign: AlignTypeSchema.optional(),
   vAlign: AlignTypeSchema.optional(),
 });
-export type ResponsiveOverride = z.infer<typeof ResponsiveOverrideSchema>;
+export type ResponsiveOverride = z.infer<typeof OverrideSchema>;
 
 export const ResponsiveOverridesSchema = z
   .object({
-    mobile: ResponsiveOverrideSchema.optional(),
-    tablet: ResponsiveOverrideSchema.optional(),
-    desktop: ResponsiveOverrideSchema.optional(),
+    mobile: OverrideSchema.optional(),
+    tablet: OverrideSchema.optional(),
+    desktop: OverrideSchema.optional(),
   })
   .partial();
 export type ResponsiveOverrides = z.infer<typeof ResponsiveOverridesSchema>;
 
-export const ImageStyleSchema = z.object({
-  width: z.coerce.number().optional(),
-  widthUnit: z.enum(['px', '%', 'vw', 'auto']).optional(),
-  height: z.coerce.number().optional(),
-  objectFit: z.enum(['cover', 'contain']).optional(),
-});
+export const ImageStyleSchema = z
+  .object({
+    columns: z.coerce.number().int().min(1).max(12).optional(),
+  })
+  .strict();
 export type ImageStyle = z.infer<typeof ImageStyleSchema>;
 
-/** Block base + variants ****************************************************/
+
+// Block base and component schemas
 const ContentBlockBaseSchema = z.object({
   id: z.string(),
   type: BlockTypeSchema,
@@ -86,11 +89,21 @@ export const ImageBlockSchema = ContentBlockBaseSchema.extend({
 });
 export type ImageBlock = z.infer<typeof ImageBlockSchema>;
 
+export const BGBlockSchema = ContentBlockBaseSchema.extend({
+  type: z.literal('background'),
+  src: z.string().optional(),
+  color: z.string().optional(),
+  mediaHandle: z.string().nullable().optional(),
+  bgStyle: BGStyleSchema.default('stretch'),
+});
+export type BGBlock = z.infer<typeof BGBlockSchema>;
+
 export const AnyBlockSchema = z.discriminatedUnion('type', [
   TitleBlockSchema,
   BylineBlockSchema,
   TextBlockSchema,
   ImageBlockSchema,
+  BGBlockSchema,
 ]);
 export type AnyBlock = z.infer<typeof AnyBlockSchema>; // Used during component creation/editing
 
@@ -101,6 +114,8 @@ export const BlockUpdateSchema = z.object({
   alt: z.string().optional(),
   mediaHandle: z.string().nullable().optional(),
   imageStyle: ImageStyleSchema.optional(),
+  color: z.string().optional(),
+  bgStyle: BGStyleSchema.optional(),
   author: z.string().optional(),
   format: z.string().optional(),
   publishedAt: z.string().optional(),
@@ -111,7 +126,7 @@ export const BlockUpdateSchema = z.object({
 });
 export type BlockUpdate = z.infer<typeof BlockUpdateSchema>;
 
-/** Page + ancillary models **************************************************/
+// Page models
 export const DirectoryMetaSchema = z.object({
   directory: z.string().nullable(),
   itemCount: z.number().int(),
@@ -125,38 +140,21 @@ export type PageMeta = z.infer<typeof PageMetaSchema>;
 export const PageStatusSchema = z.enum(['draft', 'published']);
 export type PageStatus = z.infer<typeof PageStatusSchema>;
 
-export const PageVersionSummarySchema = z.object({
+export const PageSchema = z.object({
   id: z.string(),
-  pageId: z.string(),
-  version: z.coerce.number().int().positive(),
+  slug: z.string(),
   status: PageStatusSchema,
   title: z.string(),
+  blocks: z.array(AnyBlockSchema),
+  meta: PageMetaSchema.optional(),
   createdBy: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   publishedAt: z.string().nullable().optional(),
 });
-export type PageVersionSummary = z.infer<typeof PageVersionSummarySchema>;
+export type Page = z.infer<typeof PageSchema>;
 
-export const PageVersionSchema = PageVersionSummarySchema.extend({
-  blocks: z.array(AnyBlockSchema),
-  meta: PageMetaSchema.optional(),
-});
-export type PageVersion = z.infer<typeof PageVersionSchema>;
-
-export const PageIdentitySchema = z.object({
-  id: z.string(),
-  slug: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  latestVersionId: z.string().nullable().optional(),
-  publishedVersionId: z.string().nullable().optional(),
-});
-export type PageIdentity = z.infer<typeof PageIdentitySchema>;
-
-// Page authoring payloads (shared front/back)
-export const PageWriteSchema = z.object({
-  slug: z.string().min(1),
+const PagePatchSchema = z.object({
   title: z.string().min(1),
   status: PageStatusSchema.optional(),
   blocks: z.array(AnyBlockSchema).nonempty('At least one block is required'),
@@ -164,46 +162,38 @@ export const PageWriteSchema = z.object({
   publishedAt: z.string().nullable().optional(),
   createdBy: z.string().nullable().optional(),
 });
+
+export const PageWriteSchema = PagePatchSchema.extend({
+  slug: z.string().min(1),
+});
 export type PageWrite = z.infer<typeof PageWriteSchema>;
 
-export const PageVersionWriteSchema = PageWriteSchema.omit({ slug: true });
-export type PageVersionWrite = z.infer<typeof PageVersionWriteSchema>;
-
-export const PageUpdateSchema = PageVersionWriteSchema.extend({
+export const PageUpdateSchema = PagePatchSchema.extend({
   slug: z.string().min(1).optional(),
 });
 export type PageUpdate = z.infer<typeof PageUpdateSchema>;
 
 export const PageSummarySchema = z.object({
-  page: PageIdentitySchema,
-  latestVersion: PageVersionSummarySchema.nullable(),
-  publishedVersion: PageVersionSummarySchema.nullable(),
+  page: PageSchema,
 });
 export type PageSummary = z.infer<typeof PageSummarySchema>;
 
 export const PageDetailSchema = z.object({
-  page: PageIdentitySchema,
-  draftVersion: PageVersionSchema.nullable(),
-  publishedVersion: PageVersionSchema.nullable(),
-  latestVersion: PageVersionSchema.nullable(),
-  history: z.array(PageVersionSummarySchema),
+  page: PageSchema,
 });
 export type PageDetail = z.infer<typeof PageDetailSchema>;
 
 export const PageContentResponseSchema = z.object({
   id: z.string(), // Page id
-  versionId: z.string(), // Version id used to render
   slug: z.string(),
   title: z.string(),
   status: PageStatusSchema,
   updatedAt: z.string(),
   blocks: z.array(AnyBlockSchema),
   publishedAt: z.string().nullable().optional(),
+  meta: PageMetaSchema.optional(),
 });
 export type PageContentResponse = z.infer<typeof PageContentResponseSchema>;
 
-// Page payload returned by the API (authoring + meta)
-export const PageWithMetaSchema = PageContentResponseSchema.extend({
-  meta: PageMetaSchema.optional(),
-});
+export const PageWithMetaSchema = PageContentResponseSchema;
 export type PageWithMeta = z.infer<typeof PageWithMetaSchema>;

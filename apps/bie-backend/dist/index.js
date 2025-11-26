@@ -14,7 +14,7 @@ app.use(cookieParser());
 // API Routes
 app.use('/api/auth', authRouter); // Login/Auth
 app.use('/api/media', filestackRouter); // Filestack media
-app.use('/api/pages', pagesRouter); // Page CRUD
+app.use('/api/pages', pagesRouter); // Pages API
 // SSR Proxy
 const SSR_TARGET = process.env.SSR_TARGET ?? 'http://127.0.0.1:4100';
 app.use('/', createProxyMiddleware({

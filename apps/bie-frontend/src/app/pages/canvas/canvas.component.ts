@@ -2,8 +2,11 @@ import { Component, TrackByFunction, computed, signal, HostListener, effect, inj
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { ActivatedRoute } from '@angular/router';
 import { CurrentUserService } from '../../services/current-user/current-user.service';
-import { AnyBlock, TextBlock, ImageBlock, BylineBlock, TitleBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema } from 'bie-models';
+import { PagesService } from '../../services/pages/pages.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AnyBlock, TextBlock, ImageBlock, BylineBlock, TitleBlock, BGBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, Page, PageStatus, PageWrite, PageUpdate } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/textbox/textbox.component';
@@ -14,8 +17,25 @@ import { RichTextEditorComponent } from '../../components/rich-text-editor/rich-
 import type { MediaItem } from '../../services/media-library/media-library.service';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { BLOCK_SHELL } from '../../components/block-shell/block-shell';
+import { BackgroundBlockComponent } from '../../components/background-block/background-block.component';
 
 type PreviewModeId = 'responsive' | 'mobile' | 'tablet' | 'desktop' | 'hd';
+
+type PageMetaState = {
+  id: string | null;
+  title: string;
+  slug: string;
+  slugRef: string | null;
+  status: PageStatus;
+};
+
+const defaultPageMeta: PageMetaState = {
+  id: null,
+  title: '',
+  slug: '',
+  slugRef: null,
+  status: 'draft',
+};
 
 interface PreviewPreset {
   id: PreviewModeId;
@@ -24,7 +44,7 @@ interface PreviewPreset {
   description: string;
 }
 
-const BLOCK_VERTICAL_PADDING = 16; // matches .block padding (8px top + 8px bottom)
+const BLOCK_VERTICAL_PADDING = 16; // matches .block's padding (8px top/bottom)
 const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
 
 @Component({
@@ -41,7 +61,8 @@ const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
     MediaBrowserCarouselComponent,
     LayoutControlsComponent,
     MatExpansionModule,
-    RichTextEditorComponent
+    RichTextEditorComponent,
+    BackgroundBlockComponent
   ],
   providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => CanvasComponent) }],
   templateUrl: './canvas.component.html',
@@ -70,7 +91,8 @@ export class CanvasComponent implements AfterViewInit {
   });
   readonly previewWidthPx = computed(() => this.previewPreset().widthPx);
   readonly previewScale = computed(() => this.previewZoom() / 100);
-  // Preview frame observers
+
+  // Scroller and observers
   @ViewChild('scroller') set scrollerRef(ref: ElementRef<HTMLElement> | undefined) {
     this.scrollerEl = ref?.nativeElement ?? null;
     this.observeScroller();
@@ -100,6 +122,68 @@ export class CanvasComponent implements AfterViewInit {
     return user.username ? user.username.trim() :
       (user.firstName ? user.firstName : 'Admin');
   });
+  private readonly pagesService = inject(PagesService);
+  private readonly route = inject(ActivatedRoute);
+
+  // Drafts
+  readonly pageMeta = signal<PageMetaState>({ ...defaultPageMeta });
+  readonly savingDraft = signal(false);
+  readonly publishingDraft = signal(false);
+  readonly deletingDraft = signal(false);
+  readonly saveError = signal<string | null>(null);
+  readonly lastSavedAt = signal<string | null>(null);
+  readonly loadingDraft = signal(false);
+  readonly draftLoadError = signal<string | null>(null);
+  private draftLoadSeq = 0; // Keep track of most recent pages query
+
+  // Initial editor state and selected block as signal array
+  blocks = signal<AnyBlock[]>(this.createDefaultBlocks());
+  // Read-only version of blocks, sorted by row then column, for page flow
+  pageBlocks = computed(() => [...this.blocks()].sort((a, b) => this.compareByLayout(a, b)));
+  private readonly titleBlockSyncEffect = effect(() => {
+    const title = this.pageMeta().title ?? '';
+    const blocks = this.blocks();
+    let changed = false;
+    const next = blocks.map(block => {
+      if (!this.isTitleBlock(block) || (block.text ?? '') === title) {
+        return block;
+      }
+      changed = true;
+      return { ...block, text: title };
+    });
+    if (changed) {
+      this.blocks.set(next);
+    }
+  });
+
+  readonly hasBlocks = computed(() => this.blocks().length > 0);
+  readonly metadataReady = computed(() => Boolean(this.pageMeta().title.trim()) && Boolean(this.pageMeta().slug.trim()));
+  readonly canSaveDraft = computed(
+    () => this.metadataReady() && this.hasBlocks() && !this.savingDraft() && !this.loadingDraft()
+  );
+  readonly canDeleteDraft = computed(() =>
+    Boolean(this.pageMeta().slugRef) &&
+    !this.savingDraft() &&
+    !this.publishingDraft() &&
+    !this.loadingDraft() &&
+    !this.deletingDraft()
+  );
+  readonly lastSavedDisplay = computed(() => {
+    const value = this.lastSavedAt();
+    if (!value) {
+      return null;
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return date.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  });
 
   constructor() {
     effect(() => {
@@ -116,20 +200,195 @@ export class CanvasComponent implements AfterViewInit {
         return changed ? next : arr;
       });
     });
+
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed())
+      .subscribe(params => {
+        const slug = params.get('draft');
+        if (!slug) {
+          return;
+        }
+        void this.loadDraft(slug);
+      });
   }
 
-  // Initial editor state and selected block as signal array
-  blocks = signal<AnyBlock[]>([
-    { id: 't1', type: 'title', layout: { row: 1, colStart: 1, colSpan: 12, rowSpan: 2 }, text: '' } as TitleBlock,
-    { id: 'b1', type: 'byline', layout: { row: 3, colStart: 1, colSpan: 12, rowSpan: 2 }, author: '', publishedAt: '' } as BylineBlock
-  ]);
-  // Read-only version of blocks, sorted by row then column, for page flow
-  pageBlocks = computed(() => [...this.blocks()].sort((a, b) => this.compareByLayout(a, b)));
+  onTitleChange(raw: string | null | undefined) {
+    const title = raw ?? '';
+    const slug = this.slugify(title);
+    this.pageMeta.update(meta => ({ ...meta, title, slug }));
+    this.saveError.set(null);
+  }
+
+  async saveDraft() {
+    if (this.savingDraft() || this.publishingDraft() || this.loadingDraft()) {
+      return;
+    }
+    const meta = this.pageMeta();
+    const title = meta.title.trim();
+    const slug = meta.slug.trim();
+    if (!title || !slug) {
+      this.saveError.set('Add a title and slug before saving.');
+      return;
+    }
+    if (!this.blocks().length) {
+      this.saveError.set('Add at least one block before saving.');
+      return;
+    }
+
+    this.savingDraft.set(true);
+    this.saveError.set(null);
+    try {
+      let page: Page;
+      const basePayload = this.buildPageWritePayload(meta);
+      if (meta.id || meta.slugRef) {
+        const ref = meta.slugRef ?? meta.id ?? slug;
+        const updatePayload: PageUpdate = { ...basePayload, slug };
+        page = await this.pagesService.update(ref, updatePayload);
+      } else {
+        page = await this.pagesService.post(basePayload);
+      }
+      this.applySavedPage(page);
+    } catch (err) {
+      console.error('Failed to save draft', err);
+      const message = (err as Error)?.message || 'Failed to save draft.';
+      this.saveError.set(message);
+    } finally {
+      this.savingDraft.set(false);
+    }
+  }
+
+  async publishDraft() {
+    if (this.savingDraft() || this.publishingDraft() || this.loadingDraft()) {
+      return;
+    }
+    if (!this.blocks().length) {
+      this.saveError.set('Add at least one block before saving.');
+      return;
+    }
+    const meta = this.pageMeta();
+    if (!meta.id) {
+      return;
+    }
+    this.publishingDraft.set(true);
+    this.saveError.set(null);
+    try {
+      let page: Page;
+      const payload: PageUpdate = {
+        ...this.buildPageWritePayload(meta),
+        status: 'published',
+        publishedAt: new Date().toISOString(),
+      };
+      const ref = meta.slugRef ?? meta.id ?? meta.slug;
+      page = await this.pagesService.update(ref, payload);
+      this.applySavedPage(page);
+    } catch (err) {
+      console.error('Failed to publish draft', err);
+      const message = (err as Error)?.message || 'Failed to publish draft.';
+      this.saveError.set(message);
+    } finally {
+      this.publishingDraft.set(false);
+    }
+  }
+
+  async deleteDraft() {
+    if (!this.canDeleteDraft()) {
+      return;
+    }
+    const meta = this.pageMeta();
+    const ref = meta.slugRef ?? meta.slug;
+    if (!ref) {
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm('Delete this draft? This cannot be undone.');
+      if (!confirmed) {
+        return;
+      }
+    }
+    this.deletingDraft.set(true);
+    this.saveError.set(null);
+    try {
+      await this.pagesService.delete(ref);
+      this.resetEditor();
+    } catch (err) {
+      console.error('Failed to delete draft', err);
+      const message = (err as Error)?.message || 'Failed to delete draft.';
+      this.saveError.set(message);
+    } finally {
+      this.deletingDraft.set(false);
+    }
+  }
+
+  private buildPageWritePayload(meta: PageMetaState): PageWrite {
+    return {
+      slug: meta.slug,
+      title: meta.title,
+      status: meta.status,
+      blocks: this.blocks(),
+      meta: {},
+      publishedAt: null,
+      createdBy: this.currentUser()?.id ?? undefined,
+    };
+  }
+
+  private applySavedPage(page: Page) {
+    this.pageMeta.set({
+      id: page.id ?? null,
+      title: page.title ?? '',
+      slug: page.slug ?? '',
+      slugRef: page.slug ?? null,
+      status: page.status ?? 'draft',
+    });
+    this.lastSavedAt.set(page.updatedAt ?? page.createdAt ?? null);
+    this.blocks.set(page.blocks?.length ? page.blocks : this.createDefaultBlocks());
+    this.selectedId.set(null);
+    this.saveError.set(null);
+  }
+
+  private async loadDraft(ref: string) {
+    const slug = ref?.trim();
+    if (!slug) {
+      return;
+    }
+    const requestId = ++this.draftLoadSeq;
+    this.loadingDraft.set(true);
+    this.draftLoadError.set(null);
+    try {
+      const page = await this.pagesService.get(slug);
+      if (requestId === this.draftLoadSeq) {
+        this.applySavedPage(page);
+      }
+    } catch (err) {
+      console.error('Failed to load draft', err);
+      if (requestId === this.draftLoadSeq) {
+        const message = (err as Error)?.message || 'Unable to load the selected draft.';
+        this.draftLoadError.set(message);
+        this.resetEditor();
+      }
+    } finally {
+      if (requestId === this.draftLoadSeq) {
+        this.loadingDraft.set(false);
+      }
+    }
+  }
+
+  private resetEditor() {
+    this.pageMeta.set({ ...defaultPageMeta });
+    this.lastSavedAt.set(null);
+    this.saveError.set(null);
+    this.blocks.set(this.createDefaultBlocks());
+    this.selectedId.set(null);
+  }
 
   selectedId = signal<string | null>(null);
   selected = computed(() => this.blocks().find(b => b.id === this.selectedId()) ?? null);
   inspectorOpen = signal(true);
   inspectorOverlaps = signal(false);
+  private readonly imageColumnPresetMax = 12;
+  get imageColumnOptions(): number[] {
+    const max = Math.min(this.imageColumnPresetMax, this.columns);
+    return Array.from({ length: max }, (_, idx) => idx + 1);
+  }
 
   @HostListener('document:keydown.escape')
   onEsc() { this.clearSelection(); }
@@ -191,6 +450,7 @@ export class CanvasComponent implements AfterViewInit {
   isBylineBlock(block: AnyBlock): block is BylineBlock { return block.type === 'byline'; }
   isTextBlock(block: AnyBlock): block is TextBlock { return block.type === 'text'; }
   isImageBlock(block: AnyBlock): block is ImageBlock { return block.type === 'image'; }
+  isBackgroundBlock(block: AnyBlock): block is BGBlock { return block.type === 'background'; }
   supportsFontSize(block: AnyBlock | null): block is TitleBlock | TextBlock | BylineBlock {
     if (!block) {
       return false;
@@ -209,7 +469,17 @@ export class CanvasComponent implements AfterViewInit {
         colSpan: this.columns,
         rowSpan: 2,
       }, arr);
-      return [...arr, { id, type: 'title', layout, hAlign: "flex-start", vAlign: "flex-start", text: '' } as TitleBlock];
+      return [
+        ...arr,
+        {
+          id,
+          type: 'title',
+          layout,
+          hAlign: "flex-start",
+          vAlign: "flex-start",
+          text: this.pageMeta().title ?? ''
+        } as TitleBlock
+      ];
     });
     this.selectedId.set(id);
   }
@@ -228,7 +498,7 @@ export class CanvasComponent implements AfterViewInit {
         id,
         type: 'byline',
         layout,
-        hAlign: "flex-start", 
+        hAlign: "flex-start",
         vAlign: "flex-start",
         author: this.currentAuthor()
       } as BylineBlock];
@@ -258,8 +528,8 @@ export class CanvasComponent implements AfterViewInit {
       const layout = this.autoPlace(id, {
         row: nextRow,
         colStart: 1,
-        colSpan: Math.min(this.columns, 6),
-        rowSpan: 5,
+        colSpan: Math.min(this.columns, 2),
+        rowSpan: 3,
       }, arr);
       return [
         ...arr,
@@ -267,12 +537,40 @@ export class CanvasComponent implements AfterViewInit {
           id,
           type: 'image',
           layout,
-          hAlign: "flex-start", 
+          hAlign: "flex-start",
           vAlign: "flex-start",
           src: '',
           alt: '',
           mediaHandle: null
         } as ImageBlock
+      ];
+    });
+    this.selectedId.set(id);
+  }
+
+  addBackground() {
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+    this.blocks.update(arr => {
+      const nextRow = this.nextRow(arr);
+      const layout = this.autoPlace(id, {
+        row: nextRow,
+        colStart: 1,
+        colSpan: this.columns,
+        rowSpan: 6,
+      }, arr);
+      return [
+        ...arr,
+        {
+          id,
+          type: 'background',
+          layout,
+          hAlign: 'flex-start',
+          vAlign: 'flex-start',
+          color: '',
+          src: '',
+          mediaHandle: null,
+          bgStyle: 'stretch',
+        } as BGBlock,
       ];
     });
     this.selectedId.set(id);
@@ -295,13 +593,14 @@ export class CanvasComponent implements AfterViewInit {
     const layout = block.layout ?? { row: 1, colStart: 1, colSpan: this.columns, rowSpan: 1 };
     const hAlign = block.hAlign ?? 'flex-start';
     const vAlign = block.vAlign ?? 'flex-start';
-    const isText = this.isTextBlock(block);
-    const alignItems = isText ? 'stretch' : hAlign;
+    const stretchContent = this.isTextBlock(block) || this.isBackgroundBlock(block);
+    const alignItems = stretchContent ? 'stretch' : hAlign;
+    const justifyContent = stretchContent ? 'stretch' : vAlign;
     return {
       'grid-column': `${layout.colStart} / span ${layout.colSpan}`,
       'grid-row': `${layout.row} / span ${layout.rowSpan ?? 1}`,
       'align-items': alignItems,
-      'justify-content': vAlign
+      'justify-content': justifyContent
     };
   }
 
@@ -454,7 +753,7 @@ export class CanvasComponent implements AfterViewInit {
 
   onInspectorMediaSelected(item: MediaItem) {
     const target = this.selected();
-    if (!target || !this.isImageBlock(target)) {
+    if (!target) {
       return;
     }
     const cdn = item.cdnUrl?.trim() ?? '';
@@ -467,10 +766,14 @@ export class CanvasComponent implements AfterViewInit {
       src: nextSrc,
       mediaHandle: item.handle
     };
-    if (!target.alt?.trim()) {
-      patch.alt = this.buildAltSuggestion(item.filename);
+    if (this.isImageBlock(target)) {
+      if (!target.alt?.trim()) {
+        patch.alt = this.buildAltSuggestion(item.filename);
+      }
+      this.onBlockUpdate(target, patch);
+    } else if (this.isBackgroundBlock(target)) {
+      this.onBlockUpdate(target, patch);
     }
-    this.onBlockUpdate(target, patch);
   }
 
   clearImageBlock(block: ImageBlock) {
@@ -478,6 +781,86 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     this.onBlockUpdate(block, { src: '', alt: '', mediaHandle: null });
+  }
+
+  clearBackgroundImage(block: BGBlock) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    this.onBlockUpdate(block, { src: '', mediaHandle: null });
+  }
+
+  clearBackgroundColor(block: BGBlock) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    this.onBlockUpdate(block, { color: '' });
+  }
+
+  getImageColumnSpan(block: ImageBlock) {
+    const stored = block.imageStyle?.columns;
+    const fallback = block.layout?.colSpan ?? 1;
+    return this.clampImageColumnValue(stored ?? fallback);
+  }
+
+  onBackgroundColorChange(block: BGBlock, raw: string | null | undefined) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    const color = (raw ?? '').trim();
+    this.onBlockUpdate(block, { color });
+  }
+
+  onBackgroundImageUrlChange(block: BGBlock, raw: string | null | undefined) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    const src = (raw ?? '').trim();
+    this.onBlockUpdate(block, { src });
+  }
+
+  onBackgroundStyleChange(block: BGBlock, raw: string | null | undefined) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    const parsed = BGStyleSchema.safeParse(raw);
+    if (!parsed.success) {
+      return;
+    }
+    this.onBlockUpdate(block, { bgStyle: parsed.data });
+  }
+
+  onImageColumnSpanChange(block: ImageBlock, raw: string | number | null | undefined) {
+    if (!this.isImageBlock(block) || raw === null || raw === undefined || raw === '') {
+      return;
+    }
+    const numeric = typeof raw === 'number' ? raw : Number(raw);
+    if (!Number.isFinite(numeric)) {
+      return;
+    }
+    const desired = this.clampImageColumnValue(numeric);
+    const applied = Math.min(desired, this.columns);
+    const layoutSource: GridPlacement = block.layout
+      ? { ...block.layout }
+      : {
+        row: this.nextRow(this.blocks()),
+        colStart: 1,
+        colSpan: applied,
+        rowSpan: 1,
+      };
+    const layout: GridPlacement = { ...layoutSource, colSpan: applied };
+    this.onBlockUpdate(block, {
+      layout,
+      imageStyle: { columns: applied },
+    });
+  }
+
+  private clampImageColumnValue(value: number) {
+    if (!Number.isFinite(value)) {
+      return 1;
+    }
+    const rounded = Math.round(value);
+    return Math.min(this.imageColumnPresetMax, Math.max(1, rounded));
   }
 
   onTextContentChange(block: TextBlock, html: string | null | undefined) {
@@ -547,6 +930,14 @@ export class CanvasComponent implements AfterViewInit {
           ...next,
           ...(normalized.author !== undefined ? { author: normalized.author ?? next.author } : {}),
           ...(normalized.publishedAt !== undefined ? { publishedAt: normalized.publishedAt ?? undefined } : {}),
+        };
+      } else if (this.isBackgroundBlock(next)) {
+        next = {
+          ...next,
+          ...(normalized.src !== undefined ? { src: normalized.src ?? '' } : {}),
+          ...(normalized.mediaHandle !== undefined ? { mediaHandle: normalized.mediaHandle ?? null } : {}),
+          ...(normalized.color !== undefined ? { color: normalized.color ?? '' } : {}),
+          ...(normalized.bgStyle !== undefined ? { bgStyle: normalized.bgStyle ?? 'stretch' } : {}),
         };
       }
       return next;
@@ -690,6 +1081,39 @@ export class CanvasComponent implements AfterViewInit {
       const otherEndCol = otherStartCol + other.colSpan - 1;
       return !(endCol < otherStartCol || otherEndCol < startCol);
     });
+  }
+
+  private createDefaultBlocks(): AnyBlock[] {
+    const title = this.pageMeta().title ?? '';
+    return [
+      {
+        id: 't1',
+        type: 'title',
+        layout: { row: 1, colStart: 1, colSpan: 12, rowSpan: 2 },
+        hAlign: 'flex-start',
+        vAlign: 'center',
+        text: title,
+      } as TitleBlock,
+      {
+        id: 'b1',
+        type: 'byline',
+        layout: { row: 3, colStart: 1, colSpan: 12, rowSpan: 2 },
+        hAlign: 'flex-start',
+        vAlign: 'center',
+        author: this.currentAuthor(),
+        publishedAt: '',
+      } as BylineBlock,
+    ];
+  }
+
+  private slugify(value: string) {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9_\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
   }
 
   trackByBlockId: TrackByFunction<AnyBlock> = (_i, block) => block.id;

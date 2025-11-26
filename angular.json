@@ -65,16 +65,16 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "configurations": {
-            "production": {
-              "buildTarget": "bie-frontend:build:production"
-            },
-            "development": {
-              "buildTarget": "bie-frontend:build:development"
-            }
+        "configurations": {
+          "production": {
+            "buildTarget": "bie-frontend:build:production"
           },
-          "defaultConfiguration": "development"
+          "development": {
+            "buildTarget": "bie-frontend:build:development"
+          }
         },
+        "defaultConfiguration": "development"
+      },
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n"
         },

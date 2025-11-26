@@ -1,26 +1,68 @@
 import { Injectable } from '@angular/core';
-import type { PageDetail, PageSummary, PageUpdate, PageWrite } from 'bie-models';
+import type { Page, PageSummary, PageUpdate, PageWrite } from 'bie-models';
+
+export interface PageListCursor {
+  cursorUpdatedAt: string;
+  cursorId: string;
+}
+
+export interface PageListParams {
+  limit?: number;
+  cursorUpdatedAt?: string;
+  cursorId?: string;
+}
+
+export interface PageListResult {
+  pages: PageSummary[];
+  limit: number;
+  nextCursor: PageListCursor | null;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class PagesService {
-  // Get all pages
-  async list(): Promise<PageSummary[]> {
-    const res = await fetch('/api/pages', { credentials: 'include' });
+  private unwrapPage(payload: any): Page {
+    if (payload?.page?.page) {
+      return payload.page.page;
+    }
+    if (payload?.page) {
+      return payload.page;
+    }
+    return payload;
+  }
+
+  // Get paged paginated
+  async list(params: PageListParams = {}): Promise<PageListResult> {
+    const search = new URLSearchParams();
+    if (typeof params.limit === 'number') {
+      search.set('limit', String(params.limit));
+    }
+    if (params.cursorUpdatedAt && params.cursorId) {
+      search.set('cursorUpdatedAt', params.cursorUpdatedAt);
+      search.set('cursorId', params.cursorId);
+    }
+    const query = search.toString();
+    const url = query ? `/api/pages?${query}` : '/api/pages';
+    const res = await fetch(url, { credentials: 'include' });
     if (!res.ok) throw new Error('Failed to load pages.');
-    return (await res.json()).pages ?? [];
+    const payload = await res.json();
+    return {
+      pages: payload.pages ?? [],
+      limit: Number(payload.limit) || params.limit || 10,
+      nextCursor: payload.nextCursor ?? null,
+    };
   }
 
   // Get page by slug or id
-  async get(idOrSlug: string): Promise<PageDetail> {
+  async get(idOrSlug: string): Promise<Page> {
     const res = await fetch(`/api/pages/${encodeURIComponent(idOrSlug)}`, { credentials: 'include' });
     if (!res.ok) throw new Error('Failed to load page.');
-    return (await res.json()).page;
+    return this.unwrapPage(await res.json());
   }
 
   // Create new page
-  async post(payload: PageWrite): Promise<PageDetail> {
+  async post(payload: PageWrite): Promise<Page> {
     const res = await fetch('/api/pages', {
       method: 'POST',
       credentials: 'include',
@@ -28,11 +70,11 @@ export class PagesService {
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to save page.');
-    return (await res.json()).page;
+    return this.unwrapPage(await res.json());
   }
 
-  // Create a new version for an existing page (optionally publish it)
-  async update(idOrSlug: string, payload: PageUpdate): Promise<PageDetail> {
+  // Update an existing page
+  async update(idOrSlug: string, payload: PageUpdate): Promise<Page> {
     const res = await fetch(`/api/pages/${encodeURIComponent(idOrSlug)}`, {
       method: 'PUT',
       credentials: 'include',
@@ -40,22 +82,7 @@ export class PagesService {
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to update page.');
-    return (await res.json()).page;
-  }
-
-  // Publish a specific version of a page
-  async publishVersion(idOrSlug: string, versionId: string, publishedAt?: string | null): Promise<PageDetail> {
-    const res = await fetch(
-      `/api/pages/${encodeURIComponent(idOrSlug)}/versions/${encodeURIComponent(versionId)}/publish`,
-      {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ publishedAt: publishedAt ?? null }),
-      }
-    );
-    if (!res.ok) throw new Error('Failed to publish page version.');
-    return (await res.json()).page;
+    return this.unwrapPage(await res.json());
   }
 
   // Delete page

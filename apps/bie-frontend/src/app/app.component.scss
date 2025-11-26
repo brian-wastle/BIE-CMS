@@ -75,6 +75,16 @@ $pale-green: #C1E3DD;
   position:sticky;
 }
 
+.emerald-button {
+  border: 1px solid #cbd5f5;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .top-header {
   display:inline-flex;
   justify-content: start;

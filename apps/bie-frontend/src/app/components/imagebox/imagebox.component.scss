@@ -1,6 +1,9 @@
-.preview-wrap,
-.img-preview {
-    margin-top: 8px;
+:host {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    width: 100%;
 }
 
 .broken-note {
@@ -12,6 +15,13 @@
 img.media.broken {
     opacity: .3;
     filter: grayscale(1);
+}
+
+.media {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
 }
 
 .media-placeholder {

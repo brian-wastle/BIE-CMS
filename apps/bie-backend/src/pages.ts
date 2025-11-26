@@ -1,16 +1,12 @@
 import express from 'express';
+import type { Pool, PoolClient } from 'pg';
 import {
-  PageDetail,
-  PageDetailSchema,
-  PageIdentitySchema,
+  Page,
+  PageSchema,
   PageSummary,
   PageSummarySchema,
   PageUpdate,
   PageUpdateSchema,
-  PageVersion,
-  PageVersionSchema,
-  PageVersionSummary,
-  PageVersionSummarySchema,
   PageWrite,
   PageWriteSchema,
 } from 'bie-models';
@@ -20,64 +16,22 @@ import { pool, withTransaction } from './db.js';
 
 const router = express.Router();
 
-function mapPageRow(row: any) {
-  const createdAt = row.page_created_at ?? row.created_at;
-  const updatedAt = row.page_updated_at ?? row.updated_at ?? createdAt;
-
-  return PageIdentitySchema.parse({
+function mapVersionRowToPage(row: any): Page {
+  return PageSchema.parse({
     id: row.page_id ?? row.id,
     slug: row.slug,
-    createdAt: new Date(createdAt).toISOString(),
-    updatedAt: new Date(updatedAt).toISOString(),
-    latestVersionId: row.latest_version_id ?? null,
-    publishedVersionId: row.published_version_id ?? null,
-  });
-}
-
-function mapVersionRow(row: any): PageVersion {
-  const shaped = {
-    id: row.id,
-    pageId: row.page_id,
-    version: Number(row.version),
     status: row.status,
     title: row.title,
     blocks: row.blocks,
     meta: row.meta ?? {},
     createdBy: row.created_by ?? null,
-    createdAt: new Date(row.created_at).toISOString(),
-    updatedAt: new Date(row.updated_at).toISOString(),
+    createdAt: new Date(row.version_created_at ?? row.created_at).toISOString(),
+    updatedAt: new Date(row.version_updated_at ?? row.updated_at).toISOString(),
     publishedAt: row.published_at ? new Date(row.published_at).toISOString() : null,
-  };
-  return PageVersionSchema.parse(shaped);
+  });
 }
 
-function mapVersionSummary(prefix: 'latest' | 'published', row: any): PageVersionSummary | null {
-  const id = row[`${prefix}_version_id`];
-  if (!id) return null;
-
-  const shaped = {
-    id,
-    pageId: row.page_id,
-    version: Number(row[`${prefix}_version_number`]),
-    status: row[`${prefix}_status`],
-    title: row[`${prefix}_title`],
-    createdBy: row[`${prefix}_created_by`] ?? null,
-    createdAt: new Date(row[`${prefix}_created_at`]).toISOString(),
-    updatedAt: new Date(row[`${prefix}_updated_at`]).toISOString(),
-    publishedAt: row[`${prefix}_published_at`]
-      ? new Date(row[`${prefix}_published_at`]).toISOString()
-      : null,
-  };
-
-  return PageVersionSummarySchema.parse(shaped);
-}
-
-function toSummary(version: PageVersion): PageVersionSummary {
-  const { blocks: _blocks, meta: _meta, ...summary } = version;
-  return PageVersionSummarySchema.parse(summary);
-}
-
-async function resolvePageId(ref: string, client = pool): Promise<string | null> {
+async function resolvePageId(ref: string, client: Pool | PoolClient = pool): Promise<string | null> {
   const { rows } = await client.query(
     `SELECT id FROM pages WHERE id = $1 OR slug = $1 LIMIT 1`,
     [ref]
@@ -85,41 +39,47 @@ async function resolvePageId(ref: string, client = pool): Promise<string | null>
   return rows[0]?.id ?? null;
 }
 
-async function loadPageDetail(pageId: string): Promise<PageDetail> {
-  const { rows: pageRows } = await pool.query(
-    `SELECT id, slug, created_at, updated_at, latest_version_id, published_version_id
-     FROM pages
-     WHERE id = $1
-     LIMIT 1`,
+async function loadPageById(pageId: string, client: Pool | PoolClient = pool): Promise<Page | null> {
+  const { rows } = await client.query(
+    `
+    SELECT
+      p.id AS page_id,
+      p.slug,
+      v.status,
+      v.title,
+      v.blocks,
+      v.meta,
+      v.created_by,
+      v.created_at AS version_created_at,
+      v.updated_at AS version_updated_at,
+      v.published_at
+    FROM pages p
+    JOIN LATERAL (
+      SELECT status, title, blocks, meta, created_by, created_at, updated_at, published_at
+      FROM page_versions
+      WHERE page_id = p.id
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) v ON true
+    WHERE p.id = $1
+    LIMIT 1
+    `,
     [pageId]
   );
 
-  if (!pageRows.length) {
-    throw new Error('PAGE_NOT_FOUND');
+  if (!rows.length) {
+    return null;
   }
 
-  const page = mapPageRow(pageRows[0]);
+  return mapVersionRowToPage(rows[0]);
+}
 
-  const { rows: versionRows } = await pool.query(
-    `SELECT id, page_id, version, status, title, blocks, meta, created_by, created_at, updated_at, published_at
-     FROM page_versions
-     WHERE page_id = $1
-     ORDER BY created_at DESC`,
-    [pageId]
-  );
-
-  const versions = versionRows.map(mapVersionRow);
-  const draftVersion = versions.find((v) => v.status === 'draft') ?? null;
-  const publishedVersion = versions.find((v) => v.status === 'published') ?? null;
-  const latestVersion = versions[0] ?? null;
-
-  return PageDetailSchema.parse({
-    page,
-    draftVersion,
-    publishedVersion,
-    latestVersion,
-    history: versions.map(toSummary),
-  });
+async function loadPageByRef(ref: string): Promise<Page | null> {
+  const pageId = await resolvePageId(ref);
+  if (!pageId) {
+    return null;
+  }
+  return loadPageById(pageId);
 }
 
 router.use(requireAccess);
@@ -132,48 +92,29 @@ router.get('/', async (_req, res) => {
       SELECT
         p.id AS page_id,
         p.slug,
-        p.created_at AS page_created_at,
-        p.updated_at AS page_updated_at,
-        lv.id AS latest_version_id,
-        lv.version AS latest_version_number,
-        lv.status AS latest_status,
-        lv.title AS latest_title,
-        lv.created_by AS latest_created_by,
-        lv.created_at AS latest_created_at,
-        lv.updated_at AS latest_updated_at,
-        lv.published_at AS latest_published_at,
-        pv.id AS published_version_id,
-        pv.version AS published_version_number,
-        pv.status AS published_status,
-        pv.title AS published_title,
-        pv.created_by AS published_created_by,
-        pv.created_at AS published_created_at,
-        pv.updated_at AS published_updated_at,
-        pv.published_at AS published_published_at
+        v.status,
+        v.title,
+        v.blocks,
+        v.meta,
+        v.created_by,
+        v.created_at AS version_created_at,
+        v.updated_at AS version_updated_at,
+        v.published_at
       FROM pages p
-      LEFT JOIN LATERAL (
-        SELECT v.id, v.version, v.status, v.title, v.created_by, v.created_at, v.updated_at, v.published_at
-        FROM page_versions v
-        WHERE v.page_id = p.id
-        ORDER BY v.created_at DESC
+      JOIN LATERAL (
+        SELECT status, title, blocks, meta, created_by, created_at, updated_at, published_at
+        FROM page_versions
+        WHERE page_id = p.id
+        ORDER BY created_at DESC
         LIMIT 1
-      ) lv ON true
-      LEFT JOIN LATERAL (
-        SELECT v.id, v.version, v.status, v.title, v.created_by, v.created_at, v.updated_at, v.published_at
-        FROM page_versions v
-        WHERE v.page_id = p.id AND v.status = 'published'
-        ORDER BY v.created_at DESC
-        LIMIT 1
-      ) pv ON true
+      ) v ON true
       ORDER BY p.updated_at DESC
       `
     );
 
     const pages: PageSummary[] = rows.map((row) =>
       PageSummarySchema.parse({
-        page: mapPageRow(row),
-        latestVersion: mapVersionSummary('latest', row),
-        publishedVersion: mapVersionSummary('published', row),
+        page: mapVersionRowToPage(row),
       })
     );
 
@@ -186,14 +127,11 @@ router.get('/', async (_req, res) => {
 
 // Get page by slug ID
 router.get('/:idOrSlug', async (req, res) => {
-  const ref = req.params.idOrSlug;
   try {
-    const pageId = await resolvePageId(ref);
-    if (!pageId) {
+    const page = await loadPageByRef(req.params.idOrSlug);
+    if (!page) {
       return res.status(404).json({ error: 'Page not found' });
     }
-
-    const page = await loadPageDetail(pageId);
     return res.json({ page });
   } catch (err) {
     console.error('Failed to load page', err);
@@ -239,7 +177,7 @@ router.post('/', async (req, res) => {
         [pageId, status, payload.title, payload.blocks, payload.meta ?? {}, payload.createdBy ?? null, publishedAt]
       );
 
-      const version = mapVersionRow(versionInsert.rows[0]);
+      const version = versionInsert.rows[0];
 
       if (status === 'published') {
         await client.query(
@@ -262,7 +200,10 @@ router.post('/', async (req, res) => {
       return pageId;
     });
 
-    const page = await loadPageDetail(pageId);
+    const page = await loadPageById(pageId);
+    if (!page) {
+      throw new Error('PAGE_NOT_FOUND');
+    }
     return res.json({ page });
   } catch (err) {
     console.error('Failed to upsert page', err);
@@ -319,7 +260,7 @@ router.put('/:id', async (req, res) => {
         ]
       );
 
-      const version = mapVersionRow(versionInsert.rows[0]);
+      const version = versionInsert.rows[0];
 
       if (status === 'published') {
         await client.query(
@@ -342,7 +283,10 @@ router.put('/:id', async (req, res) => {
       return resolvedPageId;
     });
 
-    const page = await loadPageDetail(pageId);
+    const page = await loadPageById(pageId);
+    if (!page) {
+      throw new Error('PAGE_NOT_FOUND');
+    }
     return res.json({ page });
   } catch (err) {
     console.error('Failed to update page', err);
@@ -399,7 +343,10 @@ router.post('/:idOrSlug/versions/:versionId/publish', async (req, res) => {
       return resolvedPageId;
     });
 
-    const page = await loadPageDetail(pageId);
+    const page = await loadPageById(pageId);
+    if (!page) {
+      throw new Error('PAGE_NOT_FOUND');
+    }
     return res.json({ page });
   } catch (err) {
     console.error('Failed to publish page version', err);

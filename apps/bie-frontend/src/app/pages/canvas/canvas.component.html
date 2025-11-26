@@ -1,4 +1,5 @@
-<div class="canvas-layout" [class.inspector-collapsed]="!inspectorOpen()" [class.inspector-overlap]="inspectorOpen() && inspectorOverlaps()">
+<div class="canvas-layout" [class.inspector-collapsed]="!inspectorOpen()"
+  [class.inspector-overlap]="inspectorOpen() && inspectorOverlaps()">
 
   <div class="canvas-main">
     <div class="canvas-area">
@@ -14,7 +15,6 @@
               }
             </select>
           </label>
-
           <div class="preview-zoom-controls">
             <label class="preview-field preview-zoom-slider">
               <span>Zoom</span>
@@ -26,7 +26,46 @@
               Reset
             </button>
           </div>
+          <div class="publish-controls">
+            <button type="button" class="emerald-button delete-button" (click)="deleteDraft()"
+              [disabled]="!canDeleteDraft()" [attr.aria-busy]="deletingDraft()">
+              {{ deletingDraft() ? 'Deleting...' : 'Delete draft' }}
+            </button>
+            <button type="button" class="emerald-button" (click)="saveDraft()" [disabled]="!canSaveDraft()"
+              [attr.aria-busy]="savingDraft()">
+              {{ savingDraft() ? 'Saving...' : (pageMeta().id ? 'Save changes' : 'Save draft') }}
+            </button>
+            <button type="button" class="emerald-button" (click)="publishDraft()" [disabled]="!lastSavedDisplay()" [attr.aria-busy]="savingDraft()">
+              {{ publishingDraft() ? 'Publishing...' : 'Publish' }}</button>
+          </div>
         </div>
+
+        <div class="preview-meta">
+          <label>
+            <span>Title</span>
+            <input type="text" [ngModel]="pageMeta().title" (ngModelChange)="onTitleChange($event)" placeholder="Choose a title">
+          </label>
+          <div class="save-status">
+            <p>Status: <strong>{{ pageMeta().status | titlecase }}</strong></p>
+            @if (savingDraft()) {
+            <span>Saving draft...</span>
+            } @else if (publishingDraft()) {
+            <span>Publishing...</span>
+            } @else if (lastSavedDisplay(); as savedAt) {
+            <span>Saved {{ savedAt }}</span>
+            } @else {
+            <span>Not saved yet</span>
+            }
+          </div>
+        </div>
+
+        @if (draftLoadError(); as loadError) {
+        <p class="save-error">{{ loadError }}</p>
+        }
+
+        @if (saveError(); as errorMessage) {
+        <p class="save-error">{{ errorMessage }}</p>
+        }
 
         <p class="preview-hint">
           {{ previewPreset().description }}
@@ -40,7 +79,7 @@
             <div class="preview-frame" [class.preview-frame-fluid]="!previewWidthPx()"
               [style.--previewWidth.px]="previewWidthPx() ?? null" [style.--previewScale]="previewScale()">
               <div #scrollerContent class="preview-frame-content">
-                <div class="grid" [style.--cols]="columns" [style.--gap.px]="gapPx"
+                <div class="grid canvas-preview" [style.--cols]="columns" [style.--gap.px]="gapPx"
                   [style.--rowHeight.px]="tileRowHeight" (click)="onPreviewCanvasClick($event)">
 
                   @for (block of pageBlocks(); track trackByBlockId($index, block)) {
@@ -54,6 +93,10 @@
                     @if (isImageBlock(block)) {
                     <app-imagebox [block]="block">
                     </app-imagebox>
+                    }
+                    @if (isBackgroundBlock(block)) {
+                    <app-background-block [block]="block">
+                    </app-background-block>
                     }
                     @if (isBylineBlock(block)) {
                     <app-byline-block [block]="block">
@@ -79,13 +122,15 @@
       <button type="button" class="palette-button" (click)="addByline()">+ Byline</button>
       <button type="button" class="palette-button" (click)="addText()">+ Text</button>
       <button type="button" class="palette-button" (click)="addImage()">+ Image</button>
+      <button type="button" class="palette-button" (click)="addBackground()">+ Background</button>
     </aside>
   </div>
 
-  <aside class="inspector" [class.inspector-collapsed]="!inspectorOpen()" [class.inspector-overlap]="inspectorOpen() && inspectorOverlaps()">
+  <aside class="inspector" [class.inspector-collapsed]="!inspectorOpen()"
+    [class.inspector-overlap]="inspectorOpen() && inspectorOverlaps()">
     <div class="inspector-header">
       <h3>Inspector</h3>
-      <button type="button" class="inspector-toggle" (click)="toggleInspector()">
+      <button type="button" class="emerald-button" (click)="toggleInspector()">
         {{ inspectorOpen() ? 'Collapse' : 'Expand' }}
       </button>
     </div>
@@ -129,10 +174,8 @@
           <h4>Block Layout</h4>
         </mat-expansion-panel-header>
         <app-layout-controls class="inspector-layout-controls" [layoutSignal]="block.layout" [hAlign]="block.hAlign"
-          [vAlign]="block.vAlign" [totalColumnsSignal]="columns"
-          (layoutChange)="onLayoutChange(block, $event)"
-          (hAlignChange)="onHAlignChange(block, $event)"
-          (vAlignChange)="onVAlignChange(block, $event)">
+          [vAlign]="block.vAlign" [totalColumnsSignal]="columns" (layoutChange)="onLayoutChange(block, $event)"
+          (hAlignChange)="onHAlignChange(block, $event)" (vAlignChange)="onVAlignChange(block, $event)">
         </app-layout-controls>
       </mat-expansion-panel>
       @if (supportsFontSize(block)) {
@@ -141,11 +184,11 @@
           <h4>Font Settings</h4>
         </mat-expansion-panel-header>
         <div class="inspector-section inspector-typography">
-            <label>
-              <span>Font size (px)</span>
-              <input type="number" min="12" max="96" placeholder="Auto" [ngModel]="block.fontSize ?? ''"
-                (ngModelChange)="onFontSizeInput(block, $event)" (blur)="onFontSizeBlur(block)">
-            </label>
+          <label>
+            <span>Font size (px)</span>
+            <input type="number" min="12" max="96" placeholder="Auto" [ngModel]="block.fontSize ?? ''"
+              (ngModelChange)="onFontSizeInput(block, $event)" (blur)="onFontSizeBlur(block)">
+          </label>
           <button type="button" class="inspector-link" (click)="resetFontSize(block)"
             [disabled]="block.fontSize == null">Reset font</button>
         </div>
@@ -159,15 +202,11 @@
         </mat-expansion-panel-header>
         <div class="inspector-section inspector-richtext">
           <app-rich-text-editor class="inspector-text-editor" [value]="block.text"
-            (valueChange)="onTextContentChange(block, $event)" [placeholder]="'Start writing...'"
-            [debounceTime]="150">
+            (valueChange)="onTextContentChange(block, $event)" [placeholder]="'Start writing...'" [debounceTime]="150">
           </app-rich-text-editor>
         </div>
       </mat-expansion-panel>
       }
-
-
-
       @if (isImageBlock(block)) {
       <mat-expansion-panel>
         <mat-expansion-panel-header>
@@ -177,19 +216,82 @@
           <input type="text" [ngModel]="block.alt" (ngModelChange)="onBlockUpdate(block, { alt: $event })">
         </label>
 
-        <div class="inspector-section inspector-section-media">
+        <div class="inspector-section inspector-image-sizing">
           <div class="inspector-section-header">
+            <h5>Image width</h5>
+            <span class="inspector-note">Select how many columns this image spans.</span>
+          </div>
+
+          <label>
+            <span>Columns</span>
+            <select [ngModel]="getImageColumnSpan(block)" (ngModelChange)="onImageColumnSpanChange(block, $event)">
+              @for (size of imageColumnOptions; track size) {
+              <option [ngValue]="size">{{ size }} column{{ size === 1 ? '' : 's' }}</option>
+              }
+            </select>
+          </label>
+
+          <p class="inspector-note">Use smaller sizes to place multiple images on the same row.</p>
+        </div>
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
             <h5>Media Library</h5>
+          </mat-expansion-panel-header>
+          <div class="inspector-section inspector-section-media">
             <button type="button" class="inspector-link" (click)="clearImageBlock(block)" [disabled]="!block.src">
               Clear image
             </button>
+            <div class="inspector-media-browser">
+              <app-media-browser-carousel [allowDelete]="false" [viewMode]="'grid'"
+                [selectedHandle]="block.mediaHandle ?? null" (mediaSelected)="onInspectorMediaSelected($event)">
+              </app-media-browser-carousel>
+            </div>
           </div>
-          <div class="inspector-media-browser">
-            <app-media-browser-carousel [allowDelete]="false" [viewMode]="'grid'"
-              [selectedHandle]="block.mediaHandle ?? null" (mediaSelected)="onInspectorMediaSelected($event)">
-            </app-media-browser-carousel>
+        </mat-expansion-panel>
+      </mat-expansion-panel>
+      }
+      @if (isBackgroundBlock(block)) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <h4>Background settings</h4>
+        </mat-expansion-panel-header>
+        <div class="inspector-section inspector-background">
+          <label>
+            <span>Fill color</span>
+            <input type="text" placeholder="#0f766e" [ngModel]="block.color ?? ''"
+              (ngModelChange)="onBackgroundColorChange(block, $event)">
+          </label>
+          <label>
+            <span>Image URL</span>
+            <input type="text" placeholder="https://example.com/background.jpg" [ngModel]="block.src ?? ''"
+              (ngModelChange)="onBackgroundImageUrlChange(block, $event)">
+          </label>
+          <label>
+            <span>Image fit</span>
+            <select [ngModel]="block.bgStyle" (ngModelChange)="onBackgroundStyleChange(block, $event)">
+              <option value="stretch">Stretch</option>
+              <option value="tile">Tile</option>
+            </select>
+          </label>
+          <div class="inspector-background-actions">
+            <button type="button" class="inspector-link" (click)="clearBackgroundColor(block)"
+              [disabled]="!(block.color ?? '').trim()">Clear color</button>
+            <button type="button" class="inspector-link" (click)="clearBackgroundImage(block)"
+              [disabled]="!(block.src ?? '').trim()">Clear image</button>
           </div>
         </div>
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <h5>Media Library</h5>
+          </mat-expansion-panel-header>
+          <div class="inspector-section inspector-section-media">
+            <div class="inspector-media-browser">
+              <app-media-browser-carousel [allowDelete]="false" [viewMode]="'grid'"
+                [selectedHandle]="block.mediaHandle ?? null" (mediaSelected)="onInspectorMediaSelected($event)">
+              </app-media-browser-carousel>
+            </div>
+          </div>
+        </mat-expansion-panel>
       </mat-expansion-panel>
       }
       <button type="button" class="inspector-link remove-link" (click)="remove(block.id)">

@@ -52,28 +52,4 @@
     <p>No directories yet. Use "New Folder" to create one for your next upload.</p>
   </div>
   }
-  @if (pendingDirectory()) {
-  <div class="folder-edit-overlay" role="dialog" aria-modal="true">
-    <div class="folder-edit-card">
-      <img class="folder-edit-icon" [src]="folderIcon" alt="" aria-hidden="true" />
-      <form class="folder-edit-form" (submit)="onPendingDirectorySubmit($event)" novalidate>
-        <h2 class="folder-edit-title">Create a New Folder</h2>
-        <label class="folder-edit-label" for="new-folder-name">Folder name: <span aria-hidden="true">*</span></label>
-        <input id="new-folder-name" type="text" name="newDirName" [formControl]="dirNameFC"
-          placeholder="e.g. blog-assets/headers" autofocus aria-required="true"
-          [attr.aria-invalid]="pendingDirectoryError() !== null"
-          [attr.aria-describedby]="pendingDirectoryError() ? 'folder-name-help folder-name-error' : 'folder-name-help'"
-          (keydown.escape)="cancelPendingDirectory()" />
-        <p class="folder-help" id="folder-name-help">Tip: stick with letters, numbers and underscores</p>
-        @if (pendingDirectoryError()) {
-        <p class="folder-error" id="folder-name-error">{{ pendingDirectoryError() }}</p>
-        }
-        <div class="folder-edit-actions">
-          <button type="submit" [disabled]="pendingDirectoryError() !== null">Save</button>
-          <button type="button" (click)="cancelPendingDirectory()">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-  }
 </div>

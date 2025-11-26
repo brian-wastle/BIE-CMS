@@ -118,68 +118,32 @@ async function removeMedia(handle: string, userId?: string) {
 }
 
 // Basic Filestack security policy allowing pick/store/read.
+// TODO: Break out policies between operations in front end
 function buildPolicyPayload(expiryEpoch: number, pathPrefix: string, mimetypes?: string[]) {
   const payload: Record<string, unknown> = {
     expiry: expiryEpoch,
-    call: ['pick', 'store', 'read'],
+    call: ['pick', 'store', 'read', 'remove'],
     path: `/${pathPrefix}`,
   };
   if (mimetypes?.length) payload.mimetypes = mimetypes;
   return payload;
 }
 
-// Issues a signed Filestack policy for media upload
-// Stores to user's optional directory
-// Blank directories default to "Unsorted"
-// TODO: The current buildPolicyPayload function does not allow for deletion of files, and a separate policy is needed
-router.post('/policy', requireAccess, async (req: AuthedRequest, res: Response) => {
-  // Zod ts validation allows for .safeParse
-  const schema = z.object({
-    directory: z.string().optional(),
-    mimetypes: z.array(z.string()).optional(),
-  });
-
-  const parseResult = schema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ error: 'Invalid payload' });
+function buildRemovePolicy(handle: string, storagePath?: string | null) {
+  const payload: Record<string, unknown> = {
+    expiry: Math.floor(Date.now() / 1000) + 60,
+    call: ['read', 'write', 'remove'],
+    handle,
+  };
+  if (storagePath && storagePath.trim().length) {
+    const normalized = storagePath.replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+    payload.path = `/${normalized}`;
   }
-
-  const { directory, mimetypes } = parseResult.data;
-  const user = req.user!;
-
-  // Build the expected FS payload: Take user, create path from user's dir input from browser, calc expiry
-  // Then convert to b64 expected by FS, policy is then signed
-  let sanitizedDir: string | undefined;
-  try {
-    sanitizedDir = directory ? sanitizeDirname(directory) : 'Unsorted';
-  } catch (err: any) {
-    return res.status(400).json({ error: err.message });
-  }
-  const segments = [user.id];
-  segments.push(sanitizedDir);
-  const storagePrefix = segments.join('/');
-  const expiryEpoch = Math.floor(Date.now() / 1000) + EXPIRY_SEC;
-  const policyPayload = buildPolicyPayload(expiryEpoch, storagePrefix, mimetypes);
-  const policyB64 = b64(policyPayload);
-  const signature = sign(policyB64, APP_SECRET);
-
-  return res.json({
-    apiKey: API_KEY,
-    policy: policyB64,
-    signature,
-    expiresAt: expiryEpoch,
-    storagePrefix,
-    directory: sanitizedDir ?? null,
-    cdnBaseUrl: CDN_BASE,
-  });
-});
+  return payload;
+}
 
 // Receive a browser upload, forward to Filestack, and respond with the resulting handle.
-router.post(
-  '/upload',
-  requireAccess,
-  upload.single('fileUpload'),
-  async (req: AuthedRequest, res: Response) => {
+router.post('/upload', requireAccess, upload.single('fileUpload'), async (req: AuthedRequest, res: Response) => {
     const file = req.file as Express.Multer.File | undefined;
     if (!file) {
       return res.status(400).json({ error: 'Missing fileUpload field' });
@@ -375,9 +339,11 @@ router.delete('/:handle', requireAccess, async (req: AuthedRequest, res: Respons
   const { handle } = req.params;
   const user = req.user!;
 
+  let storagePath: string | null = null;
+
   try {
     const { rowCount, rows } = await pool.query(
-      `SELECT owner_user_id FROM ${MEDIA_TABLE} WHERE handle=$1 AND is_deleted = FALSE`,
+      `SELECT owner_user_id, storage_path FROM ${MEDIA_TABLE} WHERE handle=$1 AND is_deleted = FALSE`,
       [handle]
     );
     if (!rowCount) {
@@ -386,25 +352,25 @@ router.delete('/:handle', requireAccess, async (req: AuthedRequest, res: Respons
     if (rows[0].owner_user_id !== user.id) {
       return res.status(403).json({ error: 'You do not have permission to delete this media item' });
     }
+    storagePath = typeof rows[0].storage_path === 'string' ? rows[0].storage_path : null;
   } catch (err) {
     console.error('Failed to authorize media deletion', err);
     return res.status(500).json({ error: 'Failed to authorize delete' });
   }
 
-  const policy = {
-    expiry: Math.floor(Date.now() / 1000) + 60,
-    call: ['remove'],
-    handle,
-  };
+  const policy = buildRemovePolicy(handle, storagePath);
   const policyB64 = b64(policy);
   const signature = sign(policyB64, APP_SECRET);
 
-  const resp = await fetch(`https://www.filestackapi.com/api/file/${handle}`, {
+  const deleteUrl = new URL(`https://www.filestackapi.com/api/file/${handle}`);
+  deleteUrl.searchParams.set('key', API_KEY);
+  deleteUrl.searchParams.set('policy', policyB64);
+  deleteUrl.searchParams.set('signature', signature);
+
+  const resp = await fetch(deleteUrl, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      'Filestack-Api-Key': API_KEY,
-      'Filestack-Security': JSON.stringify({ policy: policyB64, signature }),
     },
   });
 

@@ -1,0 +1,71 @@
+<div class="draft-manager-layout">
+  <section class="draft-overview">
+    <div>
+      <h2>Page Manager</h2>
+      <p>Review every page in the system, including published content. Items are sorted by last update time.</p>
+    </div>
+    <button type="button" (click)="refresh()" [disabled]="loading()">Refresh Pages</button>
+  </section>
+
+  <section class="draft-list-panel">
+    <header class="panel-header">
+      <div>
+        <h3>All Pages</h3>
+        <p>{{ pagesOnPage().length }} page{{ pagesOnPage().length === 1 ? '' : 's' }} on this page</p>
+      </div>
+      <div class="panel-controls">
+        <button type="button" (click)="prevPage()" [disabled]="!hasPrevPage() || loading()">Previous</button>
+        <span>Page {{ currentPageDisplay() }} of {{ loadedPages() }}</span>
+        <button type="button" (click)="nextPage()" [disabled]="!hasNextPage() || loading()">Next</button>
+      </div>
+    </header>
+
+    @if (error(); as errorMessage) {
+    <div class="state state-error">
+      <p>{{ errorMessage }}</p>
+      <button type="button" (click)="refresh()" [disabled]="loading()">Try again</button>
+    </div>
+    } @else {
+    @if (loading() && !loadedPages()) {
+    <div class="state state-loading">
+      <p>Loading pages...</p>
+    </div>
+    }
+
+    @if (!loading() && !loadedPages()) {
+    <div class="state state-empty">
+      <p>No pages have been created yet.</p>
+      <a routerLink="/author" class="link">Create your first page</a>
+    </div>
+    } @else if (pagesOnPage().length) {
+    <ul class="draft-list">
+      @for (summary of pagesOnPage(); track trackByPage($index, summary)) {
+      <li class="draft-item">
+        <div class="draft-primary">
+          <p class="draft-title">{{ summary.page.title }}</p>
+          <p class="draft-slug">Slug: {{ summary.page.slug }}</p>
+          <p class="draft-status">
+            Status:
+            <span class="status-pill" [class.status-draft]="summary.page.status === 'draft'">
+              {{ summary.page.status | titlecase }}
+            </span>
+          </p>
+        </div>
+        <div class="draft-meta">
+          <span>Updated {{ formatDate(summary.page.updatedAt) }}</span>
+          <span>Created {{ formatDate(summary.page.createdAt) }}</span>
+        </div>
+        <div class="draft-actions">
+          <a routerLink="/author" [queryParams]="{ draft: summary.page.slug }">Open in Canvas</a>
+        </div>
+      </li>
+      }
+    </ul>
+    } @else {
+    <div class="state state-empty">
+      <p>No pages on this page.</p>
+    </div>
+    }
+    }
+  </section>
+</div>

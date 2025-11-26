@@ -46,7 +46,7 @@ $green-shadow: #0e997938;
   min-width: 0;
 }
 
-.inspector-toggle {
+.emerald-button {
   border: 1px solid #cbd5f5;
   border-radius: 999px;
   padding: 6px 12px;
@@ -54,6 +54,11 @@ $green-shadow: #0e997938;
   color: #fff;
   font-size: 13px;
   cursor: pointer;
+}
+
+.emerald-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 // Canvas
@@ -79,7 +84,7 @@ $green-shadow: #0e997938;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px 16px;
 }
 
@@ -140,6 +145,10 @@ $green-shadow: #0e997938;
   color: #475569;
 }
 
+.publish-controls {
+  margin-left: auto;
+}
+
 .preview-stage {
   display: flex;
   flex-direction: column;
@@ -196,6 +205,11 @@ $green-shadow: #0e997938;
   margin: 0 auto;
   width: 100%;
   max-width: 100%;
+}
+
+.canvas-preview .block {
+  border: 1px dashed rgba(15,23,42,.35);
+  border-radius: 8px;
 }
 
 .block {
@@ -260,17 +274,50 @@ $green-shadow: #0e997938;
 }
 
 .preview-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: end;
+  font-size: 12px;
+  color: #475569;
+  margin-top: 8px;
+}
+
+.preview-meta label {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
+  gap: 4px;
+}
+
+.preview-meta input {
+  padding: 6px 8px;
+  border: 1px solid #cbd5f5;
+  border-radius: 8px;
+  background: $white;
+}
+
+.save-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
   color: #475569;
 }
 
-.preview-meta p {
+.save-status p {
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
   color: #0f172a;
+}
+
+.save-error{
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.save-error {
+  color: $error;
 }
 
 .inspector {
@@ -381,6 +428,14 @@ $green-shadow: #0e997938;
   gap: 8px;
 }
 
+.inspector-image-sizing {
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  gap: 8px;
+}
+
+
 .inspector-layout-controls {
   width: 100%;
 }
@@ -389,12 +444,6 @@ $green-shadow: #0e997938;
   color: $error;
 }
 
-.inspector-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
 
 .inspector-empty,
 .inspector-hint,

@@ -1,5 +1,4 @@
 import { Pool } from 'pg';
-// Shared Postgres pool for the API.
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export async function query(text, params) {
     return pool.query(text, params);

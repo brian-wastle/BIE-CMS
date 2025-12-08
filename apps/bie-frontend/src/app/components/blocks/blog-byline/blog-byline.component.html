@@ -1,7 +1,8 @@
 <div class="byline-view"
   [style.--byline-font-desktop.px]="fontSizes().desktop"
   [style.--byline-font-tablet.px]="fontSizes().tablet"
-  [style.--byline-font-mobile.px]="fontSizes().mobile">
+  [style.--byline-font-mobile.px]="fontSizes().mobile"
+  [style.color]="block().color || null">
   <div class="byline-content">
     <span class="byline-label">Published by </span>
     <span class="name">{{ authorName() }}</span>

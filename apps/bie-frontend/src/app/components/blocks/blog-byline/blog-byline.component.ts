@@ -1,4 +1,4 @@
-import { Component, computed } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { BylineBlock } from 'bie-models';
 import { BlockShell } from '../block-shell/block-shell';
@@ -14,9 +14,16 @@ const DISPLAY_FORMAT = 'MMMM d, y';
 export class BlogBylineComponent extends BlockShell<BylineBlock> {
   readonly displayFormat = DISPLAY_FORMAT;
   readonly authorName = computed(() => this.block().author ?? '');
+  readonly publishedAt = input<string | null | undefined>(null);
   readonly displayDate = computed(() => {
-    const publishedAt = this.block().publishedAt;
-    return publishedAt ? new Date(publishedAt) : new Date();
+    const publishedAt = this.publishedAt();
+    if (publishedAt) {
+      const parsed = new Date(publishedAt);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+    return new Date();
   });
   readonly displayIso = computed(() => {
     const date = this.displayDate();

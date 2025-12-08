@@ -6,18 +6,20 @@ import { ActivatedRoute } from '@angular/router';
 import { CurrentUserService } from '../../services/current-user/current-user.service';
 import { PagesService } from '../../services/pages/pages.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AnyBlock, TextBlock, ImageBlock, BylineBlock, TitleBlock, BGBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, Page, PageStatus, PageWrite, PageUpdate } from 'bie-models';
-import { BlogTitleComponent } from '../../components/blog-title/blog-title.component';
-import { BlogBylineComponent } from '../../components/blog-byline/blog-byline.component';
-import { TextBoxComponent } from '../../components/textbox/textbox.component';
-import { ImageBoxComponent } from '../../components/imagebox/imagebox.component';
+import { AnyBlock, TextBlock, ImageBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, Page, PageStatus, PageWrite, PageUpdate } from 'bie-models';
+import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
+import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
+import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
+import { ImageBoxComponent } from '../../components/blocks/imagebox/imagebox.component';
+import { BackgroundBlockComponent } from '../../components/blocks/background-block/background-block.component';
+import { HorizontalRuleBlockComponent } from '../../components/blocks/horizontal-rule-block/horizontal-rule-block.component';
+import { ColorPickerInputComponent } from '../../components/color-picker-input/color-picker-input.component';
 import { MediaBrowserCarouselComponent } from '../../components/media-browser-carousel/media-browser-carousel.component';
 import { LayoutControlsComponent } from '../../components/layout-controls/layout-controls.component';
 import { RichTextEditorComponent } from '../../components/rich-text-editor/rich-text-editor.component';
 import type { MediaItem } from '../../services/media-library/media-library.service';
 import { MatExpansionModule } from '@angular/material/expansion';
-import { BLOCK_SHELL } from '../../components/block-shell/block-shell';
-import { BackgroundBlockComponent } from '../../components/background-block/background-block.component';
+import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
 
 type PreviewModeId = 'responsive' | 'mobile' | 'tablet' | 'desktop' | 'hd';
 
@@ -62,7 +64,9 @@ const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
     LayoutControlsComponent,
     MatExpansionModule,
     RichTextEditorComponent,
-    BackgroundBlockComponent
+    BackgroundBlockComponent,
+    HorizontalRuleBlockComponent,
+    ColorPickerInputComponent
   ],
   providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => CanvasComponent) }],
   templateUrl: './canvas.component.html',
@@ -446,11 +450,18 @@ export class CanvasComponent implements AfterViewInit {
   isTextBlock(block: AnyBlock): block is TextBlock { return block.type === 'text'; }
   isImageBlock(block: AnyBlock): block is ImageBlock { return block.type === 'image'; }
   isBackgroundBlock(block: AnyBlock): block is BGBlock { return block.type === 'background'; }
+  isDividerBlock(block: AnyBlock): block is DividerBlock { return block.type === 'divider'; }
   supportsFontSize(block: AnyBlock | null): block is TitleBlock | TextBlock | BylineBlock {
     if (!block) {
       return false;
     }
     return this.isTitleBlock(block) || this.isTextBlock(block) || this.isBylineBlock(block);
+  }
+  supportsColor(block: AnyBlock | null): block is TitleBlock | BylineBlock {
+    if (!block) {
+      return false;
+    }
+    return this.isTitleBlock(block) || this.isBylineBlock(block);
   }
 
   // Generate new Components
@@ -543,6 +554,30 @@ export class CanvasComponent implements AfterViewInit {
     this.selectedId.set(id);
   }
 
+  addHorizontalRule() {
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+    this.blocks.update(arr => {
+      const nextRow = this.nextRow(arr);
+      const layout = this.autoPlace(id, {
+        row: nextRow,
+        colStart: 1,
+        colSpan: this.columns,
+        rowSpan: 1,
+      }, arr);
+      return [
+        ...arr,
+        {
+          id,
+          type: 'divider',
+          layout,
+          hAlign: 'center',
+          vAlign: 'center',
+        } as DividerBlock,
+      ];
+    });
+    this.selectedId.set(id);
+  }
+
   addBackground() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
@@ -589,7 +624,7 @@ export class CanvasComponent implements AfterViewInit {
     const hAlign = block.hAlign ?? 'flex-start';
     const vAlign = block.vAlign ?? 'flex-start';
     const stretchContent =
-      this.isTextBlock(block) || this.isBackgroundBlock(block) || this.isImageBlock(block);
+      this.isTextBlock(block) || this.isBackgroundBlock(block) || this.isImageBlock(block) || this.isDividerBlock(block);
     const alignItems = stretchContent ? 'stretch' : hAlign;
     const justifyContent = stretchContent ? 'stretch' : vAlign;
     return {
@@ -704,6 +739,14 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     this.onBlockUpdate(block, parsed.data);
+  }
+
+  onFontColorChange(block: AnyBlock, raw: string | number | null | undefined) {
+    if (!this.supportsColor(block)) {
+      return;
+    }
+    const color = (raw ?? '').toString().trim();
+    this.onBlockUpdate(block, { color });
   }
 
   resetFontSize(block: AnyBlock) {

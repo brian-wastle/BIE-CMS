@@ -1,12 +1,30 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
+import { PublicShellComponent } from './pages/public-shell/public-shell.component';
+import { CmsShellComponent } from './components/cms-shell/cms-shell.component';
+import { PublishedPageComponent } from './pages/published-page/published-page.component';
+import { HomepageComponent } from './pages/homepage/homepage.component';
 
 export const routes: Routes = [
-  { path: 'author', canActivate: [authGuard], loadComponent: () => import('./pages/canvas/canvas.component').then(m => m.CanvasComponent), data: { pageTitle: 'Canvas' } },
-  { path: 'upload', canActivate: [authGuard], loadComponent: () => import('./pages/media-upload/media-upload.component').then(m => m.MediaUploadComponent), data: { pageTitle: 'Media Browser' } },
-  { path: 'drafts', canActivate: [authGuard], loadComponent: () => import('./pages/draft-manager/draft-manager.component').then(m => m.DraftManagerComponent), data: { pageTitle: 'Draft Manager' } },
-  { path: 'login', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent), data: { pageTitle: 'Sign In' } },
-  { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/canvas/canvas.component').then(m => m.CanvasComponent), data: { pageTitle: 'Canvas' } },
-  //{ path: 'blog/:slug', loadComponent: () => import('./pages/blog/blog.component').then(m => m.BlogComponent) },
-  //{ path: '**', loadComponent: () => import('./components/not-found/not-found.component').then(m => m.NotFoundComponent) },
+  {
+    path: '',
+    component: PublicShellComponent,
+    children: [
+      { path: '', pathMatch: 'full', component: HomepageComponent },
+      { path: 'blog/:slug', component: PublishedPageComponent },
+    ],
+  },
+  {
+    path: '',
+    component: CmsShellComponent,
+    canActivateChild: [authGuard],
+    children: [
+      { path: 'author', data: { pageTitle: 'Canvas' }, loadComponent: () => import('./pages/canvas/canvas.component').then(m => m.CanvasComponent)},
+      { path: 'upload', data: { pageTitle: 'Media Browser' }, loadComponent: () => import('./pages/media-upload/media-upload.component').then(m => m.MediaUploadComponent)},
+      { path: 'drafts', data: { pageTitle: 'Draft Manager' }, loadComponent: () => import('./pages/draft-manager/draft-manager.component').then(m => m.DraftManagerComponent)},
+      { path: 'login', data: { pageTitle: 'Sign In', requiresAuth: false }, loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent)},
+    ],
+  },
+  
+  { path: '**', redirectTo: '' },
 ];

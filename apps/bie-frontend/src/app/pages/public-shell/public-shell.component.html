@@ -1,0 +1,20 @@
+<div class="public-shell">
+  <header class="public-header">
+    <div class="brand">
+      <a routerLink="/">brian-wastle-dot-net</a>
+    </div>
+    <nav class="public-nav">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Home
+      </a>
+    </nav>
+  </header>
+
+  <main class="public-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <footer class="public-footer">
+    powered by <a routerLink="/author">BIE-CMS</a>
+  </footer>
+</div>

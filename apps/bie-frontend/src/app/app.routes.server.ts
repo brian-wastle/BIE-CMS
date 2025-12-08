@@ -8,5 +8,6 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'author', renderMode: RenderMode.Client },
   { path: 'upload', renderMode: RenderMode.Client },
   // SSR - server
+  { path: 'blog/:slug', renderMode: RenderMode.Server },
   { path: '**', renderMode: RenderMode.Server },
 ];

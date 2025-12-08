@@ -1,12 +1,24 @@
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateChildFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
+import { CurrentUserService } from '../services/current-user/current-user.service';
 
-export const authGuard: CanActivateFn = async () => {
+export const authGuard: CanActivateChildFn = async (route, state) => {
+  if (route.data?.['requiresAuth'] === false) {
+    return true;
+  }
+
+  const currentUserService = inject(CurrentUserService);
   const router = inject(Router);
-  try {
-    const res = await fetch('/api/auth/me', { credentials: 'include' });
-    if (res.ok) return true;
-  } catch {}
-  router.navigateByUrl('/login');
-  return false;
+
+  let user = currentUserService.user();
+  if (user === undefined) {
+    await currentUserService.refresh();
+    user = currentUserService.user();
+  }
+
+  if (user) {
+    return true;
+  }
+
+  return router.parseUrl('/login');
 };

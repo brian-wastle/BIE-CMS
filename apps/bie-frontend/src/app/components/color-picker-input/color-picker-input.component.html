@@ -1,0 +1,15 @@
+<input
+  type="text"
+  [ngModel]="color()"
+  (ngModelChange)="colorChange.emit($event)"
+  (click)="openPicker()"
+  (focus)="openPicker()"
+  placeholder="#rrggbb"
+/>
+@if (showPicker) {
+<div (click)="$event.stopPropagation()">
+  <color-sketch
+    [color]="color()"
+    (onChangeComplete)="handleChangeComplete($event)">
+  </color-sketch>
+</div>}

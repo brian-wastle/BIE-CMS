@@ -1,0 +1,53 @@
+<div class="published-page">
+
+  @if (loading()) {
+    <div class="state state-loading">
+      <p>Loading page...</p>
+    </div>
+  } @else if (error(); as message) {
+    <div class="state state-error">
+      <p>{{ message }}</p>
+    </div>
+  } @else if (page(); as current) {
+    <article class="article">
+      <section class="article-grid"
+        [style.--cols]="gridColumns"
+        [style.--gap.px]="gridGapPx"
+        [style.--rowHeight.px]="gridRowHeight">
+        @if (pageBlocks().length) {
+          @for (block of pageBlocks(); track trackByBlockId($index, block)) {
+            <div class="block" [ngStyle]="blockStyle(block)">
+              @if (isTitleBlock(block)) {
+              <app-title-block [block]="block"></app-title-block>
+              }
+              @if (isBylineBlock(block)) {
+              <app-byline-block [block]="block"
+                [publishedAt]="current.publishedAt ?? current.updatedAt"></app-byline-block>
+              }
+              @if (isTextBlock(block)) {
+              <app-textbox [block]="block"></app-textbox>
+              }
+              @if (isImageBlock(block)) {
+              <app-imagebox [block]="block"></app-imagebox>
+              }
+              @if (isBackgroundBlock(block)) {
+              <app-background-block [block]="block"></app-background-block>
+              }
+              @if (isDividerBlock(block)) {
+              <app-horizontal-rule-block [block]="block"></app-horizontal-rule-block>
+              }
+            </div>
+          }
+        } @else {
+          <div class="state state-empty">
+            <p>This page is empty.</p>
+          </div>
+        }
+      </section>
+    </article>
+  } @else {
+    <div class="state state-empty">
+      <p>Page not available.</p>
+    </div>
+  }
+</div>

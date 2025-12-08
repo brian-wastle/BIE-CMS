@@ -25,7 +25,7 @@ $green-shadow: #0e997938;
 
 .canvas-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 32vw, 380px);
   gap: 24px;
   align-items: start;
   position: relative;
@@ -326,6 +326,9 @@ $green-shadow: #0e997938;
   flex-direction: column;
   gap: 12px;
   overflow: hidden;
+  width: 100%;
+  max-width: clamp(280px, 32vw, 380px);
+  align-self: start;
 }
 
 .inspector.inspector-collapsed {
@@ -366,6 +369,7 @@ $green-shadow: #0e997938;
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
 }
 
@@ -433,8 +437,48 @@ $green-shadow: #0e997938;
   width: 100%;
 }
 
-.remove-link {
+.inspector-remove-tab {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #faf9fd;
+  margin-bottom: 10px;
+  margin-left:2px;
   color: $error;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 48px;
+  padding: 0 12px;
+  width: min(100%, 360px);
+  cursor: pointer;
+  gap: 12px;
+  box-shadow: 0 3px 1px -2px rgba(15, 23, 42, 0.2), 0 2px 2px rgba(15, 23, 42, 0.14), 0 1px 5px rgba(15, 23, 42, 0.12);
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+  text-align: left;
+
+  h4 {
+    margin:12px 6px;
+  }
+}
+
+.inspector-remove-tab:hover {
+  border-color: $border-accent;
+  background: $surface;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 5px -3px rgba(15, 23, 42, 0.2), 0 8px 10px 1px rgba(15, 23, 42, 0.14), 0 3px 14px 2px rgba(15, 23, 42, 0.12);
+}
+
+.inspector-remove-tab:focus-visible {
+  outline: 2px solid $error;
+  outline-offset: 2px;
+}
+
+.inspector-remove-tab mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
 
@@ -491,6 +535,15 @@ $green-shadow: #0e997938;
   color: #fff;
   font-size: 13px;
   cursor: pointer;
+}
+
+mat-expansion-panel {
+  margin-left:2px;
+  width: min(100%, 360px);
+}
+
+:host ::ng-deep .mat-expansion-panel-header {
+  padding: 0 12px;
 }
 
 @media (max-width: 1024px) {

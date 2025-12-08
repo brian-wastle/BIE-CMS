@@ -33,9 +33,10 @@
             </button>
             <button type="button" class="emerald-button" (click)="saveDraft()" [disabled]="!canSaveDraft()"
               [attr.aria-busy]="savingDraft()">
-              {{ savingDraft() ? 'Saving...' : (pageMeta().id ? 'Save changes' : 'Save draft') }}
+              {{ savingDraft() ? 'Saving...' : (pageMeta().slugRef ? 'Save changes' : 'Save draft') }}
             </button>
-            <button type="button" class="emerald-button" (click)="publishDraft()" [disabled]="!lastSavedDisplay()" [attr.aria-busy]="savingDraft()">
+            <button type="button" class="emerald-button" (click)="publishDraft()" [disabled]="!lastSavedDisplay()"
+              [attr.aria-busy]="savingDraft()">
               {{ publishingDraft() ? 'Publishing...' : 'Publish' }}</button>
           </div>
         </div>
@@ -43,7 +44,8 @@
         <div class="preview-meta">
           <label>
             <span>Title</span>
-            <input type="text" [ngModel]="pageMeta().title" (ngModelChange)="onTitleChange($event)" placeholder="Choose a title">
+            <input type="text" [ngModel]="pageMeta().title" (ngModelChange)="onTitleChange($event)"
+              placeholder="Choose a title">
           </label>
           <div class="save-status">
             <p>Status: <strong>{{ pageMeta().status | titlecase }}</strong></p>
@@ -83,7 +85,9 @@
                   [style.--rowHeight.px]="tileRowHeight" (click)="onPreviewCanvasClick($event)">
 
                   @for (block of pageBlocks(); track trackByBlockId($index, block)) {
-                  <div class="block" [ngClass]="{ selected: selectedId() === block.id }" [ngStyle]="blockStyle(block)"
+                  <div class="block"
+                    [ngClass]="{ selected: selectedId() === block.id }"
+                    [ngStyle]="blockStyle(block)"
                     (click)="onPreviewBlockClick(block.id, $event)">
 
                     @if (isTextBlock(block)) {
@@ -94,21 +98,25 @@
                     <app-imagebox [block]="block">
                     </app-imagebox>
                     }
-                    @if (isBackgroundBlock(block)) {
-                    <app-background-block [block]="block">
-                    </app-background-block>
-                    }
-                    @if (isBylineBlock(block)) {
+                  @if (isBackgroundBlock(block)) {
+                  <app-background-block [block]="block">
+                  </app-background-block>
+                  }
+                  @if (isBylineBlock(block)) {
                     <app-byline-block [block]="block">
                     </app-byline-block>
                     }
-                    @if (isTitleBlock(block)) {
-                    <app-title-block [block]="block">
-                    </app-title-block>
-                    }
-                  </div>
+                  @if (isTitleBlock(block)) {
+                  <app-title-block [block]="block">
+                  </app-title-block>
+                  }
+                  @if (isDividerBlock(block)) {
+                  <app-horizontal-rule-block [block]="block">
+                  </app-horizontal-rule-block>
                   }
                 </div>
+                }
+              </div>
               </div>
             </div>
           </div>
@@ -121,6 +129,7 @@
       <button type="button" class="palette-button" (click)="addTitle()">+ Title</button>
       <button type="button" class="palette-button" (click)="addByline()">+ Byline</button>
       <button type="button" class="palette-button" (click)="addText()">+ Text</button>
+      <button type="button" class="palette-button" (click)="addHorizontalRule()">+ Divider</button>
       <button type="button" class="palette-button" (click)="addImage()">+ Image</button>
       <button type="button" class="palette-button" (click)="addBackground()">+ Background</button>
     </aside>
@@ -178,6 +187,9 @@
           (hAlignChange)="onHAlignChange(block, $event)" (vAlignChange)="onVAlignChange(block, $event)">
         </app-layout-controls>
       </mat-expansion-panel>
+
+
+
       @if (supportsFontSize(block)) {
       <mat-expansion-panel>
         <mat-expansion-panel-header>
@@ -190,7 +202,11 @@
               (ngModelChange)="onFontSizeInput(block, $event)" (blur)="onFontSizeBlur(block)">
           </label>
           <button type="button" class="inspector-link" (click)="resetFontSize(block)"
-            [disabled]="block.fontSize == null">Reset font</button>
+            [disabled]="block.fontSize == null">Reset font size</button>
+          @if (supportsColor(block)) {
+          <app-color-picker-input [color]="block.color ?? ''"
+            (colorChange)="onFontColorChange(block, $event)"></app-color-picker-input>
+          }
         </div>
       </mat-expansion-panel>
       }
@@ -277,8 +293,9 @@
         </mat-expansion-panel>
       </mat-expansion-panel>
       }
-      <button type="button" class="inspector-link remove-link" (click)="remove(block.id)">
-        Remove block
+      <button type="button" class="inspector-remove-tab" (click)="remove(block.id)">
+        <h4>Remove block</h4>
+        <mat-icon aria-hidden="true">delete</mat-icon>
       </button>
       } @else {
       <p class="inspector-empty">Select a block to edit.</p>

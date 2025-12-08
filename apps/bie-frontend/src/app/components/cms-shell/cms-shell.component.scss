@@ -1,13 +1,11 @@
 @use 'sass:color';
 
-// $app-bg-color: #eefaff;
 $app-bg-color: #fffaf3;
 $dark-green: #1c3832;
 $peach: #f5dac0;
-$pastel-pink: #FFD1DC;
-$light-green: #A0D1C8;
-$pale-green: #C1E3DD;
-
+$pastel-pink: #ffd1dc;
+$light-green: #a0d1c8;
+$pale-green: #c1e3dd;
 
 :host {
   display: block;
@@ -19,8 +17,8 @@ $pale-green: #C1E3DD;
   justify-content: space-between;
   align-items: center;
   height: 64px;
-  margin:0;
-  margin-right:4px;
+  margin: 0;
+  margin-right: 4px;
   margin-bottom: 2rem;
   background-color: $dark-green;
 }
@@ -29,7 +27,7 @@ $pale-green: #C1E3DD;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  margin-top:8px;
+  margin-top: 8px;
 }
 
 .app-container {
@@ -38,9 +36,9 @@ $pale-green: #C1E3DD;
 }
 
 .app-sidenav {
-  width: 280px; // desktop width
+  width: 280px;
   background-color: $dark-green;
-  border-radius: 0rem;
+  border-radius: 0;
 }
 
 .toolbar-title {
@@ -58,7 +56,7 @@ $pale-green: #C1E3DD;
   z-index: 1;
 }
 
-.sidenav-content {  /* line 61 */
+.sidenav-content {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -69,10 +67,10 @@ $pale-green: #C1E3DD;
 
 .sidenav-toggle {
   z-index: 1;
-  top:12px;
+  top: 12px;
   left: 4px;
   margin: 0 8px 24px 0;
-  position:sticky;
+  position: sticky;
 }
 
 .emerald-button {
@@ -86,35 +84,33 @@ $pale-green: #C1E3DD;
 }
 
 .top-header {
-  display:inline-flex;
+  display: inline-flex;
   justify-content: start;
   margin-right: 24px;
 }
 
 .menu-toggle-flex {
-  display:flex;
+  display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
 .menu-toggle-flex-extended {
-  margin-top:64px;
+  margin-top: 64px;
   justify-content: end;
 }
 
 .page-title {
   color: #3e4e5e;
   font-size: 2.5rem;
-  margin-top:64px;
-  margin-bottom:0;
+  margin-top: 64px;
+  margin-bottom: 0;
 }
 
 .content {
   padding: 8px;
-  margin: 0px;
-  // min-height: 30vh; // adjust with toolbar height
-  // box-sizing: border-box;
+  margin: 0;
   border: 1px solid $peach;
-  border-radius: .75rem;
+  border-radius: 0.75rem;
   background-color: #ffffff;
 }

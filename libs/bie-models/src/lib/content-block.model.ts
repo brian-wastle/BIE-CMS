@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Enums
-export const BlockTypeSchema = z.enum(['text', 'image', 'video', 'title', 'byline', 'background']);
+export const BlockTypeSchema = z.enum(['text', 'image', 'video', 'title', 'byline', 'background', 'divider']);
 export type BlockType = z.infer<typeof BlockTypeSchema>;
 
 export const AlignTypeSchema = z.enum(['flex-start', 'center', 'flex-end']);
@@ -56,6 +56,7 @@ const ContentBlockBaseSchema = z.object({
   type: BlockTypeSchema,
   layout: GridPlacementSchema,
   fontSize: z.coerce.number().nullable().optional(),
+  color: z.string().optional(),
   hAlign: AlignTypeSchema,
   vAlign: AlignTypeSchema,
   responsive: ResponsiveOverridesSchema.optional(),
@@ -92,11 +93,15 @@ export type ImageBlock = z.infer<typeof ImageBlockSchema>;
 export const BGBlockSchema = ContentBlockBaseSchema.extend({
   type: z.literal('background'),
   src: z.string().optional(),
-  color: z.string().optional(),
   mediaHandle: z.string().nullable().optional(),
   bgStyle: BGStyleSchema.default('stretch'),
 });
 export type BGBlock = z.infer<typeof BGBlockSchema>;
+
+export const DividerBlockSchema = ContentBlockBaseSchema.extend({
+  type: z.literal('divider'),
+});
+export type DividerBlock = z.infer<typeof DividerBlockSchema>;
 
 export const AnyBlockSchema = z.discriminatedUnion('type', [
   TitleBlockSchema,
@@ -104,6 +109,7 @@ export const AnyBlockSchema = z.discriminatedUnion('type', [
   TextBlockSchema,
   ImageBlockSchema,
   BGBlockSchema,
+  DividerBlockSchema,
 ]);
 export type AnyBlock = z.infer<typeof AnyBlockSchema>; // Used during component creation/editing
 

@@ -6,6 +6,7 @@ export declare const BlockTypeSchema: z.ZodEnum<{
     title: "title";
     byline: "byline";
     background: "background";
+    divider: "divider";
 }>;
 export type BlockType = z.infer<typeof BlockTypeSchema>;
 export declare const AlignTypeSchema: z.ZodEnum<{
@@ -130,6 +131,7 @@ export declare const TitleBlockSchema: z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -212,6 +214,7 @@ export declare const BylineBlockSchema: z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -295,6 +298,7 @@ export declare const TextBlockSchema: z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -377,6 +381,7 @@ export declare const ImageBlockSchema: z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -464,6 +469,7 @@ export declare const BGBlockSchema: z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -535,7 +541,6 @@ export declare const BGBlockSchema: z.ZodObject<{
     }, z.core.$strip>>;
     type: z.ZodLiteral<"background">;
     src: z.ZodOptional<z.ZodString>;
-    color: z.ZodOptional<z.ZodString>;
     mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     bgStyle: z.ZodDefault<z.ZodEnum<{
         stretch: "stretch";
@@ -543,6 +548,88 @@ export declare const BGBlockSchema: z.ZodObject<{
     }>>;
 }, z.core.$strip>;
 export type BGBlock = z.infer<typeof BGBlockSchema>;
+export declare const DividerBlockSchema: z.ZodObject<{
+    id: z.ZodString;
+    layout: z.ZodObject<{
+        row: z.ZodCoercedNumber<unknown>;
+        colStart: z.ZodCoercedNumber<unknown>;
+        colSpan: z.ZodCoercedNumber<unknown>;
+        rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+    }, z.core.$strip>;
+    fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
+    hAlign: z.ZodEnum<{
+        "flex-start": "flex-start";
+        center: "center";
+        "flex-end": "flex-end";
+    }>;
+    vAlign: z.ZodEnum<{
+        "flex-start": "flex-start";
+        center: "center";
+        "flex-end": "flex-end";
+    }>;
+    responsive: z.ZodOptional<z.ZodObject<{
+        mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+            fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            layout: z.ZodOptional<z.ZodObject<{
+                row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+            }, z.core.$strip>>;
+            hAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+            vAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+        }, z.core.$strip>>>;
+        tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+            fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            layout: z.ZodOptional<z.ZodObject<{
+                row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+            }, z.core.$strip>>;
+            hAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+            vAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+        }, z.core.$strip>>>;
+        desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+            fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            layout: z.ZodOptional<z.ZodObject<{
+                row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+            }, z.core.$strip>>;
+            hAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+            vAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+    type: z.ZodLiteral<"divider">;
+}, z.core.$strip>;
+export type DividerBlock = z.infer<typeof DividerBlockSchema>;
 export declare const AnyBlockSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     id: z.ZodString;
     layout: z.ZodObject<{
@@ -552,6 +639,7 @@ export declare const AnyBlockSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -632,6 +720,7 @@ export declare const AnyBlockSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -713,6 +802,7 @@ export declare const AnyBlockSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -793,6 +883,7 @@ export declare const AnyBlockSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -878,6 +969,7 @@ export declare const AnyBlockSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
         rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     }, z.core.$strip>;
     fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
     hAlign: z.ZodEnum<{
         "flex-start": "flex-start";
         center: "center";
@@ -949,12 +1041,91 @@ export declare const AnyBlockSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strip>>;
     type: z.ZodLiteral<"background">;
     src: z.ZodOptional<z.ZodString>;
-    color: z.ZodOptional<z.ZodString>;
     mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     bgStyle: z.ZodDefault<z.ZodEnum<{
         stretch: "stretch";
         tile: "tile";
     }>>;
+}, z.core.$strip>, z.ZodObject<{
+    id: z.ZodString;
+    layout: z.ZodObject<{
+        row: z.ZodCoercedNumber<unknown>;
+        colStart: z.ZodCoercedNumber<unknown>;
+        colSpan: z.ZodCoercedNumber<unknown>;
+        rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+    }, z.core.$strip>;
+    fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+    color: z.ZodOptional<z.ZodString>;
+    hAlign: z.ZodEnum<{
+        "flex-start": "flex-start";
+        center: "center";
+        "flex-end": "flex-end";
+    }>;
+    vAlign: z.ZodEnum<{
+        "flex-start": "flex-start";
+        center: "center";
+        "flex-end": "flex-end";
+    }>;
+    responsive: z.ZodOptional<z.ZodObject<{
+        mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+            fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            layout: z.ZodOptional<z.ZodObject<{
+                row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+            }, z.core.$strip>>;
+            hAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+            vAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+        }, z.core.$strip>>>;
+        tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+            fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            layout: z.ZodOptional<z.ZodObject<{
+                row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+            }, z.core.$strip>>;
+            hAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+            vAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+        }, z.core.$strip>>>;
+        desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+            fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            layout: z.ZodOptional<z.ZodObject<{
+                row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+            }, z.core.$strip>>;
+            hAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+            vAlign: z.ZodOptional<z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+    type: z.ZodLiteral<"divider">;
 }, z.core.$strip>], "type">;
 export type AnyBlock = z.infer<typeof AnyBlockSchema>;
 export declare const BlockUpdateSchema: z.ZodObject<{
@@ -1081,6 +1252,7 @@ export declare const PageSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1161,6 +1333,7 @@ export declare const PageSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1242,6 +1415,7 @@ export declare const PageSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1322,6 +1496,7 @@ export declare const PageSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1407,6 +1582,7 @@ export declare const PageSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1478,12 +1654,91 @@ export declare const PageSchema: z.ZodObject<{
         }, z.core.$strip>>;
         type: z.ZodLiteral<"background">;
         src: z.ZodOptional<z.ZodString>;
-        color: z.ZodOptional<z.ZodString>;
         mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         bgStyle: z.ZodDefault<z.ZodEnum<{
             stretch: "stretch";
             tile: "tile";
         }>>;
+    }, z.core.$strip>, z.ZodObject<{
+        id: z.ZodString;
+        layout: z.ZodObject<{
+            row: z.ZodCoercedNumber<unknown>;
+            colStart: z.ZodCoercedNumber<unknown>;
+            colSpan: z.ZodCoercedNumber<unknown>;
+            rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+        }, z.core.$strip>;
+        fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
+        hAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        vAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        responsive: z.ZodOptional<z.ZodObject<{
+            mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+        type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     createdBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -1507,6 +1762,7 @@ export declare const PageWriteSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1587,6 +1843,7 @@ export declare const PageWriteSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1668,6 +1925,7 @@ export declare const PageWriteSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1748,6 +2006,7 @@ export declare const PageWriteSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1833,6 +2092,7 @@ export declare const PageWriteSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -1904,12 +2164,91 @@ export declare const PageWriteSchema: z.ZodObject<{
         }, z.core.$strip>>;
         type: z.ZodLiteral<"background">;
         src: z.ZodOptional<z.ZodString>;
-        color: z.ZodOptional<z.ZodString>;
         mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         bgStyle: z.ZodDefault<z.ZodEnum<{
             stretch: "stretch";
             tile: "tile";
         }>>;
+    }, z.core.$strip>, z.ZodObject<{
+        id: z.ZodString;
+        layout: z.ZodObject<{
+            row: z.ZodCoercedNumber<unknown>;
+            colStart: z.ZodCoercedNumber<unknown>;
+            colSpan: z.ZodCoercedNumber<unknown>;
+            rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+        }, z.core.$strip>;
+        fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
+        hAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        vAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        responsive: z.ZodOptional<z.ZodObject<{
+            mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+        type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -1932,6 +2271,7 @@ export declare const PageUpdateSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -2012,6 +2352,7 @@ export declare const PageUpdateSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -2093,6 +2434,7 @@ export declare const PageUpdateSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -2173,6 +2515,7 @@ export declare const PageUpdateSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -2258,6 +2601,7 @@ export declare const PageUpdateSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -2329,12 +2673,91 @@ export declare const PageUpdateSchema: z.ZodObject<{
         }, z.core.$strip>>;
         type: z.ZodLiteral<"background">;
         src: z.ZodOptional<z.ZodString>;
-        color: z.ZodOptional<z.ZodString>;
         mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         bgStyle: z.ZodDefault<z.ZodEnum<{
             stretch: "stretch";
             tile: "tile";
         }>>;
+    }, z.core.$strip>, z.ZodObject<{
+        id: z.ZodString;
+        layout: z.ZodObject<{
+            row: z.ZodCoercedNumber<unknown>;
+            colStart: z.ZodCoercedNumber<unknown>;
+            colSpan: z.ZodCoercedNumber<unknown>;
+            rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+        }, z.core.$strip>;
+        fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
+        hAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        vAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        responsive: z.ZodOptional<z.ZodObject<{
+            mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+        type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -2360,6 +2783,7 @@ export declare const PageSummarySchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -2440,6 +2864,7 @@ export declare const PageSummarySchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -2521,6 +2946,7 @@ export declare const PageSummarySchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -2601,6 +3027,7 @@ export declare const PageSummarySchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -2686,6 +3113,7 @@ export declare const PageSummarySchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -2757,12 +3185,91 @@ export declare const PageSummarySchema: z.ZodObject<{
             }, z.core.$strip>>;
             type: z.ZodLiteral<"background">;
             src: z.ZodOptional<z.ZodString>;
-            color: z.ZodOptional<z.ZodString>;
             mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
             bgStyle: z.ZodDefault<z.ZodEnum<{
                 stretch: "stretch";
                 tile: "tile";
             }>>;
+        }, z.core.$strip>, z.ZodObject<{
+            id: z.ZodString;
+            layout: z.ZodObject<{
+                row: z.ZodCoercedNumber<unknown>;
+                colStart: z.ZodCoercedNumber<unknown>;
+                colSpan: z.ZodCoercedNumber<unknown>;
+                rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+            }, z.core.$strip>;
+            fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
+            hAlign: z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>;
+            vAlign: z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>;
+            responsive: z.ZodOptional<z.ZodObject<{
+                mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                    fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                    layout: z.ZodOptional<z.ZodObject<{
+                        row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                    }, z.core.$strip>>;
+                    hAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                    vAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                }, z.core.$strip>>>;
+                tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                    fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                    layout: z.ZodOptional<z.ZodObject<{
+                        row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                    }, z.core.$strip>>;
+                    hAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                    vAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                }, z.core.$strip>>>;
+                desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                    fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                    layout: z.ZodOptional<z.ZodObject<{
+                        row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                    }, z.core.$strip>>;
+                    hAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                    vAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+            type: z.ZodLiteral<"divider">;
         }, z.core.$strip>], "type">>;
         meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
         createdBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -2790,6 +3297,7 @@ export declare const PageDetailSchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -2870,6 +3378,7 @@ export declare const PageDetailSchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -2951,6 +3460,7 @@ export declare const PageDetailSchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -3031,6 +3541,7 @@ export declare const PageDetailSchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -3116,6 +3627,7 @@ export declare const PageDetailSchema: z.ZodObject<{
                 rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
             }, z.core.$strip>;
             fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
             hAlign: z.ZodEnum<{
                 "flex-start": "flex-start";
                 center: "center";
@@ -3187,12 +3699,91 @@ export declare const PageDetailSchema: z.ZodObject<{
             }, z.core.$strip>>;
             type: z.ZodLiteral<"background">;
             src: z.ZodOptional<z.ZodString>;
-            color: z.ZodOptional<z.ZodString>;
             mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
             bgStyle: z.ZodDefault<z.ZodEnum<{
                 stretch: "stretch";
                 tile: "tile";
             }>>;
+        }, z.core.$strip>, z.ZodObject<{
+            id: z.ZodString;
+            layout: z.ZodObject<{
+                row: z.ZodCoercedNumber<unknown>;
+                colStart: z.ZodCoercedNumber<unknown>;
+                colSpan: z.ZodCoercedNumber<unknown>;
+                rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+            }, z.core.$strip>;
+            fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+            color: z.ZodOptional<z.ZodString>;
+            hAlign: z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>;
+            vAlign: z.ZodEnum<{
+                "flex-start": "flex-start";
+                center: "center";
+                "flex-end": "flex-end";
+            }>;
+            responsive: z.ZodOptional<z.ZodObject<{
+                mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                    fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                    layout: z.ZodOptional<z.ZodObject<{
+                        row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                    }, z.core.$strip>>;
+                    hAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                    vAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                }, z.core.$strip>>>;
+                tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                    fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                    layout: z.ZodOptional<z.ZodObject<{
+                        row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                    }, z.core.$strip>>;
+                    hAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                    vAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                }, z.core.$strip>>>;
+                desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                    fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                    layout: z.ZodOptional<z.ZodObject<{
+                        row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                        rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                    }, z.core.$strip>>;
+                    hAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                    vAlign: z.ZodOptional<z.ZodEnum<{
+                        "flex-start": "flex-start";
+                        center: "center";
+                        "flex-end": "flex-end";
+                    }>>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+            type: z.ZodLiteral<"divider">;
         }, z.core.$strip>], "type">>;
         meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
         createdBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -3220,6 +3811,7 @@ export declare const PageContentResponseSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3300,6 +3892,7 @@ export declare const PageContentResponseSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3381,6 +3974,7 @@ export declare const PageContentResponseSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3461,6 +4055,7 @@ export declare const PageContentResponseSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3546,6 +4141,7 @@ export declare const PageContentResponseSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3617,12 +4213,91 @@ export declare const PageContentResponseSchema: z.ZodObject<{
         }, z.core.$strip>>;
         type: z.ZodLiteral<"background">;
         src: z.ZodOptional<z.ZodString>;
-        color: z.ZodOptional<z.ZodString>;
         mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         bgStyle: z.ZodDefault<z.ZodEnum<{
             stretch: "stretch";
             tile: "tile";
         }>>;
+    }, z.core.$strip>, z.ZodObject<{
+        id: z.ZodString;
+        layout: z.ZodObject<{
+            row: z.ZodCoercedNumber<unknown>;
+            colStart: z.ZodCoercedNumber<unknown>;
+            colSpan: z.ZodCoercedNumber<unknown>;
+            rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+        }, z.core.$strip>;
+        fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
+        hAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        vAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        responsive: z.ZodOptional<z.ZodObject<{
+            mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+        type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
     publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
@@ -3646,6 +4321,7 @@ export declare const PageWithMetaSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3726,6 +4402,7 @@ export declare const PageWithMetaSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3807,6 +4484,7 @@ export declare const PageWithMetaSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3887,6 +4565,7 @@ export declare const PageWithMetaSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -3972,6 +4651,7 @@ export declare const PageWithMetaSchema: z.ZodObject<{
             rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
         }, z.core.$strip>;
         fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
         hAlign: z.ZodEnum<{
             "flex-start": "flex-start";
             center: "center";
@@ -4043,12 +4723,91 @@ export declare const PageWithMetaSchema: z.ZodObject<{
         }, z.core.$strip>>;
         type: z.ZodLiteral<"background">;
         src: z.ZodOptional<z.ZodString>;
-        color: z.ZodOptional<z.ZodString>;
         mediaHandle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         bgStyle: z.ZodDefault<z.ZodEnum<{
             stretch: "stretch";
             tile: "tile";
         }>>;
+    }, z.core.$strip>, z.ZodObject<{
+        id: z.ZodString;
+        layout: z.ZodObject<{
+            row: z.ZodCoercedNumber<unknown>;
+            colStart: z.ZodCoercedNumber<unknown>;
+            colSpan: z.ZodCoercedNumber<unknown>;
+            rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+        }, z.core.$strip>;
+        fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+        color: z.ZodOptional<z.ZodString>;
+        hAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        vAlign: z.ZodEnum<{
+            "flex-start": "flex-start";
+            center: "center";
+            "flex-end": "flex-end";
+        }>;
+        responsive: z.ZodOptional<z.ZodObject<{
+            mobile: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            tablet: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+            desktop: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+                fontSize: z.ZodOptional<z.ZodNullable<z.ZodCoercedNumber<unknown>>>;
+                layout: z.ZodOptional<z.ZodObject<{
+                    row: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colStart: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    colSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+                    rowSpan: z.ZodOptional<z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+                }, z.core.$strip>>;
+                hAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+                vAlign: z.ZodOptional<z.ZodEnum<{
+                    "flex-start": "flex-start";
+                    center: "center";
+                    "flex-end": "flex-end";
+                }>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+        type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
     publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;

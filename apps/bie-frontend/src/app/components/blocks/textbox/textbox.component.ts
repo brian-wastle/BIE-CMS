@@ -13,7 +13,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 })
 export class TextBoxComponent extends BlockShell<TextBlock> implements AfterViewInit, OnDestroy {
   @ViewChild('textboxRoot', { static: true }) textboxRoot!: ElementRef<HTMLElement>;
-  private resizeObserver!: ResizeObserver;
+  private resizeObserver: ResizeObserver | null = null;
   private pendingAutoSizeHeight = 0;
   private autoSizeFrame: number | null = null;
 
@@ -49,6 +49,9 @@ export class TextBoxComponent extends BlockShell<TextBlock> implements AfterView
   });
 
   ngAfterViewInit() {
+    if (typeof window === 'undefined' || typeof ResizeObserver === 'undefined') {
+      return;
+    }
     const element = this.textboxRoot.nativeElement;
     this.resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
@@ -63,7 +66,7 @@ export class TextBoxComponent extends BlockShell<TextBlock> implements AfterView
   }
 
   ngOnDestroy() {
-    this.resizeObserver.disconnect();
+    this.resizeObserver?.disconnect();
     if (this.autoSizeFrame != null) {
       cancelAnimationFrame(this.autoSizeFrame);
     }

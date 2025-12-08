@@ -12,15 +12,15 @@
 
 .textbox-content {
   width: 100%;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: var(--text-font-desktop, 18px);
   line-height: 1.65;
   color: #1f2933;
   max-width: 100%;
   white-space: normal;
   overflow-wrap: break-word;
-  word-break: break-word;
-
+  word-break: normal;
+  hyphens: auto;
+  
   p {
     margin: 0 0 1.2em;
   }

@@ -1,4 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, PLATFORM_ID, REQUEST, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import type { Request } from 'express';
 import type { Page, PageSummary, PageUpdate, PageWrite } from 'bie-models';
 
 export interface PageListCursor {
@@ -22,6 +24,9 @@ export interface PageListResult {
   providedIn: 'root'
 })
 export class PagesService {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly serverRequest = inject<Request | null>(REQUEST, { optional: true }) ?? null;
+
   private unwrapPage(payload: any): Page {
     if (payload?.page?.page) {
       return payload.page.page;
@@ -44,7 +49,7 @@ export class PagesService {
     }
     const query = search.toString();
     const url = query ? `/api/pages?${query}` : '/api/pages';
-    const res = await fetch(url, { credentials: 'include' });
+    const res = await fetch(this.buildApiUrl(url), this.withServerCookies({ credentials: 'include' }));
     if (!res.ok) throw new Error('Failed to load pages.');
     const payload = await res.json();
     return {
@@ -54,43 +59,89 @@ export class PagesService {
     };
   }
 
-  // Get page by slug or id
-  async get(idOrSlug: string): Promise<Page> {
-    const res = await fetch(`/api/pages/${encodeURIComponent(idOrSlug)}`, { credentials: 'include' });
+  async listPublished(): Promise<PageSummary[]> {
+    const res = await fetch(this.buildApiUrl('/api/pages/published'), this.withServerCookies({ credentials: 'include' }));
+    if (!res.ok) throw new Error('Failed to load published pages.');
+    const payload = await res.json();
+    return payload.pages ?? [];
+  }
+
+  // Get page by slug
+  async get(slug: string): Promise<Page> {
+    const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({ credentials: 'include' }));
     if (!res.ok) throw new Error('Failed to load page.');
+    return this.unwrapPage(await res.json());
+  }
+
+  // Get published page by slug
+  async getPublished(slug: string): Promise<Page> {
+    const res = await fetch(this.buildApiUrl(`/api/pages/published/${encodeURIComponent(slug)}`), this.withServerCookies({ credentials: 'include' }));
+    if (!res.ok) throw new Error(res.status === 404 ? 'Published page not found.' : 'Failed to load page.');
     return this.unwrapPage(await res.json());
   }
 
   // Create new page
   async post(payload: PageWrite): Promise<Page> {
-    const res = await fetch('/api/pages', {
+    const res = await fetch(this.buildApiUrl('/api/pages'), this.withServerCookies({
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+    }));
     if (!res.ok) throw new Error('Failed to save page.');
     return this.unwrapPage(await res.json());
   }
 
-  // Update an existing page
-  async update(idOrSlug: string, payload: PageUpdate): Promise<Page> {
-    const res = await fetch(`/api/pages/${encodeURIComponent(idOrSlug)}`, {
+  // Update an existing page by slug
+  async update(slug: string, payload: PageUpdate): Promise<Page> {
+    const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+    }));
     if (!res.ok) throw new Error('Failed to update page.');
     return this.unwrapPage(await res.json());
   }
 
-  // Delete page
-  async delete(idOrSlug: string): Promise<void> {
-    const res = await fetch(`/api/pages/${encodeURIComponent(idOrSlug)}`, {
+  // Delete page by slug
+  async delete(slug: string): Promise<void> {
+    const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({
       method: 'DELETE',
       credentials: 'include',
-    });
+    }));
     if (!res.ok) throw new Error('Failed to delete page.');
+  }
+
+  private buildApiUrl(path: string) {
+    if (isPlatformBrowser(this.platformId)) {
+      return path;
+    }
+    const envBase = process.env['PUBLIC_API_BASE_URL'] ?? process.env['API_TARGET'];
+    if (envBase) {
+      return new URL(path, envBase).toString();
+    }
+    const req = this.serverRequest;
+    const protoHeader = req?.headers?.['x-forwarded-proto'] ?? (req as any)?.protocol ?? 'http';
+    const hostHeader = req?.headers?.['x-forwarded-host'] ?? req?.headers?.host;
+    const proto = Array.isArray(protoHeader) ? protoHeader[0] : String(protoHeader ?? 'http').split(',')[0]?.trim() || 'http';
+    const host = Array.isArray(hostHeader) ? hostHeader[0] : String(hostHeader ?? '').split(',')[0]?.trim();
+    if (host) {
+      return `${proto}://${host}${path}`;
+    }
+    return `http://127.0.0.1:4000${path}`;
+  }
+
+  private withServerCookies(init?: RequestInit): RequestInit | undefined {
+    if (isPlatformBrowser(this.platformId)) {
+      return init;
+    }
+    const cookie = this.serverRequest?.headers?.cookie;
+    if (!cookie) {
+      return init;
+    }
+    const headers = new Headers(init?.headers ?? {});
+    headers.set('cookie', cookie);
+    return { ...init, headers };
   }
 }

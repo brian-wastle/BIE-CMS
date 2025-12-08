@@ -16,7 +16,7 @@ import { pool, withTransaction } from './db.js';
 
 const router = express.Router();
 
-function mapVersionRowToPage(row: any): Page {
+function mapVersionToPage(row: any): Page {
   return PageSchema.parse({
     id: row.page_id ?? row.id,
     slug: row.slug,
@@ -31,10 +31,10 @@ function mapVersionRowToPage(row: any): Page {
   });
 }
 
-async function resolvePageId(ref: string, client: Pool | PoolClient = pool): Promise<string | null> {
+async function resolvePageId(slug: string, client: Pool | PoolClient = pool): Promise<string | null> {
   const { rows } = await client.query(
-    `SELECT id FROM pages WHERE id = $1 OR slug = $1 LIMIT 1`,
-    [ref]
+    `SELECT id FROM pages WHERE slug = $1 LIMIT 1`,
+    [slug]
   );
   return rows[0]?.id ?? null;
 }
@@ -71,16 +71,93 @@ async function loadPageById(pageId: string, client: Pool | PoolClient = pool): P
     return null;
   }
 
-  return mapVersionRowToPage(rows[0]);
+  return mapVersionToPage(rows[0]);
 }
 
-async function loadPageByRef(ref: string): Promise<Page | null> {
-  const pageId = await resolvePageId(ref);
+async function loadPageBySlug(slug: string): Promise<Page | null> {
+  const pageId = await resolvePageId(slug);
   if (!pageId) {
     return null;
   }
   return loadPageById(pageId);
 }
+
+async function loadPublishedPageBySlug(slug: string): Promise<Page | null> {
+  const { rows } = await pool.query(
+    `
+    SELECT
+      p.id AS page_id,
+      p.slug,
+      v.status,
+      v.title,
+      v.blocks,
+      v.meta,
+      v.created_by,
+      v.created_at AS version_created_at,
+      v.updated_at AS version_updated_at,
+      v.published_at
+    FROM pages p
+    JOIN page_versions v ON v.id = p.published_version_id
+    WHERE p.slug = $1
+    LIMIT 1
+    `,
+    [slug]
+  );
+
+  if (!rows.length) {
+    return null;
+  }
+
+  return mapVersionToPage(rows[0]);
+}
+
+router.get('/published', async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `
+      SELECT
+        p.id AS page_id,
+        p.slug,
+        v.status,
+        v.title,
+        v.blocks,
+        v.meta,
+        v.created_by,
+        v.created_at AS version_created_at,
+        v.updated_at AS version_updated_at,
+        v.published_at
+      FROM pages p
+      JOIN page_versions v ON v.id = p.published_version_id
+      WHERE p.published_version_id IS NOT NULL
+      ORDER BY v.published_at DESC NULLS LAST, p.updated_at DESC
+      `
+    );
+
+    const pages: PageSummary[] = rows.map((row) =>
+      PageSummarySchema.parse({
+        page: mapVersionToPage(row),
+      })
+    );
+
+    return res.json({ pages });
+  } catch (err) {
+    console.error('Failed to list published pages', err);
+    return res.status(500).json({ error: 'Failed to list published pages' });
+  }
+});
+
+router.get('/published/:slug', async (req, res) => {
+  try {
+    const page = await loadPublishedPageBySlug(req.params.slug);
+    if (!page) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+    return res.json({ page });
+  } catch (err) {
+    console.error('Failed to load published page', err);
+    return res.status(500).json({ error: 'Failed to load published page' });
+  }
+});
 
 router.use(requireAccess);
 
@@ -114,7 +191,7 @@ router.get('/', async (_req, res) => {
 
     const pages: PageSummary[] = rows.map((row) =>
       PageSummarySchema.parse({
-        page: mapVersionRowToPage(row),
+        page: mapVersionToPage(row),
       })
     );
 
@@ -125,10 +202,10 @@ router.get('/', async (_req, res) => {
   }
 });
 
-// Get page by slug ID
-router.get('/:idOrSlug', async (req, res) => {
+// Get page by slug
+router.get('/:slug', async (req, res) => {
   try {
-    const page = await loadPageByRef(req.params.idOrSlug);
+    const page = await loadPageBySlug(req.params.slug);
     if (!page) {
       return res.status(404).json({ error: 'Page not found' });
     }
@@ -216,7 +293,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update page
-router.put('/:id', async (req, res) => {
+router.put('/:slug', async (req, res) => {
   const parseResult = PageUpdateSchema.safeParse(req.body);
   if (!parseResult.success) {
     return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.issues });
@@ -225,13 +302,13 @@ router.put('/:id', async (req, res) => {
   const payload: PageUpdate = parseResult.data;
   const status = payload.status ?? 'draft';
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
-  const ref = req.params.id;
+  const slugParam = req.params.slug;
   const blocksJson = JSON.stringify(payload.blocks);
   const metaJson = JSON.stringify(payload.meta ?? {});
 
   try {
     const pageId = await withTransaction(async (client) => {
-      const resolvedPageId = await resolvePageId(ref, client);
+      const resolvedPageId = await resolvePageId(slugParam, client);
       if (!resolvedPageId) {
         throw new Error('PAGE_NOT_FOUND');
       }
@@ -303,7 +380,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Publish an existing version
-router.post('/:idOrSlug/versions/:versionId/publish', async (req, res) => {
+router.post('/:slug/versions/:versionId/publish', async (req, res) => {
   const publishedAt =
     req.body?.publishedAt !== undefined && req.body?.publishedAt !== null
       ? new Date(req.body.publishedAt).toISOString()
@@ -311,7 +388,7 @@ router.post('/:idOrSlug/versions/:versionId/publish', async (req, res) => {
 
   try {
     const pageId = await withTransaction(async (client) => {
-      const resolvedPageId = await resolvePageId(req.params.idOrSlug, client);
+      const resolvedPageId = await resolvePageId(req.params.slug, client);
       if (!resolvedPageId) {
         throw new Error('PAGE_NOT_FOUND');
       }
@@ -363,9 +440,9 @@ router.post('/:idOrSlug/versions/:versionId/publish', async (req, res) => {
 });
 
 // Delete page
-router.delete('/:id', async (req, res) => {
+router.delete('/:slug', async (req, res) => {
   try {
-    const pageId = await resolvePageId(req.params.id);
+    const pageId = await resolvePageId(req.params.slug);
     if (!pageId) {
       return res.status(404).json({ error: 'Page not found' });
     }

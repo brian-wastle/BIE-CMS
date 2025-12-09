@@ -111,13 +111,45 @@ async function loadPublishedPageBySlug(slug: string): Promise<Page | null> {
   return mapVersionToPage(rows[0]);
 }
 
-router.get('/published', async (_req, res) => {
+router.get('/published', async (req, res) => {
+  const limitParam = Number.parseInt(String(req.query.limit ?? ''), 10);
+  const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 50) : 10;
+  const cursorUpdatedAtRaw = typeof req.query.cursorUpdatedAt === 'string' ? req.query.cursorUpdatedAt : null;
+  const cursorIdRaw = typeof req.query.cursorId === 'string' ? req.query.cursorId : null;
+
+  if ((cursorUpdatedAtRaw && !cursorIdRaw) || (!cursorUpdatedAtRaw && cursorIdRaw)) {
+    return res.status(400).json({ error: 'Invalid cursor' });
+  }
+
+  const params: any[] = [];
+  const publishedSortExpr = 'COALESCE(v.published_at, v.updated_at, p.updated_at)';
+  let cursorClause = '';
+
+  if (cursorUpdatedAtRaw && cursorIdRaw) {
+    const parsedCursorDate = new Date(cursorUpdatedAtRaw);
+    if (Number.isNaN(parsedCursorDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid cursor' });
+    }
+    const cursorUpdatedAtIdx = params.push(parsedCursorDate.toISOString());
+    const cursorIdIdx = params.push(cursorIdRaw);
+    cursorClause = `
+      AND (
+        ${publishedSortExpr} < $${cursorUpdatedAtIdx}::timestamptz
+        OR (${publishedSortExpr} = $${cursorUpdatedAtIdx}::timestamptz AND p.id < $${cursorIdIdx}::uuid)
+      )
+    `;
+  }
+
+  const fetchLimit = limit + 1;
+  const limitIdx = params.push(fetchLimit);
+
   try {
     const { rows } = await pool.query(
       `
       SELECT
         p.id AS page_id,
         p.slug,
+        p.updated_at AS page_updated_at,
         v.status,
         v.title,
         v.blocks,
@@ -125,21 +157,44 @@ router.get('/published', async (_req, res) => {
         v.created_by,
         v.created_at AS version_created_at,
         v.updated_at AS version_updated_at,
-        v.published_at
+        v.published_at,
+        ${publishedSortExpr} AS published_sort
       FROM pages p
       JOIN page_versions v ON v.id = p.published_version_id
       WHERE p.published_version_id IS NOT NULL
-      ORDER BY v.published_at DESC NULLS LAST, p.updated_at DESC
-      `
+      ${cursorClause}
+      ORDER BY published_sort DESC, p.id DESC
+      LIMIT $${limitIdx}
+      `,
+      params
     );
 
-    const pages: PageSummary[] = rows.map((row) =>
+    const hasMore = rows.length > limit;
+    const limitedRows = hasMore ? rows.slice(0, limit) : rows;
+
+    const pages: PageSummary[] = limitedRows.map((row) =>
       PageSummarySchema.parse({
         page: mapVersionToPage(row),
       })
     );
 
-    return res.json({ pages });
+    let nextCursor: { cursorUpdatedAt: string; cursorId: string } | null = null;
+    if (hasMore && limitedRows.length) {
+      const lastRow = limitedRows[limitedRows.length - 1];
+      const cursorDate =
+        lastRow.published_sort ?? lastRow.published_at ?? lastRow.version_updated_at ?? lastRow.page_updated_at ?? lastRow.updated_at;
+      if (cursorDate) {
+        const dateValue = new Date(cursorDate);
+        if (!Number.isNaN(dateValue.getTime())) {
+          nextCursor = {
+            cursorUpdatedAt: dateValue.toISOString(),
+            cursorId: lastRow.page_id ?? lastRow.id,
+          };
+        }
+      }
+    }
+
+    return res.json({ pages, limit, nextCursor });
   } catch (err) {
     console.error('Failed to list published pages', err);
     return res.status(500).json({ error: 'Failed to list published pages' });
@@ -161,14 +216,45 @@ router.get('/published/:slug', async (req, res) => {
 
 router.use(requireAccess);
 
-// Get all pages in order of most recent updates
-router.get('/', async (_req, res) => {
+// Get paginated pages in order of most recent updates
+router.get('/', async (req, res) => {
+  const limitParam = Number.parseInt(String(req.query.limit ?? ''), 10);
+  const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 50) : 10;
+  const cursorUpdatedAtRaw = typeof req.query.cursorUpdatedAt === 'string' ? req.query.cursorUpdatedAt : null;
+  const cursorIdRaw = typeof req.query.cursorId === 'string' ? req.query.cursorId : null;
+
+  if ((cursorUpdatedAtRaw && !cursorIdRaw) || (!cursorUpdatedAtRaw && cursorIdRaw)) {
+    return res.status(400).json({ error: 'Invalid cursor' });
+  }
+
+  let cursorClause = '';
+  const params: any[] = [];
+
+  if (cursorUpdatedAtRaw && cursorIdRaw) {
+    const parsedCursorDate = new Date(cursorUpdatedAtRaw);
+    if (Number.isNaN(parsedCursorDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid cursor' });
+    }
+    const cursorUpdatedAtIdx = params.push(parsedCursorDate.toISOString());
+    const cursorIdIdx = params.push(cursorIdRaw);
+    cursorClause = `
+      WHERE (
+        p.updated_at < $${cursorUpdatedAtIdx}::timestamptz
+        OR (p.updated_at = $${cursorUpdatedAtIdx}::timestamptz AND p.id < $${cursorIdIdx}::uuid)
+      )
+    `;
+  }
+
+  const fetchLimit = limit + 1;
+  const limitIdx = params.push(fetchLimit);
+
   try {
     const { rows } = await pool.query(
       `
       SELECT
         p.id AS page_id,
         p.slug,
+        p.updated_at AS page_updated_at,
         v.status,
         v.title,
         v.blocks,
@@ -185,17 +271,38 @@ router.get('/', async (_req, res) => {
         ORDER BY created_at DESC
         LIMIT 1
       ) v ON true
-      ORDER BY p.updated_at DESC
-      `
+      ${cursorClause}
+      ORDER BY p.updated_at DESC, p.id DESC
+      LIMIT $${limitIdx}
+      `,
+      params
     );
 
-    const pages: PageSummary[] = rows.map((row) =>
+    const hasMore = rows.length > limit;
+    const limitedRows = hasMore ? rows.slice(0, limit) : rows;
+
+    const pages: PageSummary[] = limitedRows.map((row) =>
       PageSummarySchema.parse({
         page: mapVersionToPage(row),
       })
     );
 
-    return res.json({ pages });
+    let nextCursor: { cursorUpdatedAt: string; cursorId: string } | null = null;
+    if (hasMore && limitedRows.length) {
+      const lastRow = limitedRows[limitedRows.length - 1];
+      const cursorDate = lastRow.page_updated_at ?? lastRow.version_updated_at ?? lastRow.updated_at;
+      if (cursorDate) {
+        const dateValue = new Date(cursorDate);
+        if (!Number.isNaN(dateValue.getTime())) {
+          nextCursor = {
+            cursorUpdatedAt: dateValue.toISOString(),
+            cursorId: lastRow.page_id ?? lastRow.id,
+          };
+        }
+      }
+    }
+
+    return res.json({ pages, limit, nextCursor });
   } catch (err) {
     console.error('Failed to list pages', err);
     return res.status(500).json({ error: 'Failed to list pages' });

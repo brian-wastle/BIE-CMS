@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, TrackByFunction, computed, inject, signal } from '@angular/core';
+import { Component, TrackByFunction, inject, signal, computed } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import type { PageSummary } from 'bie-models';
-import { PagesService } from '../../services/pages/pages.service';
-import type { PageListCursor, PageListParams } from '../../services/pages/pages.service';
+import { PagesService, PageListCursor, PageListParams } from '../../services/pages/pages.service';
+
 
 @Component({
   selector: 'app-draft-manager',
@@ -25,7 +25,7 @@ export class DraftManagerComponent {
   readonly hasMoreData = signal(true);
   private readonly pendingPageCount = signal(0);
 
-  readonly pagesOnPage = computed(() => this.pageCache()[this.currentPageIndex()] ?? []);
+  readonly displayedPages = computed(() => this.pageCache()[this.currentPageIndex()] ?? []);
   readonly loadedPages = computed(() => this.pageCache().length);
   readonly currentPageDisplay = computed(() => (this.loadedPages() ? this.currentPageIndex() + 1 : 0));
   readonly hasPrevPage = computed(() => this.currentPageIndex() > 0);

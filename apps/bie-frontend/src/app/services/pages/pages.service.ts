@@ -37,7 +37,7 @@ export class PagesService {
     return payload;
   }
 
-  // Get paged paginated
+  // Get all blogs paginated
   async list(params: PageListParams = {}): Promise<PageListResult> {
     const search = new URLSearchParams();
     if (typeof params.limit === 'number') {
@@ -58,29 +58,43 @@ export class PagesService {
       nextCursor: payload.nextCursor ?? null,
     };
   }
-
-  async listPublished(): Promise<PageSummary[]> {
-    const res = await fetch(this.buildApiUrl('/api/pages/published'), this.withServerCookies({ credentials: 'include' }));
+  // Get published blogs paginated 
+  async listPublished(params: PageListParams = {}): Promise<PageListResult> {
+    const search = new URLSearchParams();
+    if (typeof params.limit === 'number') {
+      search.set('limit', String(params.limit));
+    }
+    if (params.cursorUpdatedAt && params.cursorId) {
+      search.set('cursorUpdatedAt', params.cursorUpdatedAt);
+      search.set('cursorId', params.cursorId);
+    }
+    const query = search.toString();
+    const url = query ? `/api/pages/published?${query}` : '/api/pages/published';
+    const res = await fetch(this.buildApiUrl(url), this.withServerCookies({ credentials: 'include' }));
     if (!res.ok) throw new Error('Failed to load published pages.');
     const payload = await res.json();
-    return payload.pages ?? [];
+    return {
+      pages: payload.pages ?? [],
+      limit: Number(payload.limit) || params.limit || 10,
+      nextCursor: payload.nextCursor ?? null,
+    };
   }
 
-  // Get page by slug
+  // Get blog by slug
   async get(slug: string): Promise<Page> {
     const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({ credentials: 'include' }));
     if (!res.ok) throw new Error('Failed to load page.');
     return this.unwrapPage(await res.json());
   }
 
-  // Get published page by slug
+  // Get published blog by slug
   async getPublished(slug: string): Promise<Page> {
     const res = await fetch(this.buildApiUrl(`/api/pages/published/${encodeURIComponent(slug)}`), this.withServerCookies({ credentials: 'include' }));
     if (!res.ok) throw new Error(res.status === 404 ? 'Published page not found.' : 'Failed to load page.');
     return this.unwrapPage(await res.json());
   }
 
-  // Create new page
+  // Create new blog
   async post(payload: PageWrite): Promise<Page> {
     const res = await fetch(this.buildApiUrl('/api/pages'), this.withServerCookies({
       method: 'POST',
@@ -92,7 +106,7 @@ export class PagesService {
     return this.unwrapPage(await res.json());
   }
 
-  // Update an existing page by slug
+  // Update an existing blog by slug
   async update(slug: string, payload: PageUpdate): Promise<Page> {
     const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({
       method: 'PUT',
@@ -104,7 +118,7 @@ export class PagesService {
     return this.unwrapPage(await res.json());
   }
 
-  // Delete page by slug
+  // Delete blog by slug
   async delete(slug: string): Promise<void> {
     const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({
       method: 'DELETE',

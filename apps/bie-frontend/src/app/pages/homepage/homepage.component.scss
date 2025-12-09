@@ -1,0 +1,51 @@
+.homepage-flex {
+    display: flex;
+    flex-direction: column;
+}
+
+.page-list {
+    min-height: 50vh;
+
+    a {
+        color: #000000;
+        text-decoration: none;
+        width:fit-content;
+    }
+    a:visited {
+        color: #181818;
+    }
+
+    ul {
+        list-style: none;
+        padding-left: 8em;
+    }
+    
+}
+
+.blog-title {
+    font-size: larger;
+    display: flex;
+    align-items: center;
+
+    mat-icon {
+        margin-right: 16px;
+        font-size: 18px; 
+        width: 18px;
+        height: 18px;
+    }
+
+    h2 {
+        margin:0;
+    }
+}
+
+.blog-date {
+    font-size: smaller;
+    color: #747474;
+    margin: 8px 0 24px 36px;
+}
+
+.page-controls {
+    display: flex;
+    justify-content: center;
+}

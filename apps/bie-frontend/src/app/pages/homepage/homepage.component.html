@@ -1,1 +1,36 @@
-<p>homepage works!</p>
+<div class="homepage-flex">
+    @if (error(); as errorMessage) {
+    <div class="state state-error">
+        <p>{{ errorMessage }}</p>
+        <button type="button" (click)="refresh()" [disabled]="loading()">Try again</button>
+    </div>
+    } @else {
+    @if (loading() && !loadedPages()) {
+    <div class="state state-loading">
+        <p>Loading pages...</p>
+    </div>
+    }
+    <div class="page-list">
+        <ul role="list">
+            @for (summary of displayedPages(); track summary.page.id) {
+            <li class="blog-item">
+                <div>
+                <a class="blog-title" [routerLink]="['/blog', summary.page.slug]">
+                    <mat-icon>feed</mat-icon>
+                    <h2>{{ summary.page.title }}</h2>
+                </a>
+                </div>
+                <p class="blog-date">{{ (summary.page.publishedAt) | date:"MMM dd, yyyy 'at' hh:mm a" }}
+                </p>
+            </li>
+            }
+        </ul>
+    </div>
+
+    <div class="page-controls">
+        <button type="button" (click)="prevPage()" [disabled]="!hasPrevPage() || loading()">Previous</button>
+        <span>Page {{ currentPageDisplay() }} of {{ loadedPages() }}</span>
+        <button type="button" (click)="nextPage()" [disabled]="!hasNextPage() || loading()">Next</button>
+    </div>
+    }
+</div>

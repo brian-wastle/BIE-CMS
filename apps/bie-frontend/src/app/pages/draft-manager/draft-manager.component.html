@@ -11,7 +11,7 @@
     <header class="panel-header">
       <div>
         <h3>All Pages</h3>
-        <p>{{ pagesOnPage().length }} page{{ pagesOnPage().length === 1 ? '' : 's' }} on this page</p>
+        <p>{{ displayedPages().length }} page{{ displayedPages().length === 1 ? '' : 's' }} on this page</p>
       </div>
       <div class="panel-controls">
         <button type="button" (click)="prevPage()" [disabled]="!hasPrevPage() || loading()">Previous</button>
@@ -37,9 +37,9 @@
       <p>No pages have been created yet.</p>
       <a routerLink="/author" class="link">Create your first page</a>
     </div>
-    } @else if (pagesOnPage().length) {
+    } @else if (displayedPages().length) {
     <ul class="draft-list">
-      @for (summary of pagesOnPage(); track trackByPage($index, summary)) {
+      @for (summary of displayedPages(); track trackByPage($index, summary)) {
       <li class="draft-item">
         <div class="draft-primary">
           <p class="draft-title">{{ summary.page.title }}</p>

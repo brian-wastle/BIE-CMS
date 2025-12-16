@@ -16,6 +16,10 @@ const browserDistFolder = resolve(serverDistFolder, '../browser');
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
+app.use((_req, res, next) => {
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 app.use(express.static(browserDistFolder, {
   maxAge: '1y',
   index: false,

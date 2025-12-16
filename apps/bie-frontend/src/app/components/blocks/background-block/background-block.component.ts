@@ -5,7 +5,6 @@ import { BlockShell } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-background-block',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './background-block.component.html',
   styleUrls: ['./background-block.component.scss'],

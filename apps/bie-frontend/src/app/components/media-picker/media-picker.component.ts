@@ -8,7 +8,6 @@ const SKELETON_TILE_COUNT = 8;
 
 @Component({
   selector: 'app-media-picker',
-  standalone: true,
   imports: [CommonModule, MatIconModule],
   templateUrl: './media-picker.component.html',
   styleUrl: './media-picker.component.scss',

@@ -14,7 +14,6 @@ import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
 
 @Component({
   selector: 'app-published-page',
-  standalone: true,
   imports: [
     CommonModule,
     BlogTitleComponent,

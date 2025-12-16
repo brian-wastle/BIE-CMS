@@ -7,7 +7,6 @@ import { PagesService, PageListCursor, PageListParams } from '../../services/pag
 
 @Component({
   selector: 'app-draft-manager',
-  standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './draft-manager.component.html',
   styleUrl: './draft-manager.component.scss'

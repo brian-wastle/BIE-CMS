@@ -6,7 +6,6 @@ import type { MediaItem } from '../../services/media-library/media-library.servi
 
 @Component({
   selector: 'app-media-browser',
-  standalone: true,
   imports: [DirectoryBrowserComponent, MediaPickerComponent],
   templateUrl: './media-browser.component.html',
   styleUrl: './media-browser.component.scss'

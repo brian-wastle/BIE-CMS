@@ -10,7 +10,6 @@ import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-cms-shell',
-  standalone: true,
   imports: [
     CommonModule,
     RouterOutlet,

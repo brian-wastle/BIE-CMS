@@ -5,7 +5,6 @@ import { BlockShell } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-title-block',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './blog-title.component.html',
   styleUrls: ['./blog-title.component.scss']

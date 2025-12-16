@@ -7,7 +7,6 @@ import { GridPlacement, AlignType } from 'bie-models';
 
 @Component({
   selector: 'app-layout-controls',
-  standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
   templateUrl: './layout-controls.component.html',
   styleUrls: ['./layout-controls.component.scss'],

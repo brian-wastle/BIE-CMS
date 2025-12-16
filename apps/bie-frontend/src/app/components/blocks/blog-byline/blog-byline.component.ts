@@ -6,7 +6,6 @@ const DISPLAY_FORMAT = 'MMMM d, y';
 
 @Component({
   selector: 'app-byline-block',
-  standalone: true,
   imports: [CommonModule, DatePipe],
   templateUrl: './blog-byline.component.html',
   styleUrls: ['./blog-byline.component.scss'],

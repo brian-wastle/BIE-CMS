@@ -5,7 +5,6 @@ import { BlockShell } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-horizontal-rule-block',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './horizontal-rule-block.component.html',
   styleUrls: ['./horizontal-rule-block.component.scss'],

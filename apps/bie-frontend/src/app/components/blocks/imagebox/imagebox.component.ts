@@ -6,7 +6,6 @@ import { BlockShell } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-imagebox',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './imagebox.component.html',
   styleUrls: ['./imagebox.component.scss'],

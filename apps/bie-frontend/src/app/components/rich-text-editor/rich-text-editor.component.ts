@@ -6,7 +6,6 @@ import type { QuillModules } from 'ngx-quill/config';
 
 @Component({
   selector: 'app-rich-text-editor',
-  standalone: true,
   imports: [CommonModule, FormsModule, QuillEditorComponent],
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss'

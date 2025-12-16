@@ -20,7 +20,6 @@ interface UploadItem {
 
 @Component({
   selector: 'app-media-upload',
-  standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MediaBrowserComponent],
   templateUrl: './media-upload.component.html',
   styleUrl: './media-upload.component.scss'

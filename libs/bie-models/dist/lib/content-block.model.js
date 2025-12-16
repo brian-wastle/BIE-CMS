@@ -31,7 +31,7 @@ export const ImageStyleSchema = z
 })
     .strict();
 // Block base and component schemas
-const ContentBlockBaseSchema = z.object({
+const BlockBaseSchema = z.object({
     id: z.string(),
     type: BlockTypeSchema,
     layout: GridPlacementSchema,
@@ -41,60 +41,65 @@ const ContentBlockBaseSchema = z.object({
     vAlign: AlignTypeSchema,
     responsive: ResponsiveOverridesSchema.optional(),
 });
-export const TitleBlockSchema = ContentBlockBaseSchema.extend({
+export const TitleBlockSchema = BlockBaseSchema.extend({
     type: z.literal('title'),
     text: z.string(),
 });
-export const BylineBlockSchema = ContentBlockBaseSchema.extend({
+export const BylineBlockSchema = BlockBaseSchema.extend({
     type: z.literal('byline'),
     author: z.string(),
     publishedAt: z.string().optional(),
 });
-export const TextBlockSchema = ContentBlockBaseSchema.extend({
+export const TextBlockSchema = BlockBaseSchema.extend({
     type: z.literal('text'),
     text: z.string(),
 });
-export const ImageBlockSchema = ContentBlockBaseSchema.extend({
+export const ImageBlockSchema = BlockBaseSchema.extend({
     type: z.literal('image'),
     src: z.string(),
     alt: z.string().optional(),
     mediaHandle: z.string().nullable().optional(),
     imageStyle: ImageStyleSchema.optional(),
 });
-export const BGBlockSchema = ContentBlockBaseSchema.extend({
+export const VideoBlockSchema = BlockBaseSchema.extend({
+    type: z.literal('video'),
+    videoId: z.string(),
+    videoUrl: z.string().optional(),
+    caption: z.string().nullish(),
+});
+export const BGBlockSchema = BlockBaseSchema.extend({
     type: z.literal('background'),
     src: z.string().optional(),
     mediaHandle: z.string().nullable().optional(),
     bgStyle: BGStyleSchema.default('stretch'),
 });
-export const DividerBlockSchema = ContentBlockBaseSchema.extend({
+export const DividerBlockSchema = BlockBaseSchema.extend({
     type: z.literal('divider'),
 });
-export const AnyBlockSchema = z.discriminatedUnion('type', [
+const BlockSchemas = [
     TitleBlockSchema,
     BylineBlockSchema,
     TextBlockSchema,
+    VideoBlockSchema,
     ImageBlockSchema,
     BGBlockSchema,
     DividerBlockSchema,
-]);
-export const BlockUpdateSchema = z.object({
-    layout: GridPlacementSchema.optional(),
-    text: z.string().optional(),
-    src: z.string().optional(),
-    alt: z.string().optional(),
-    mediaHandle: z.string().nullable().optional(),
-    imageStyle: ImageStyleSchema.optional(),
-    color: z.string().optional(),
-    bgStyle: BGStyleSchema.optional(),
-    author: z.string().optional(),
-    format: z.string().optional(),
-    publishedAt: z.string().optional(),
-    fontSize: z.coerce.number().nullable().optional(),
-    hAlign: AlignTypeSchema.optional(),
-    vAlign: AlignTypeSchema.optional(),
-    responsive: ResponsiveOverridesSchema.nullable().optional(),
-});
+];
+export const AnyBlockSchema = z.discriminatedUnion('type', BlockSchemas);
+const BlockUpdateShape = BlockSchemas.reduce((shape, blockSchema) => {
+    const partialShape = blockSchema.partial().shape;
+    Object.entries(partialShape).forEach(([key, value]) => {
+        if (key === 'id' || key === 'type') {
+            return;
+        }
+        shape[key] = value;
+    });
+    return shape;
+}, {});
+if (BlockUpdateShape.responsive) {
+    BlockUpdateShape.responsive = ResponsiveOverridesSchema.nullable().optional();
+}
+export const BlockUpdateSchema = z.object(BlockUpdateShape);
 // Page models
 export const DirectoryMetaSchema = z.object({
     directory: z.string().nullable(),

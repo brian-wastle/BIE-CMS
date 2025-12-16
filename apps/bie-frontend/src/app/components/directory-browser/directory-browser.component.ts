@@ -8,7 +8,6 @@ import { MediaLibraryService } from '../../services/media-library/media-library.
 
 @Component({
   selector: 'app-directory-browser',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, MatTableModule, MatSortModule],
   templateUrl: './directory-browser.component.html',
   styleUrl: './directory-browser.component.scss',

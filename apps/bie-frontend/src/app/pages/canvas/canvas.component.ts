@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { CurrentUserService } from '../../services/current-user/current-user.service';
 import { PagesService } from '../../services/pages/pages.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AnyBlock, TextBlock, ImageBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, Page, PageStatus, PageWrite, PageUpdate } from 'bie-models';
+import { AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, Page, PageStatus, PageWrite, PageUpdate } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -20,6 +20,8 @@ import { RichTextEditorComponent } from '../../components/rich-text-editor/rich-
 import type { MediaItem } from '../../services/media-library/media-library.service';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
+import { extractYoutubeId } from '../../utils/youtube';
+import { VideoBoxComponent } from '../../components/blocks/videobox/videobox.component';
 
 type PreviewModeId = 'responsive' | 'mobile' | 'tablet' | 'desktop' | 'hd';
 
@@ -51,13 +53,13 @@ const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
 
 @Component({
   selector: 'app-canvas',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
     MatIconModule,
     TextBoxComponent,
     ImageBoxComponent,
+    VideoBoxComponent,
     BlogTitleComponent,
     BlogBylineComponent,
     MediaBrowserCarouselComponent,
@@ -154,6 +156,31 @@ export class CanvasComponent implements AfterViewInit {
       }
       changed = true;
       return { ...block, text: title };
+    });
+    if (changed) {
+      this.blocks.set(next);
+    }
+  });
+  private readonly videoBlockSyncEffect = effect(() => {
+    const blocks = this.blocks();
+    let changed = false;
+    const next = blocks.map(block => {
+      if (!this.isVideoBlock(block)) {
+        return block;
+      }
+      const trimmedUrl = (block.videoUrl ?? '').trim();
+      const parsedFromUrl = extractYoutubeId(trimmedUrl);
+      const trimmedId = (block.videoId ?? '').trim();
+      const resolvedId = trimmedId || parsedFromUrl;
+      if (resolvedId === block.videoId && trimmedUrl === (block.videoUrl ?? '')) {
+        return block;
+      }
+      changed = true;
+      return {
+        ...block,
+        videoId: resolvedId,
+        videoUrl: trimmedUrl,
+      };
     });
     if (changed) {
       this.blocks.set(next);
@@ -448,6 +475,7 @@ export class CanvasComponent implements AfterViewInit {
   isTitleBlock(block: AnyBlock): block is TitleBlock { return block.type === 'title'; }
   isBylineBlock(block: AnyBlock): block is BylineBlock { return block.type === 'byline'; }
   isTextBlock(block: AnyBlock): block is TextBlock { return block.type === 'text'; }
+  isVideoBlock(block: AnyBlock): block is VideoBlock { return block.type === 'video'; }
   isImageBlock(block: AnyBlock): block is ImageBlock { return block.type === 'image'; }
   isBackgroundBlock(block: AnyBlock): block is BGBlock { return block.type === 'background'; }
   isDividerBlock(block: AnyBlock): block is DividerBlock { return block.type === 'divider'; }
@@ -500,14 +528,16 @@ export class CanvasComponent implements AfterViewInit {
         colSpan: this.columns,
         rowSpan: 2,
       }, arr);
-      return [...arr, {
-        id,
-        type: 'byline',
-        layout,
-        hAlign: "flex-start",
-        vAlign: "flex-start",
-        author: this.currentAuthor()
-      } as BylineBlock];
+      return [
+        ...arr,
+        {
+          id,
+          type: 'byline',
+          layout,
+          hAlign: "flex-start",
+          vAlign: "flex-start",
+          author: this.currentAuthor()
+        } as BylineBlock];
     });
     this.selectedId.set(id);
   }
@@ -522,7 +552,42 @@ export class CanvasComponent implements AfterViewInit {
         colSpan: Math.min(this.columns, 8),
         rowSpan: 4,
       }, arr);
-      return [...arr, { id, type: 'text', layout, hAlign: "flex-start", vAlign: "flex-start", text: '' } as TextBlock];
+      return [
+        ...arr,
+        {
+          id,
+          type: 'text',
+          layout,
+          hAlign: "flex-start",
+          vAlign: "flex-start",
+          text: ''
+        } as TextBlock];
+    });
+    this.selectedId.set(id);
+  }
+
+  addVideo() {
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+    this.blocks.update(arr => {
+      const nextRow = this.nextRow(arr);
+      const layout = this.autoPlace(id, {
+        row: nextRow,
+        colStart: 1,
+        colSpan: Math.min(this.columns, 4),
+        rowSpan: 3,
+      }, arr);
+      return [
+        ...arr,
+        {
+          id,
+          type: 'video',
+          layout,
+          hAlign: "flex-start",
+          vAlign: "flex-start",
+          videoId: '',
+          videoUrl: ''
+        } as VideoBlock
+      ];
     });
     this.selectedId.set(id);
   }
@@ -624,7 +689,7 @@ export class CanvasComponent implements AfterViewInit {
     const hAlign = block.hAlign ?? 'flex-start';
     const vAlign = block.vAlign ?? 'flex-start';
     const stretchContent =
-      this.isTextBlock(block) || this.isBackgroundBlock(block) || this.isImageBlock(block) || this.isDividerBlock(block);
+      this.isTextBlock(block) || this.isBackgroundBlock(block) || this.isVideoBlock(block) || this.isImageBlock(block) || this.isDividerBlock(block);
     const alignItems = stretchContent ? 'stretch' : hAlign;
     const justifyContent = stretchContent ? 'stretch' : vAlign;
     return {
@@ -874,18 +939,60 @@ export class CanvasComponent implements AfterViewInit {
     this.onBlockUpdate(block, { text: next });
   }
 
+  onVideoUrlChange(block: VideoBlock, url: string | null | undefined) {
+    if (!this.isVideoBlock(block)) {
+      return;
+    }
+    const input = (url ?? '').trim();
+    const nextId = extractYoutubeId(input);
+    if ((block.videoId ?? '') === nextId && (block.videoUrl ?? '') === input) {
+      return;
+    }
+    this.onBlockUpdate(block, { videoId: nextId, videoUrl: input });
+  }
+
+  onVideoCaptionChange(block: VideoBlock, caption: string | null | undefined) {
+    if (!this.isVideoBlock(block)) {
+      return;
+    }
+    const nextCaption = (caption ?? '').trim();
+    if ((block.caption ?? '') === nextCaption) {
+      return;
+    }
+    this.onBlockUpdate(block, { caption: nextCaption });
+  }
+
   private readonly ParsedPatchSchema = BlockUpdateSchema.partial();
-  private normalizePatch = (input: BlockUpdate | null) => {
+  private readonly allowedPatchKeys = new Set(Object.keys(BlockUpdateSchema.shape));
+  private normalizePatch = (input: BlockUpdate | null): BlockUpdate | null => {
+    if (!input) {
+      return null;
+    }
     const parsed = this.ParsedPatchSchema.safeParse(input);
-    return parsed.success ? parsed.data : null;
+    if (!parsed.success) {
+      return null;
+    }
+    const normalized = parsed.data as BlockUpdate;
+    const normalizedRecord = normalized as Record<string, unknown>;
+    const originalRecord = input as Record<string, unknown>;
+    for (const key of Object.keys(originalRecord)) {
+      if (!this.allowedPatchKeys.has(key)) {
+        continue;
+      }
+      if (Object.prototype.hasOwnProperty.call(normalizedRecord, key) && normalizedRecord[key] !== undefined) {
+        continue;
+      }
+      normalizedRecord[key] = originalRecord[key];
+    }
+    return normalized;
   };
 
   onBlockUpdate(block: AnyBlock, patch: BlockUpdate) {
     const normalized = this.normalizePatch(patch);
     if (!normalized) {
+      console.warn('[Canvas] onBlockUpdate skipped (invalid patch)', { blockId: block.id, patch });
       return;
     }
-
     this.blocks.update(arr => arr.map(b => {
       if (b.id !== block.id) {
         return b;
@@ -932,6 +1039,18 @@ export class CanvasComponent implements AfterViewInit {
             imageStyle: { ...(next.imageStyle ?? {}), columns: layoutColSpan },
           };
         }
+      } else if (this.isVideoBlock(next)) {
+        const prevState = {
+          videoId: next.videoId,
+          videoUrl: next.videoUrl,
+          caption: next.caption,
+        };
+        next = {
+          ...next,
+          ...(normalized.videoId !== undefined ? { videoId: normalized.videoId ?? next.videoId } : {}),
+          ...(normalized.videoUrl !== undefined ? { videoUrl: normalized.videoUrl ?? next.videoUrl } : {}),
+          ...(normalized.caption !== undefined ? { caption: normalized.caption ?? null } : {}),
+        };
       } else if (this.isBylineBlock(next)) {
         next = {
           ...next,

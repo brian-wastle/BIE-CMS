@@ -85,9 +85,7 @@
                   [style.--rowHeight.px]="tileRowHeight" (click)="onPreviewCanvasClick($event)">
 
                   @for (block of pageBlocks(); track trackByBlockId($index, block)) {
-                  <div class="block"
-                    [ngClass]="{ selected: selectedId() === block.id }"
-                    [ngStyle]="blockStyle(block)"
+                  <div class="block" [ngClass]="{ selected: selectedId() === block.id }" [ngStyle]="blockStyle(block)"
                     (click)="onPreviewBlockClick(block.id, $event)">
 
                     @if (isTextBlock(block)) {
@@ -98,25 +96,29 @@
                     <app-imagebox [block]="block">
                     </app-imagebox>
                     }
-                  @if (isBackgroundBlock(block)) {
-                  <app-background-block [block]="block">
-                  </app-background-block>
-                  }
-                  @if (isBylineBlock(block)) {
+                    @if (isVideoBlock(block)) {
+                    <app-videobox [block]="block">
+                    </app-videobox>
+                    }
+                    @if (isBackgroundBlock(block)) {
+                    <app-background-block [block]="block">
+                    </app-background-block>
+                    }
+                    @if (isBylineBlock(block)) {
                     <app-byline-block [block]="block">
                     </app-byline-block>
                     }
-                  @if (isTitleBlock(block)) {
-                  <app-title-block [block]="block">
-                  </app-title-block>
-                  }
-                  @if (isDividerBlock(block)) {
-                  <app-horizontal-rule-block [block]="block">
-                  </app-horizontal-rule-block>
+                    @if (isTitleBlock(block)) {
+                    <app-title-block [block]="block">
+                    </app-title-block>
+                    }
+                    @if (isDividerBlock(block)) {
+                    <app-horizontal-rule-block [block]="block">
+                    </app-horizontal-rule-block>
+                    }
+                  </div>
                   }
                 </div>
-                }
-              </div>
               </div>
             </div>
           </div>
@@ -129,8 +131,9 @@
       <button type="button" class="palette-button" (click)="addTitle()">+ Title</button>
       <button type="button" class="palette-button" (click)="addByline()">+ Byline</button>
       <button type="button" class="palette-button" (click)="addText()">+ Text</button>
-      <button type="button" class="palette-button" (click)="addHorizontalRule()">+ Divider</button>
       <button type="button" class="palette-button" (click)="addImage()">+ Image</button>
+      <button type="button" class="palette-button" (click)="addVideo()">+ Video</button>
+      <button type="button" class="palette-button" (click)="addHorizontalRule()">+ Divider</button>
       <button type="button" class="palette-button" (click)="addBackground()">+ Background</button>
     </aside>
   </div>
@@ -247,6 +250,25 @@
             </div>
           </div>
         </mat-expansion-panel>
+      </mat-expansion-panel>
+      }
+      @if (isVideoBlock(block)) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <h4>Video settings</h4>
+        </mat-expansion-panel-header>
+          <div class="inspector-section inspector-video">
+          <label>
+            <span>YouTube URL or ID</span>
+            <input type="text" placeholder="https://youtu.be/..." [ngModel]="block.videoUrl ?? block.videoId"
+              (ngModelChange)="onVideoUrlChange(block, $event)">
+          </label>
+          <label>
+            <span>Caption (optional)</span>
+            <input type="text" placeholder="Add a short description" [ngModel]="block.caption ?? ''"
+              (ngModelChange)="onVideoCaptionChange(block, $event)">
+          </label>
+        </div>
       </mat-expansion-panel>
       }
       @if (isBackgroundBlock(block)) {

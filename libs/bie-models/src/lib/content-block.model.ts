@@ -51,7 +51,7 @@ export type ImageStyle = z.infer<typeof ImageStyleSchema>;
 
 
 // Block base and component schemas
-const ContentBlockBaseSchema = z.object({
+const BlockBaseSchema = z.object({
   id: z.string(),
   type: BlockTypeSchema,
   layout: GridPlacementSchema,
@@ -62,26 +62,26 @@ const ContentBlockBaseSchema = z.object({
   responsive: ResponsiveOverridesSchema.optional(),
 });
 
-export const TitleBlockSchema = ContentBlockBaseSchema.extend({
+export const TitleBlockSchema = BlockBaseSchema.extend({
   type: z.literal('title'),
   text: z.string(),
 });
 export type TitleBlock = z.infer<typeof TitleBlockSchema>;
 
-export const BylineBlockSchema = ContentBlockBaseSchema.extend({
+export const BylineBlockSchema = BlockBaseSchema.extend({
   type: z.literal('byline'),
   author: z.string(),
   publishedAt: z.string().optional(),
 });
 export type BylineBlock = z.infer<typeof BylineBlockSchema>;
 
-export const TextBlockSchema = ContentBlockBaseSchema.extend({
+export const TextBlockSchema = BlockBaseSchema.extend({
   type: z.literal('text'),
   text: z.string(), 
 });
 export type TextBlock = z.infer<typeof TextBlockSchema>;
 
-export const ImageBlockSchema = ContentBlockBaseSchema.extend({
+export const ImageBlockSchema = BlockBaseSchema.extend({
   type: z.literal('image'),
   src: z.string(),
   alt: z.string().optional(),
@@ -90,7 +90,15 @@ export const ImageBlockSchema = ContentBlockBaseSchema.extend({
 });
 export type ImageBlock = z.infer<typeof ImageBlockSchema>;
 
-export const BGBlockSchema = ContentBlockBaseSchema.extend({
+export const VideoBlockSchema = BlockBaseSchema.extend({
+  type: z.literal('video'),
+  videoId: z.string(),
+  videoUrl: z.string().optional(),
+  caption: z.string().nullish(),
+});
+export type VideoBlock = z.infer<typeof VideoBlockSchema>;
+
+export const BGBlockSchema = BlockBaseSchema.extend({
   type: z.literal('background'),
   src: z.string().optional(),
   mediaHandle: z.string().nullable().optional(),
@@ -98,39 +106,54 @@ export const BGBlockSchema = ContentBlockBaseSchema.extend({
 });
 export type BGBlock = z.infer<typeof BGBlockSchema>;
 
-export const DividerBlockSchema = ContentBlockBaseSchema.extend({
+export const DividerBlockSchema = BlockBaseSchema.extend({
   type: z.literal('divider'),
 });
 export type DividerBlock = z.infer<typeof DividerBlockSchema>;
 
-export const AnyBlockSchema = z.discriminatedUnion('type', [
+const BlockSchemas = [
   TitleBlockSchema,
   BylineBlockSchema,
   TextBlockSchema,
+  VideoBlockSchema,
   ImageBlockSchema,
   BGBlockSchema,
   DividerBlockSchema,
-]);
+] as const;
+
+export const AnyBlockSchema = z.discriminatedUnion('type', BlockSchemas);
 export type AnyBlock = z.infer<typeof AnyBlockSchema>; // Used during component creation/editing
 
-export const BlockUpdateSchema = z.object({
-  layout: GridPlacementSchema.optional(),
-  text: z.string().optional(),
-  src: z.string().optional(),
-  alt: z.string().optional(),
-  mediaHandle: z.string().nullable().optional(),
-  imageStyle: ImageStyleSchema.optional(),
-  color: z.string().optional(),
-  bgStyle: BGStyleSchema.optional(),
-  author: z.string().optional(),
-  format: z.string().optional(),
-  publishedAt: z.string().optional(),
-  fontSize: z.coerce.number().nullable().optional(),
-  hAlign: AlignTypeSchema.optional(),
-  vAlign: AlignTypeSchema.optional(),
-  responsive: ResponsiveOverridesSchema.nullable().optional(),
-});
-export type BlockUpdate = z.infer<typeof BlockUpdateSchema>;
+const BlockUpdateShape = BlockSchemas.reduce<Record<string, z.ZodTypeAny>>((shape, blockSchema) => {
+  const partialShape = blockSchema.partial().shape as Record<string, z.ZodTypeAny>;
+  Object.entries(partialShape).forEach(([key, value]) => {
+    if (key === 'id' || key === 'type') {
+      return;
+    }
+    shape[key] = value;
+  });
+  return shape;
+}, {});
+
+if (BlockUpdateShape.responsive) {
+  BlockUpdateShape.responsive = ResponsiveOverridesSchema.nullable().optional();
+}
+
+export const BlockUpdateSchema = z.object(BlockUpdateShape);
+
+type UnionToIntersection<U> =
+  (U extends unknown ? (arg: U) => void : never) extends (arg: infer I) => void ? I : never;
+// Alias "Schema" as naked type param on left side of extends causes distributive behavior in TS
+// In this case, the union of all block schemas
+type BlockPatchUnion = (typeof BlockSchemas)[number] extends infer Schema
+  ? Schema extends z.ZodTypeAny
+    ? Partial<Omit<z.infer<Schema>, 'id' | 'type'>>
+    : never
+  : never;
+type BlockUpdateProps = UnionToIntersection<BlockPatchUnion>;
+type Simplify<T> = { [K in keyof T]: T[K] };
+
+export type BlockUpdate = Simplify<z.infer<typeof BlockUpdateSchema> & BlockUpdateProps>;
 
 // Page models
 export const DirectoryMetaSchema = z.object({

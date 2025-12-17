@@ -4,6 +4,8 @@ import { PublicShellComponent } from './pages/public-shell/public-shell.componen
 import { CmsShellComponent } from './components/cms-shell/cms-shell.component';
 import { PublishedPageComponent } from './pages/published-page/published-page.component';
 import { HomepageComponent } from './pages/homepage/homepage.component';
+import { publishedPageResolver } from './resolvers/published-page.resolver';
+import { ErrorPageComponent } from './pages/error-page/error-page.component';
 
 export const routes: Routes = [
   {
@@ -11,7 +13,7 @@ export const routes: Routes = [
     component: PublicShellComponent,
     children: [
       { path: '', pathMatch: 'full', component: HomepageComponent },
-      { path: 'blog/:slug', component: PublishedPageComponent },
+      { path: 'blog/:slug', component: PublishedPageComponent, resolve: { publishedPage: publishedPageResolver } },
     ],
   },
   {
@@ -26,5 +28,5 @@ export const routes: Routes = [
     ],
   },
   
-  { path: '**', redirectTo: '' },
+  { path: '**', component: ErrorPageComponent },
 ];

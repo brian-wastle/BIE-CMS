@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, TrackByFunction, computed, effect, forwardRef, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AnyBlock, BGBlock, BylineBlock, DividerBlock, ImageBlock, Page, TextBlock, TitleBlock } from 'bie-models';
-import { PagesService } from '../../services/pages/pages.service';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -11,6 +10,7 @@ import { ImageBoxComponent } from '../../components/blocks/imagebox/imagebox.com
 import { BackgroundBlockComponent } from '../../components/blocks/background-block/background-block.component';
 import { HorizontalRuleBlockComponent } from '../../components/blocks/horizontal-rule-block/horizontal-rule-block.component';
 import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
+import { PublishedPageResolverResult } from '../../resolvers/published-page.resolver';
 
 @Component({
   selector: 'app-published-page',
@@ -29,16 +29,14 @@ import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
 })
 export class PublishedPageComponent {
   readonly pageTitle = 'Published Page';
-  private readonly pagesService = inject(PagesService);
   private readonly route = inject(ActivatedRoute);
-  private readonly paramMap = toSignal(this.route.paramMap, {
-    initialValue: this.route.snapshot.paramMap,
+  private readonly routeData = toSignal(this.route.data, {
+    initialValue: this.route.snapshot.data,
   });
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly page = signal<Page | null>(null);
-  private loadSeq = 0;
 
   readonly gridColumns = 12;
   readonly gridGapPx = 16;
@@ -62,38 +60,17 @@ export class PublishedPageComponent {
 
   constructor() {
     effect(() => {
-      const slug = this.paramMap().get('slug')?.trim();
-      if (!slug) {
+      const resolved = this.routeData()?.['publishedPage'] as PublishedPageResolverResult | undefined;
+      if (!resolved) {
+        this.loading.set(true);
         this.page.set(null);
-        this.error.set('Missing slug.');
-        this.loading.set(false);
+        this.error.set(null);
         return;
       }
-      void this.loadPublishedPage(slug);
+      this.page.set(resolved.page);
+      this.error.set(resolved.error);
+      this.loading.set(false);
     });
-  }
-
-  async loadPublishedPage(slug: string) {
-    const requestId = ++this.loadSeq;
-    this.loading.set(true);
-    this.error.set(null);
-    try {
-      const page = await this.pagesService.getPublished(slug);
-      if (requestId === this.loadSeq) {
-        this.page.set(page);
-      }
-    } catch (err) {
-      if (requestId === this.loadSeq) {
-        console.error('Failed to load published page', err);
-        const message = (err as Error)?.message ?? 'Unable to load this page.';
-        this.error.set(message);
-        this.page.set(null);
-      }
-    } finally {
-      if (requestId === this.loadSeq) {
-        this.loading.set(false);
-      }
-    }
   }
 
   blockStyle(block: AnyBlock) {

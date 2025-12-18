@@ -1,10 +1,35 @@
+.homepage-wrapper {
+    margin: 0 auto;
+    padding: 0 4rem;
+}
+
+.homepage-top {
+    margin:4rem 0 2rem;
+
+    h1 {
+        margin-bottom: 1rem;
+    }
+    p {
+        font-style: italic;
+    }
+}
+
+.about-me {
+    margin-bottom:2rem;
+    padding: 0 1rem;
+    line-height: 1.5;
+}
+
 .homepage-flex {
+    border: 1px solid #86b8ac40;
     display: flex;
     flex-direction: column;
+    margin: 0 1rem;
+    padding-bottom: 8px;
 }
 
 .page-list {
-    min-height: 50vh;
+    min-height: 30vh;
 
     a {
         color: #000000;
@@ -17,7 +42,7 @@
 
     ul {
         list-style: none;
-        padding-left: 8em;
+        padding-left: 2rem;
     }
     
 }
@@ -34,7 +59,7 @@
         height: 18px;
     }
 
-    h2 {
+    h3 {
         margin:0;
     }
 }
@@ -48,4 +73,8 @@
 .page-controls {
     display: flex;
     justify-content: center;
+
+    span {
+        margin: 0 8px;
+    }
 }

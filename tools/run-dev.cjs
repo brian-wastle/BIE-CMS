@@ -1,14 +1,3 @@
-#!/usr/bin/env node
-/**
- * Selects the appropriate dev workflow.
- *
- * Usage:
- *   npm run dev            # CSR dev server + backend
- *   npm run dev -- --ssr   # SSR dev server + backend
- *
- * Accepts either "--ssr" or "-ssr".
- */
-
 const runAll = require('npm-run-all');
 
 const args = process.argv.slice(2);

@@ -1,10 +1,5 @@
 import 'dotenv/config';
-import {
-  AngularNodeAppEngine,
-  createNodeRequestHandler,
-  isMainModule,
-  writeResponseToNodeResponse,
-} from '@angular/ssr/node';
+import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import { dirname, resolve } from 'node:path';
@@ -29,9 +24,13 @@ app.use(express.static(browserDistFolder, {
 // SSR auth gate
 app.use(cookieParser());
 
+app.get('/healthz', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 const API_TARGET = process.env['API_TARGET'] ?? 'http://localhost:4000';
 
-const protectedPaths = ['/author', '/gate']; // TODO: Switch in prod
+const protectedPaths = ['/author', '/upload', '/drafts'];
 app.use(protectedPaths, async (req, res, next) => {
   try {
     const r = await fetch(`${API_TARGET}/api/auth/me`, {

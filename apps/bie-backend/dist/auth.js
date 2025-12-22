@@ -23,8 +23,25 @@ function signAccessToken(user) {
         expiresIn: `${ACCESS_TTL_MIN}m`,
     });
 }
-function newRefreshToken() {
+function newRefreshTokenSecret() {
     return crypto.randomBytes(32).toString('hex');
+}
+function formatRefreshCookieValue(id, secret) {
+    return `v2.${id}.${secret}`;
+}
+function parseRefreshCookie(raw) {
+    if (typeof raw !== 'string' || !raw.startsWith('v2.')) {
+        return null;
+    }
+    const parts = raw.split('.');
+    if (parts.length !== 3) {
+        return null;
+    }
+    const [, tokenId, secret] = parts;
+    if (!tokenId || !secret) {
+        return null;
+    }
+    return { tokenId, secret };
 }
 // NOTE: hash with argon2id explicitly (good defaults; tune later if needed)
 async function hashPassword(plain) {
@@ -33,14 +50,31 @@ async function hashPassword(plain) {
 async function verifyPassword(plain, hash) {
     return argon2.verify(hash, plain);
 }
-async function storeRefreshToken(userId, token) {
-    const hash = await argon2.hash(token, { type: argon2.argon2id });
+async function issueRefreshToken(userId) {
+    const secret = newRefreshTokenSecret();
+    const hash = await argon2.hash(secret, { type: argon2.argon2id });
     const res = await pool.query(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
      VALUES ($1, $2, now() + ($3 || ' days')::interval)
      RETURNING id, expires_at`, [userId, hash, REFRESH_TTL_DAYS]);
-    return { id: res.rows[0].id, expiresAt: res.rows[0].expires_at };
+    const row = res.rows[0];
+    return {
+        id: row.id,
+        cookieValue: formatRefreshCookieValue(row.id, secret),
+        expiresAt: row.expires_at,
+    };
 }
-async function findValidRefresh(userId, token) {
+async function loadRefreshTokenRow(tokenId, opts = {}) {
+    const where = ['id = $1'];
+    if (!opts.includeRevoked) {
+        where.push('revoked_at IS NULL');
+    }
+    if (!opts.includeExpired) {
+        where.push('expires_at > now()');
+    }
+    const { rows } = await pool.query(`SELECT * FROM refresh_tokens WHERE ${where.join(' AND ')} LIMIT 1`, [tokenId]);
+    return rows[0] ?? null;
+}
+async function findValidLegacyRefresh(userId, token) {
     const { rows } = await pool.query(`SELECT * FROM refresh_tokens
      WHERE user_id=$1 AND revoked_at IS NULL AND expires_at > now()
      ORDER BY created_at DESC`, [userId]);
@@ -51,11 +85,13 @@ async function findValidRefresh(userId, token) {
     }
     return null;
 }
-async function rotateRefreshToken(oldRow, userId) {
-    const token = newRefreshToken();
-    const { id: newId } = await storeRefreshToken(userId, token);
-    await pool.query(`UPDATE refresh_tokens SET revoked_at=now(), replaced_by=$1 WHERE id=$2`, [newId, oldRow.id]);
-    return { token, id: newId };
+async function rotateRefreshToken(oldRow) {
+    const next = await issueRefreshToken(oldRow.user_id);
+    await pool.query(`UPDATE refresh_tokens SET revoked_at=now(), replaced_by=$1 WHERE id=$2`, [next.id, oldRow.id]);
+    return next;
+}
+async function revokeRefreshToken(tokenId) {
+    await pool.query(`UPDATE refresh_tokens SET revoked_at=now() WHERE id=$1`, [tokenId]);
 }
 router.use(cookieParser());
 // Register (argon2id)
@@ -90,58 +126,100 @@ router.post('/login', async (req, res) => {
     if (!ok)
         return res.status(401).json({ error: 'Invalid credentials' });
     const access = signAccessToken({ id: user.id, email: user.email });
-    const refresh = newRefreshToken();
-    await storeRefreshToken(user.id, refresh);
+    const refresh = await issueRefreshToken(user.id);
     res
         .cookie('access_token', access, { ...cookieOpts, maxAge: ACCESS_TTL_MIN * 60 * 1000 })
-        .cookie('refresh_token', refresh, { ...cookieOpts, maxAge: REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000 })
+        .cookie('refresh_token', refresh.cookieValue, { ...cookieOpts, maxAge: REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000 })
         .json({ ok: true });
 });
 // Refresh + Logout unchanged (already argon2 for token hashes)
 router.post('/refresh', async (req, res) => {
-    const refresh = req.cookies['refresh_token'];
-    if (!refresh)
+    const refreshCookie = req.cookies['refresh_token'];
+    if (!refreshCookie) {
         return res.status(401).json({ error: 'No refresh token' });
-    const accessMaybe = req.cookies['access_token'];
-    let userId = null;
-    if (accessMaybe) {
-        try {
-            userId = jwt.decode(accessMaybe)?.sub ?? null;
-        }
-        catch { }
     }
-    if (!userId)
-        return res.status(401).json({ error: 'Unknown session' });
-    const row = await findValidRefresh(userId, refresh);
-    if (!row)
-        return res.status(401).json({ error: 'Invalid refresh' });
-    const { token: newRefresh } = await rotateRefreshToken(row, userId);
-    const { rows: urows } = await pool.query(`SELECT id, email FROM users WHERE id=$1`, [userId]);
-    const user = urows[0];
-    const newAccess = signAccessToken({ id: user.id, email: user.email });
-    res
-        .cookie('access_token', newAccess, { ...cookieOpts, maxAge: ACCESS_TTL_MIN * 60 * 1000 })
-        .cookie('refresh_token', newRefresh, { ...cookieOpts, maxAge: REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000 })
-        .json({ ok: true });
-});
-router.post('/logout', async (req, res) => {
-    const refresh = req.cookies['refresh_token'];
-    if (refresh) {
+    const parsed = parseRefreshCookie(refreshCookie);
+    let tokenRow = null;
+    if (parsed) {
+        tokenRow = await loadRefreshTokenRow(parsed.tokenId);
+        if (!tokenRow) {
+            return res.status(401).json({ error: 'Invalid refresh' });
+        }
+        const matches = await argon2.verify(tokenRow.token_hash, parsed.secret);
+        if (!matches) {
+            await revokeRefreshToken(tokenRow.id);
+            return res.status(401).json({ error: 'Invalid refresh' });
+        }
+    }
+    else {
         const accessMaybe = req.cookies['access_token'];
         let userId = null;
         if (accessMaybe) {
             try {
                 userId = jwt.decode(accessMaybe)?.sub ?? null;
             }
-            catch { }
+            catch {
+                userId = null;
+            }
         }
-        if (userId) {
-            const row = await findValidRefresh(userId, refresh);
-            if (row)
-                await pool.query(`UPDATE refresh_tokens SET revoked_at=now() WHERE id=$1`, [row.id]);
+        if (!userId) {
+            return res.status(401).json({ error: 'Unknown session' });
+        }
+        tokenRow = await findValidLegacyRefresh(userId, refreshCookie);
+        if (!tokenRow) {
+            return res.status(401).json({ error: 'Invalid refresh' });
         }
     }
-    res.clearCookie('access_token', { path: '/' })
+    if (!tokenRow) {
+        return res.status(401).json({ error: 'Invalid refresh' });
+    }
+    const userId = tokenRow.user_id;
+    const nextRefresh = await rotateRefreshToken(tokenRow);
+    const { rows: urows } = await pool.query(`SELECT id, email FROM users WHERE id=$1`, [userId]);
+    const user = urows[0];
+    if (!user) {
+        return res.status(401).json({ error: 'Unknown user' });
+    }
+    const newAccess = signAccessToken({ id: user.id, email: user.email });
+    res
+        .cookie('access_token', newAccess, { ...cookieOpts, maxAge: ACCESS_TTL_MIN * 60 * 1000 })
+        .cookie('refresh_token', nextRefresh.cookieValue, { ...cookieOpts, maxAge: REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000 })
+        .json({ ok: true });
+});
+router.post('/logout', async (req, res) => {
+    const refresh = req.cookies['refresh_token'];
+    if (refresh) {
+        const parsed = parseRefreshCookie(refresh);
+        if (parsed) {
+            const row = await loadRefreshTokenRow(parsed.tokenId, { includeExpired: true });
+            if (row) {
+                const matches = await argon2.verify(row.token_hash, parsed.secret);
+                if (matches) {
+                    await revokeRefreshToken(row.id);
+                }
+            }
+        }
+        else {
+            const accessMaybe = req.cookies['access_token'];
+            let userId = null;
+            if (accessMaybe) {
+                try {
+                    userId = jwt.decode(accessMaybe)?.sub ?? null;
+                }
+                catch {
+                    userId = null;
+                }
+            }
+            if (userId) {
+                const row = await findValidLegacyRefresh(userId, refresh);
+                if (row) {
+                    await revokeRefreshToken(row.id);
+                }
+            }
+        }
+    }
+    res
+        .clearCookie('access_token', { path: '/' })
         .clearCookie('refresh_token', { path: '/' })
         .json({ ok: true });
 });

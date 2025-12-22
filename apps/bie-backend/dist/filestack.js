@@ -25,6 +25,11 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: MAX_UPLOAD_BYTES },
 });
+const FilestackStoreResponseSchema = z.object({
+    url: z.url(),
+    handle: z.string().min(1).optional(),
+    key: z.string().min(1).optional(),
+}).loose();
 // Encodes an object as base64 for Filestack policy payloads.
 function b64(json) {
     return Buffer.from(JSON.stringify(json)).toString('base64');
@@ -91,58 +96,29 @@ async function removeMedia(handle, userId) {
     await pool.query(query, params);
 }
 // Basic Filestack security policy allowing pick/store/read.
+// TODO: Break out policies between operations in front end
 function buildPolicyPayload(expiryEpoch, pathPrefix, mimetypes) {
     const payload = {
         expiry: expiryEpoch,
-        call: ['pick', 'store', 'read'],
+        call: ['pick', 'store', 'read', 'remove'],
         path: `/${pathPrefix}`,
     };
     if (mimetypes?.length)
         payload.mimetypes = mimetypes;
     return payload;
 }
-// Issues a signed Filestack policy for media upload
-// Stores to user's optional directory
-// Blank directories default to "Unsorted"
-// TODO: The current buildPolicyPayload function does not allow for deletion of files, and a separate policy is needed
-router.post('/policy', requireAccess, async (req, res) => {
-    // Zod ts validation allows for .safeParse
-    const schema = z.object({
-        directory: z.string().optional(),
-        mimetypes: z.array(z.string()).optional(),
-    });
-    const parseResult = schema.safeParse(req.body);
-    if (!parseResult.success) {
-        return res.status(400).json({ error: 'Invalid payload' });
+function buildRemovePolicy(handle, storagePath) {
+    const payload = {
+        expiry: Math.floor(Date.now() / 1000) + 60,
+        call: ['read', 'write', 'remove'],
+        handle,
+    };
+    if (storagePath && storagePath.trim().length) {
+        const normalized = storagePath.replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+        payload.path = `/${normalized}`;
     }
-    const { directory, mimetypes } = parseResult.data;
-    const user = req.user;
-    // Build the expected FS payload: Take user, create path from user's dir input from browser, calc expiry
-    // Then convert to b64 expected by FS, policy is then signed
-    let sanitizedDir;
-    try {
-        sanitizedDir = directory ? sanitizeDirname(directory) : 'Unsorted';
-    }
-    catch (err) {
-        return res.status(400).json({ error: err.message });
-    }
-    const segments = [user.id];
-    segments.push(sanitizedDir);
-    const storagePrefix = segments.join('/');
-    const expiryEpoch = Math.floor(Date.now() / 1000) + EXPIRY_SEC;
-    const policyPayload = buildPolicyPayload(expiryEpoch, storagePrefix, mimetypes);
-    const policyB64 = b64(policyPayload);
-    const signature = sign(policyB64, APP_SECRET);
-    return res.json({
-        apiKey: API_KEY,
-        policy: policyB64,
-        signature,
-        expiresAt: expiryEpoch,
-        storagePrefix,
-        directory: sanitizedDir ?? null,
-        cdnBaseUrl: CDN_BASE,
-    });
-});
+    return payload;
+}
 // Receive a browser upload, forward to Filestack, and respond with the resulting handle.
 router.post('/upload', requireAccess, upload.single('fileUpload'), async (req, res) => {
     const file = req.file;
@@ -204,30 +180,49 @@ router.post('/upload', requireAccess, upload.single('fileUpload'), async (req, r
         console.error('Unexpected Filestack upload response', raw);
         return res.status(502).json({ error: 'Unexpected response from Filestack upload service' });
     }
-    const url = payload?.url ?? null;
-    const pathParts = url.split('/');
-    const handle = pathParts.pop() ?? null;
+    const parsedPayload = FilestackStoreResponseSchema.safeParse(payload);
+    if (!parsedPayload.success) {
+        console.error('Filestack upload response validation failed', parsedPayload.error);
+        return res.status(502).json({ error: 'Filestack upload response missing CDN URL' });
+    }
+    const filestackResponse = parsedPayload.data;
+    const { url: payloadUrl, handle: payloadHandle, key: payloadKey } = filestackResponse;
+    let filestackUrl;
+    try {
+        filestackUrl = new URL(payloadUrl);
+    }
+    catch (err) {
+        console.error('Filestack upload response contained invalid URL', payloadUrl, err);
+        return res.status(502).json({ error: 'Filestack upload response contained invalid URL' });
+    }
+    let handle = payloadHandle ?? payloadKey ?? null;
+    if (!handle) {
+        const pathParts = filestackUrl.pathname.split('/').filter(Boolean);
+        handle = pathParts.pop() ?? null;
+    }
+    if (!handle) {
+        console.error('Filestack upload response missing handle', filestackResponse);
+        return res.status(502).json({ error: 'Filestack upload response missing file handle' });
+    }
     const normalizedDirectory = sanitizedDir === 'unsorted' ? null : sanitizedDir;
-    if (handle) {
-        try {
-            await appendMedia({
-                handle,
-                userId: user.id,
-                directory: normalizedDirectory,
-                filename: safeFilename,
-                mimetype: file.mimetype || null,
-                size: file.size,
-                cdnUrl: url,
-                storagePath: `${storagePrefix}/${safeFilename}`,
-            });
-        }
-        catch (err) {
-            console.error('Failed to persist media record after upload', err);
-        }
+    try {
+        await appendMedia({
+            handle,
+            userId: user.id,
+            directory: normalizedDirectory,
+            filename: safeFilename,
+            mimetype: file.mimetype || null,
+            size: file.size,
+            cdnUrl: filestackUrl.toString(),
+            storagePath: `${storagePrefix}/${safeFilename}`,
+        });
+    }
+    catch (err) {
+        console.error('Failed to save media record after upload', err);
     }
     return res.status(201).json({
         handle,
-        url,
+        url: filestackUrl.toString(),
         filename: safeFilename,
         directory: normalizedDirectory,
         storagePath: `${storagePrefix}/${safeFilename}`,
@@ -328,32 +323,32 @@ router.get('/directories', requireAccess, async (req, res) => {
 router.delete('/:handle', requireAccess, async (req, res) => {
     const { handle } = req.params;
     const user = req.user;
+    let storagePath = null;
     try {
-        const { rowCount, rows } = await pool.query(`SELECT owner_user_id FROM ${MEDIA_TABLE} WHERE handle=$1 AND is_deleted = FALSE`, [handle]);
+        const { rowCount, rows } = await pool.query(`SELECT owner_user_id, storage_path FROM ${MEDIA_TABLE} WHERE handle=$1 AND is_deleted = FALSE`, [handle]);
         if (!rowCount) {
             return res.status(404).json({ error: 'Media handle not found' });
         }
         if (rows[0].owner_user_id !== user.id) {
             return res.status(403).json({ error: 'You do not have permission to delete this media item' });
         }
+        storagePath = typeof rows[0].storage_path === 'string' ? rows[0].storage_path : null;
     }
     catch (err) {
         console.error('Failed to authorize media deletion', err);
         return res.status(500).json({ error: 'Failed to authorize delete' });
     }
-    const policy = {
-        expiry: Math.floor(Date.now() / 1000) + 60,
-        call: ['remove'],
-        handle,
-    };
+    const policy = buildRemovePolicy(handle, storagePath);
     const policyB64 = b64(policy);
     const signature = sign(policyB64, APP_SECRET);
-    const resp = await fetch(`https://www.filestackapi.com/api/file/${handle}`, {
+    const deleteUrl = new URL(`https://www.filestackapi.com/api/file/${handle}`);
+    deleteUrl.searchParams.set('key', API_KEY);
+    deleteUrl.searchParams.set('policy', policyB64);
+    deleteUrl.searchParams.set('signature', signature);
+    const resp = await fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
-            'Filestack-Api-Key': API_KEY,
-            'Filestack-Security': JSON.stringify({ policy: policyB64, signature }),
         },
     });
     if (!resp.ok) {

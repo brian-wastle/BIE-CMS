@@ -358,7 +358,6 @@ export class CanvasComponent implements AfterViewInit {
       blocks: this.blocks(),
       meta: {},
       publishedAt: null,
-      createdBy: this.currentUser()?.id ?? undefined,
     };
   }
 

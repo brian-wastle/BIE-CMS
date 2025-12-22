@@ -1,5 +1,6 @@
 import { Injectable, effect, signal } from '@angular/core';
 import type { DirectoryMeta } from 'bie-models';
+import { AuthSessionService } from '../auth-session/auth-session.service';
 
 const UNSORTED_KEY = 'unsorted';
 const TEMP_DIRECTORY_STORAGE_KEY = 'media-upload:temp-directories';
@@ -27,7 +28,7 @@ export interface MediaItem {
 export class MediaLibraryService {
   readonly tempDirectories = signal<DirectoryMeta[]>(this.restoreTempDirectories());
 
-  constructor() {
+  constructor(private readonly authSession: AuthSessionService) {
     const storage = this.getSessionStorage();
     if (storage) {
       effect(() => {
@@ -46,7 +47,9 @@ export class MediaLibraryService {
   }
 
   async fetchDirectories():Promise<DirectoryMeta[]> {
-      const response = await fetch('/api/media/directories', { credentials: 'include' });
+      const response = await this.authSession.withAuthRetry(() =>
+        fetch('/api/media/directories', { credentials: 'include' })
+      );
       if (!response.ok) {
         const problem: unknown = await response.json().catch(() => null);
         if (problem && typeof problem === 'object' && typeof (problem as any).error === 'string') {
@@ -66,9 +69,11 @@ export class MediaLibraryService {
     }
 
     const query = params.toString();
-    const response = await fetch(`/api/media/files${query ? `?${query}` : ''}`, {
-      credentials: 'include'
-    });
+    const response = await this.authSession.withAuthRetry(() =>
+      fetch(`/api/media/files${query ? `?${query}` : ''}`, {
+        credentials: 'include'
+      })
+    );
 
     if (!response.ok) {
       const problem: unknown = await response.json().catch(() => null);
@@ -88,10 +93,12 @@ export class MediaLibraryService {
   }
 
   async deleteFile(handle: string): Promise<void> {
-    const response = await fetch(`/api/media/${encodeURIComponent(handle)}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
+    const response = await this.authSession.withAuthRetry(() =>
+      fetch(`/api/media/${encodeURIComponent(handle)}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+    );
     if (!response.ok) {
       const text = await response.text().catch(() => null);
       throw new Error(text || response.statusText || 'Failed to delete media file');

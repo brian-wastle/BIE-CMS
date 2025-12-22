@@ -2488,7 +2488,6 @@ export declare const PageSchema: z.ZodObject<{
         type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    createdBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
     publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -3082,7 +3081,6 @@ export declare const PageWriteSchema: z.ZodObject<{
     }, z.core.$strip>], "type">>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    createdBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     slug: z.ZodString;
 }, z.core.$strip>;
 export type PageWrite = z.infer<typeof PageWriteSchema>;
@@ -3674,7 +3672,6 @@ export declare const PageUpdateSchema: z.ZodObject<{
     }, z.core.$strip>], "type">>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    createdBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     slug: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 export type PageUpdate = z.infer<typeof PageUpdateSchema>;
@@ -4268,7 +4265,6 @@ export declare const PageSummarySchema: z.ZodObject<{
             type: z.ZodLiteral<"divider">;
         }, z.core.$strip>], "type">>;
         meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-        createdBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
         publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -4865,7 +4861,6 @@ export declare const PageDetailSchema: z.ZodObject<{
             type: z.ZodLiteral<"divider">;
         }, z.core.$strip>], "type">>;
         meta: z.ZodOptional<z.ZodCatch<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-        createdBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
         publishedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;

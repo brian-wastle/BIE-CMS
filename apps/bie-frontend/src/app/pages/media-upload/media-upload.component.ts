@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, ViewChild, computed, signal } from '@angular/core';
+import { Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaBrowserComponent } from '../../components/media-browser/media-browser.component';
+import { AuthSessionService } from '../../services/auth-session/auth-session.service';
 
 type UploadStatus = 'pending' | 'uploading' | 'success' | 'error';
 type ViewMode = 'list' | 'grid';
@@ -26,6 +27,7 @@ interface UploadItem {
 })
 export class MediaUploadComponent {
   @ViewChild(MediaBrowserComponent) mediaBrowser?: MediaBrowserComponent;
+  private readonly authSession = inject(AuthSessionService);
 
   readonly queue = signal<UploadItem[]>([]);
   readonly viewMode = signal<ViewMode>('grid');
@@ -183,22 +185,27 @@ export class MediaUploadComponent {
     }
     this.updateQueue(itemId, { status: 'uploading', progress: 10, error: undefined });
 
-    const form = new FormData();
-    form.append('fileUpload', target.file, target.file.name);
-    if (target.file.type) {
-      form.append('mimetype', target.file.type);
-    }
-    if (directory) {
-      form.append('directory', directory);
-    }
+    const buildFormData = () => {
+      const form = new FormData();
+      form.append('fileUpload', target.file, target.file.name);
+      if (target.file.type) {
+        form.append('mimetype', target.file.type);
+      }
+      if (directory) {
+        form.append('directory', directory);
+      }
+      return form;
+    };
 
     let response: Response;
     try {
-      response = await fetch('/api/media/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: form
-      });
+      response = await this.authSession.withAuthRetry(() =>
+        fetch('/api/media/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: buildFormData()
+        })
+      );
     } catch (err) {
       console.error('Failed to upload media (network)', err);
       throw new Error('Network error while uploading file.');

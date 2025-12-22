@@ -48,6 +48,14 @@ type MediaRecord = {
   storagePath: string;
 };
 
+const FilestackStoreResponseSchema = z.object({
+  url: z.url(),
+  handle: z.string().min(1).optional(),
+  key: z.string().min(1).optional(),
+}).loose();
+
+type FilestackStoreResponse = z.infer<typeof FilestackStoreResponseSchema>;
+
 // Encodes an object as base64 for Filestack policy payloads.
 function b64(json: Record<string, unknown>) {
   return Buffer.from(JSON.stringify(json)).toString('base64');
@@ -201,7 +209,7 @@ router.post('/upload', requireAccess, upload.single('fileUpload'), async (req: A
     }
 
     const raw = await resp.text();
-    let payload: any = null;
+    let payload: unknown = null;
     try {
       payload = JSON.parse(raw);
     } catch (err) {
@@ -209,32 +217,51 @@ router.post('/upload', requireAccess, upload.single('fileUpload'), async (req: A
       return res.status(502).json({ error: 'Unexpected response from Filestack upload service' });
     }
 
-    const url = payload?.url ?? null;
+    const parsedPayload = FilestackStoreResponseSchema.safeParse(payload);
+    if (!parsedPayload.success) {
+      console.error('Filestack upload response validation failed', parsedPayload.error);
+      return res.status(502).json({ error: 'Filestack upload response missing CDN URL' });
+    }
 
-    const pathParts = url.split('/');
-    const handle = pathParts.pop() ?? null;
+    const filestackResponse: FilestackStoreResponse = parsedPayload.data;
+    const { url: payloadUrl, handle: payloadHandle, key: payloadKey } = filestackResponse;
+    let filestackUrl: URL;
+    try {
+      filestackUrl = new URL(payloadUrl);
+    } catch (err) {
+      console.error('Filestack upload response contained invalid URL', payloadUrl, err);
+      return res.status(502).json({ error: 'Filestack upload response contained invalid URL' });
+    }
+
+    let handle = payloadHandle ?? payloadKey ?? null;
+    if (!handle) {
+      const pathParts = filestackUrl.pathname.split('/').filter(Boolean);
+      handle = pathParts.pop() ?? null;
+    }
+    if (!handle) {
+      console.error('Filestack upload response missing handle', filestackResponse);
+      return res.status(502).json({ error: 'Filestack upload response missing file handle' });
+    }
 
     const normalizedDirectory = sanitizedDir === 'unsorted' ? null : sanitizedDir;
-    if (handle) {
-      try {
-        await appendMedia({
-          handle,
-          userId: user.id,
-          directory: normalizedDirectory,
-          filename: safeFilename,
-          mimetype: file.mimetype || null,
-          size: file.size,
-          cdnUrl: url,
-          storagePath: `${storagePrefix}/${safeFilename}`,
-        });
-      } catch (err) {
-        console.error('Failed to persist media record after upload', err);
-      }
+    try {
+      await appendMedia({
+        handle,
+        userId: user.id,
+        directory: normalizedDirectory,
+        filename: safeFilename,
+        mimetype: file.mimetype || null,
+        size: file.size,
+        cdnUrl: filestackUrl.toString(),
+        storagePath: `${storagePrefix}/${safeFilename}`,
+      });
+    } catch (err) {
+      console.error('Failed to save media record after upload', err);
     }
 
     return res.status(201).json({
       handle,
-      url,
+      url: filestackUrl.toString(),
       filename: safeFilename,
       directory: normalizedDirectory,
       storagePath: `${storagePrefix}/${safeFilename}`,

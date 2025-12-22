@@ -16,6 +16,13 @@ import { pool, withTransaction } from './db.js';
 
 const router = express.Router();
 
+type RequestUser = { id: string; email?: string } | undefined;
+
+function getAuthenticatedUserId(req: express.Request): string | null {
+  const user = (req as any)?.user as RequestUser;
+  return typeof user?.id === 'string' ? user.id : null;
+}
+
 function mapVersionToPage(row: any): Page {
   return PageSchema.parse({
     id: row.page_id ?? row.id,
@@ -24,7 +31,6 @@ function mapVersionToPage(row: any): Page {
     title: row.title,
     blocks: row.blocks,
     meta: row.meta ?? {},
-    createdBy: row.created_by ?? null,
     createdAt: new Date(row.version_created_at ?? row.created_at).toISOString(),
     updatedAt: new Date(row.version_updated_at ?? row.updated_at).toISOString(),
     publishedAt: row.published_at ? new Date(row.published_at).toISOString() : null,
@@ -49,13 +55,12 @@ async function loadPageById(pageId: string, client: Pool | PoolClient = pool): P
       v.title,
       v.blocks,
       v.meta,
-      v.created_by,
       v.created_at AS version_created_at,
       v.updated_at AS version_updated_at,
       v.published_at
     FROM pages p
     JOIN LATERAL (
-      SELECT status, title, blocks, meta, created_by, created_at, updated_at, published_at
+      SELECT status, title, blocks, meta, created_at, updated_at, published_at
       FROM page_versions
       WHERE page_id = p.id
       ORDER BY created_at DESC
@@ -92,7 +97,6 @@ async function loadPublishedPageBySlug(slug: string): Promise<Page | null> {
       v.title,
       v.blocks,
       v.meta,
-      v.created_by,
       v.created_at AS version_created_at,
       v.updated_at AS version_updated_at,
       v.published_at
@@ -154,7 +158,6 @@ router.get('/published', async (req, res) => {
         v.title,
         v.blocks,
         v.meta,
-        v.created_by,
         v.created_at AS version_created_at,
         v.updated_at AS version_updated_at,
         v.published_at,
@@ -259,13 +262,12 @@ router.get('/', async (req, res) => {
         v.title,
         v.blocks,
         v.meta,
-        v.created_by,
         v.created_at AS version_created_at,
         v.updated_at AS version_updated_at,
         v.published_at
       FROM pages p
       JOIN LATERAL (
-        SELECT status, title, blocks, meta, created_by, created_at, updated_at, published_at
+        SELECT status, title, blocks, meta, created_at, updated_at, published_at
         FROM page_versions
         WHERE page_id = p.id
         ORDER BY created_at DESC
@@ -331,6 +333,11 @@ router.post('/', async (req, res) => {
   }
 
   const payload: PageWrite = parseResult.data;
+  const createdBy = getAuthenticatedUserId(req);
+  if (!createdBy) {
+    console.error('Authenticated user missing on page create request');
+    return res.status(500).json({ error: 'Missing authenticated user' });
+  }
   const status = payload.status ?? 'draft';
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
   const blocksJson = JSON.stringify(payload.blocks);
@@ -360,7 +367,7 @@ router.post('/', async (req, res) => {
         VALUES ($1, 1, $2::page_version_status, $3, $4::jsonb, $5::jsonb, $6, $7::timestamptz)
         RETURNING id, page_id, version, status, title, blocks, meta, created_by, created_at, updated_at, published_at
         `,
-        [pageId, status, payload.title, blocksJson, metaJson, payload.createdBy ?? null, publishedAt]
+        [pageId, status, payload.title, blocksJson, metaJson, createdBy, publishedAt]
       );
 
       const version = versionInsert.rows[0];
@@ -407,6 +414,11 @@ router.put('/:slug', async (req, res) => {
   }
 
   const payload: PageUpdate = parseResult.data;
+  const createdBy = getAuthenticatedUserId(req);
+  if (!createdBy) {
+    console.error('Authenticated user missing on page update request');
+    return res.status(500).json({ error: 'Missing authenticated user' });
+  }
   const status = payload.status ?? 'draft';
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
   const slugParam = req.params.slug;
@@ -443,7 +455,7 @@ router.put('/:slug', async (req, res) => {
           payload.title,
           blocksJson,
           metaJson,
-          payload.createdBy ?? null,
+          createdBy,
           publishedAt,
         ]
       );

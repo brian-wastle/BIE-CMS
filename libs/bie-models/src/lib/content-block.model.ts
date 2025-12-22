@@ -176,7 +176,6 @@ export const PageSchema = z.object({
   title: z.string(),
   blocks: z.array(AnyBlockSchema),
   meta: PageMetaSchema.optional(),
-  createdBy: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   publishedAt: z.string().nullable().optional(),
@@ -189,7 +188,6 @@ const PagePatchSchema = z.object({
   blocks: z.array(AnyBlockSchema).nonempty('At least one block is required'),
   meta: PageMetaSchema.optional(),
   publishedAt: z.string().nullable().optional(),
-  createdBy: z.string().nullable().optional(),
 });
 
 export const PageWriteSchema = PagePatchSchema.extend({

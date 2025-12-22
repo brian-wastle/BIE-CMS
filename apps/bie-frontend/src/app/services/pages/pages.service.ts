@@ -2,6 +2,7 @@ import { Injectable, PLATFORM_ID, REQUEST, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type { Request } from 'express';
 import type { Page, PageSummary, PageUpdate, PageWrite } from 'bie-models';
+import { AuthSessionService } from '../auth-session/auth-session.service';
 
 export interface PageListCursor {
   cursorUpdatedAt: string;
@@ -26,6 +27,7 @@ export interface PageListResult {
 export class PagesService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly serverRequest = inject<Request | null>(REQUEST, { optional: true }) ?? null;
+  private readonly authSession = inject(AuthSessionService);
 
   private unwrapPage(payload: any): Page {
     if (payload?.page?.page) {
@@ -49,7 +51,9 @@ export class PagesService {
     }
     const query = search.toString();
     const url = query ? `/api/pages?${query}` : '/api/pages';
-    const res = await fetch(this.buildApiUrl(url), this.withServerCookies({ credentials: 'include' }));
+    const res = await this.authSession.withAuthRetry(() =>
+      fetch(this.buildApiUrl(url), this.withServerCookies({ credentials: 'include' }))
+    );
     if (!res.ok) throw new Error('Failed to load pages.');
     const payload = await res.json();
     return {
@@ -70,7 +74,9 @@ export class PagesService {
     }
     const query = search.toString();
     const url = query ? `/api/pages/published?${query}` : '/api/pages/published';
-    const res = await fetch(this.buildApiUrl(url), this.withServerCookies({ credentials: 'include' }));
+    const res = await this.authSession.withAuthRetry(() =>
+      fetch(this.buildApiUrl(url), this.withServerCookies({ credentials: 'include' }))
+    );
     if (!res.ok) throw new Error('Failed to load published pages.');
     const payload = await res.json();
     return {
@@ -82,48 +88,60 @@ export class PagesService {
 
   // Get blog by slug
   async get(slug: string): Promise<Page> {
-    const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({ credentials: 'include' }));
+    const res = await this.authSession.withAuthRetry(() =>
+      fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({ credentials: 'include' }))
+    );
     if (!res.ok) throw new Error('Failed to load page.');
     return this.unwrapPage(await res.json());
   }
 
   // Get published blog by slug
   async getPublished(slug: string): Promise<Page> {
-    const res = await fetch(this.buildApiUrl(`/api/pages/published/${encodeURIComponent(slug)}`), this.withServerCookies({ credentials: 'include' }));
+    const res = await this.authSession.withAuthRetry(() =>
+      fetch(this.buildApiUrl(`/api/pages/published/${encodeURIComponent(slug)}`), this.withServerCookies({ credentials: 'include' }))
+    );
     if (!res.ok) throw new Error(res.status === 404 ? 'Published page not found.' : 'Failed to load page.');
     return this.unwrapPage(await res.json());
   }
 
   // Create new blog
   async post(payload: PageWrite): Promise<Page> {
-    const res = await fetch(this.buildApiUrl('/api/pages'), this.withServerCookies({
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }));
+    const body = JSON.stringify(payload);
+    const res = await this.authSession.withAuthRetry(() =>
+      fetch(this.buildApiUrl('/api/pages'), this.withServerCookies({
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      }))
+    );
     if (!res.ok) throw new Error('Failed to save page.');
     return this.unwrapPage(await res.json());
   }
 
   // Update an existing blog by slug
   async update(slug: string, payload: PageUpdate): Promise<Page> {
-    const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }));
+    const body = JSON.stringify(payload);
+    const res = await this.authSession.withAuthRetry(() =>
+      fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      }))
+    );
     if (!res.ok) throw new Error('Failed to update page.');
     return this.unwrapPage(await res.json());
   }
 
   // Delete blog by slug
   async delete(slug: string): Promise<void> {
-    const res = await fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({
-      method: 'DELETE',
-      credentials: 'include',
-    }));
+    const res = await this.authSession.withAuthRetry(() =>
+      fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({
+        method: 'DELETE',
+        credentials: 'include',
+      }))
+    );
     if (!res.ok) throw new Error('Failed to delete page.');
   }
 

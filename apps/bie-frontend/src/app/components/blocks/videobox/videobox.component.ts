@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnDestroy, computed, inject, signal, ViewChild, ElementRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { VideoBlock } from 'bie-models';
@@ -7,7 +7,7 @@ import { BlockShell } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-videobox',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './videobox.component.html',
   styleUrls: ['./videobox.component.scss'],
 })

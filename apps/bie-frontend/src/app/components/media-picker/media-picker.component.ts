@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnDestroy, effect, inject, input, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaItem, MediaLibraryService, MediaSort } from '../../services/media-library/media-library.service';
@@ -8,7 +8,7 @@ const SKELETON_TILE_COUNT = 8;
 
 @Component({
   selector: 'app-media-picker',
-  imports: [CommonModule, MatIconModule],
+  imports: [MatIconModule],
   templateUrl: './media-picker.component.html',
   styleUrl: './media-picker.component.scss',
 })

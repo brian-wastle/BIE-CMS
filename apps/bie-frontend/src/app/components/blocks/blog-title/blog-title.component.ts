@@ -1,11 +1,11 @@
 import { Component, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TitleBlock } from 'bie-models';
 import { BlockShell } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-title-block',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './blog-title.component.html',
   styleUrls: ['./blog-title.component.scss']
 })

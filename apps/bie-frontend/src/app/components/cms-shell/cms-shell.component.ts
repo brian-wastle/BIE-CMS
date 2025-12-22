@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterOutlet, RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -11,15 +11,14 @@ import { MatButtonModule } from '@angular/material/button';
 @Component({
   selector: 'app-cms-shell',
   imports: [
-    CommonModule,
     RouterOutlet,
     RouterLink,
     MatSidenavModule,
     MatToolbarModule,
     MatIconModule,
     MatListModule,
-    MatButtonModule,
-  ],
+    MatButtonModule
+],
   templateUrl: './cms-shell.component.html',
   styleUrls: ['./cms-shell.component.scss'],
 })

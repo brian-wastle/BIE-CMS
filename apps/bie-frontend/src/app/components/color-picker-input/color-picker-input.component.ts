@@ -1,12 +1,12 @@
 import { Component, input, output, HostListener, ElementRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ColorSketchModule } from 'ngx-color/sketch';
 import type { ColorEvent } from 'ngx-color';
 
 @Component({
   selector: 'app-color-picker-input',
-  imports: [CommonModule, FormsModule, ColorSketchModule],
+  imports: [FormsModule, ColorSketchModule],
   templateUrl: './color-picker-input.component.html',
   styleUrl: './color-picker-input.component.scss'
 })

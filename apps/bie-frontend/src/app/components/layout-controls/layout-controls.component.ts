@@ -1,5 +1,5 @@
 import { Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,7 +7,7 @@ import { GridPlacement, AlignType } from 'bie-models';
 
 @Component({
   selector: 'app-layout-controls',
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
+  imports: [FormsModule, MatIconModule, MatButtonModule],
   templateUrl: './layout-controls.component.html',
   styleUrls: ['./layout-controls.component.scss'],
 })

@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe} from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, model, input, output, signal, ViewChild } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';

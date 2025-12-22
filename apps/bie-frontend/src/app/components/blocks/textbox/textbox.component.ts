@@ -1,13 +1,13 @@
 // textbox.component.ts
 import { Component, SecurityContext, computed, inject, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TextBlock } from 'bie-models';
 import { BlockShell, BLOCK_SHELL } from '../block-shell/block-shell';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-textbox',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './textbox.component.html',
   styleUrls: ['./textbox.component.scss'],
 })

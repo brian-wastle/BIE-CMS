@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,7 +21,7 @@ interface UploadItem {
 
 @Component({
   selector: 'app-media-upload',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MediaBrowserComponent],
+  imports: [FormsModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MediaBrowserComponent],
   templateUrl: './media-upload.component.html',
   styleUrl: './media-upload.component.scss'
 })

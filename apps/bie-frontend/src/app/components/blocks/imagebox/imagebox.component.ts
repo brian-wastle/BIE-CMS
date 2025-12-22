@@ -1,12 +1,12 @@
 // imagebox.component.ts
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ImageBlock } from 'bie-models';
 import { BlockShell } from '../block-shell/block-shell';
 
 @Component({
   selector: 'app-imagebox',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './imagebox.component.html',
   styleUrls: ['./imagebox.component.scss'],
 })

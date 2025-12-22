@@ -1,11 +1,11 @@
 import { Component, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-login',
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })

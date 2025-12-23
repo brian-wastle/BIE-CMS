@@ -10,10 +10,10 @@ Headless CMS built on:
 ```
 apps/
   bie-frontend/   # Angular SSR app
-  bie-backend/    # Express API + DB tooling
+  bie-backend/    # Express API and DB migration
 libs/
-  bie-models/     # Shared schemas/types
-tools/            # build/run helpers
+  bie-models/     # Shared types library
+tools/            # Run command helpers
 ```
 
 ## Prerequisites
@@ -25,36 +25,34 @@ tools/            # build/run helpers
 ## Environment variables
 Create `.env` files in the repo root, `apps/bie-backend`, and `apps/bie-frontend` as needed.
 
+Example .envs are available in each repo
 
-## Quick start
+## Quick migration steps
+- Clone repo
+- Set environment variables
 ```bash
-git clone <repo> && cd BIE-CMS
-cp .env.example .env         # adjust per environment
-npm ci
+npm i
 npm run lib:build
 npm run db:bootstrap         # first install only
 npm run db:migrate
-npm run db:seed:admin        # seeds initial admin user
-npm run dev                  # starts Angular + API (with SSR when --ssr)
+npm run db:seed:admin        # seeds initial admin user, see .env.example
+npm run dev:ssr              # starts Angular, SSR and API servers
 ```
+- Configure nginx
 
 ## Common scripts
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Runs backend + Angular dev servers (no SSR unless `--ssr`). |
-| `npm run dev -- --ssr` | Same as above but serves SSR + API. |
-| `npm run build:prod` | Builds shared lib, backend, and frontend bundles. |
-| `npm run prod:ssr` | Runs the compiled API (`PORT=4000`) and SSR server (`PORT=4100`). |
-| `npm run db:all` | Bootstrap + migrate + seed admin. |
-| `npm run db:rebase` | Drop DB then re-run bootstrap/migrations/seeds (dangerous). |
-
-Each workspace also exposes its own scripts (`npm -w apps/bie-frontend run build`, etc.).
+| `npm run dev` | Runs Angular and API dev servers (no SSR). |
+| `npm run dev:ssr` | Runs Angular, API, and SSR dev servers. |
+| `npm run build:prod` | Builds types lib, backend, and frontend bundles. |
+| `npm run prod:ssr` | Runs the compiled API and SSR server. |
+| `npm run db:all` | Bootstrap postgres db, run migration scripts in order, seed admin to database. |
 
 ## Deployment notes
 1. Run `npm run build:prod`.
-2. Start servers via `npm run prod:ssr` (wrap with PM2/systemd on Linux).
-3. Terminate TLS and route traffic with nginx or Caddy; keep ports 4000/4100 firewalled to localhost.
-4. Ensure background workers (cron/queue) are pointed at the same env + database if applicable.
+2. Start servers via `npm run prod:ssr`.
+3. Route traffic with nginx.
 
 ## Health checks
 - Backend: `GET http://127.0.0.1:4000/healthz` checks API + DB.

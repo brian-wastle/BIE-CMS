@@ -1,16 +1,17 @@
 # BIE-CMS
 
 Headless CMS built on:
-- Angular 20 (signals + SSR) for the authoring and public experiences.
+- Angular v21 for the authoring and public experiences.
 - Node with Express API for auth, content, and Filestack media uploads
-- PostgreSQL for persistence.
-- A shared `bie-models` library (zod) to keep contracts aligned.
+- PostgreSQL database.
+- A shared `bie-models` library to keep contracts aligned.
 
 ## Project structure
 ```
 apps/
   bie-frontend/   # Angular SSR app
   bie-backend/    # Express API and DB migration
+  
 libs/
   bie-models/     # Shared types library
 tools/            # Run command helpers

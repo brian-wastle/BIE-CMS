@@ -21,7 +21,7 @@ tools/            # Run command helpers
 - Node 18+
 - npm 10+
 - PostgreSQL 14+ with the `citext` extension available.
-- Filestack API key + app secret (Filestack implementation can be swapped for any CDN).
+- Filestack API key and app secret (Filestack implementation can be swapped for any CDN).
 
 ## Environment variables
 Create `.env` files in the repo root, `apps/bie-backend`, and `apps/bie-frontend` as needed.
@@ -56,7 +56,7 @@ npm run dev:ssr              # starts Angular, SSR and API servers
 3. Route traffic with nginx.
 
 ## Health checks
-- Backend: `GET http://127.0.0.1:4000/healthz` checks API + DB.
+- Backend: `GET http://127.0.0.1:4000/healthz` checks API and database.
 - SSR: `GET http://127.0.0.1:4100/healthz` verifies the Angular server bundle responds.
 
 Keep `.env` files out of version control and rotate secrets when shipping to production.

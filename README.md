@@ -29,7 +29,7 @@ Create `.env` files in the repo root, `apps/bie-backend`, and `apps/bie-frontend
 Example .envs are available in each repo
 
 ## Quick migration steps
-- Clone repo
+- Clone repo and switch to production branch
 - Set environment variables
 ```bash
 npm i

@@ -13,7 +13,7 @@
     "test:front": "npm -w apps/bie-frontend run test",
     "serve:ssr": "npm -w apps/bie-frontend run serve:ssr",
     "start:back": "npm -w apps/bie-backend run start",
-    "start:ssr": "node dist/bie-frontend/server/server.mjs",
+    "start:ssr": "node dist/bie-frontend/browser/server/server.mjs",
     "dev": "node tools/run-dev.cjs",
     "dev:front": "npm -w apps/bie-frontend run start",
     "dev:back": "npm -w apps/bie-backend run dev",

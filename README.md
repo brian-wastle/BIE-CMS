@@ -37,7 +37,8 @@ npm run lib:build
 npm run db:bootstrap         # first install only
 npm run db:migrate
 npm run db:seed:admin        # seeds initial admin user, see .env.example
-npm run prod:ssr              # starts Angular, SSR and API servers
+npm run build:prod
+npm run prod:ssr             # starts Angular, SSR and API servers
 ```
 - Configure nginx
 
@@ -47,7 +48,7 @@ npm run prod:ssr              # starts Angular, SSR and API servers
 | `npm run dev` | Runs Angular and API dev servers (no SSR). |
 | `npm run dev:ssr` | Runs Angular, API, and SSR dev servers. |
 | `npm run build:prod` | Builds types lib, backend, and frontend bundles. |
-| `npm run prod:ssr` | Runs the compiled API and SSR server. |
+| `npm run prod:ssr` | Runs the compiled API, SSR server, and CSR static server. |
 | `npm run db:all` | Bootstrap postgres db, run migration scripts in order, seed admin to database. |
 
 ## Deployment notes
@@ -58,5 +59,6 @@ npm run prod:ssr              # starts Angular, SSR and API servers
 ## Health checks
 - Backend: `GET http://127.0.0.1:4000/healthz` checks API and database.
 - SSR: `GET http://127.0.0.1:4100/healthz` verifies the Angular server bundle responds.
+- CSR bundle: `GET http://127.0.0.1:4200/` confirms the static browser build is being served.
 
 Keep `.env` files out of version control and rotate secrets when shipping to production.

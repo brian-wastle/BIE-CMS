@@ -23,6 +23,8 @@ import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
 import { extractYoutubeId } from '../../utils/youtube';
 import { VideoBoxComponent } from '../../components/blocks/videobox/videobox.component';
 
+// TODO: touch gesture handler for preview-frame area
+
 type PreviewModeId = 'responsive' | 'mobile' | 'tablet' | 'desktop' | 'hd';
 
 type PageMetaState = {

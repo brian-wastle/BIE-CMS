@@ -16,13 +16,6 @@ $error: #f87171;
 $error-soft: #f8717133;
 $green-shadow: #0e997938;
 
-.inspector-collapsed-panel {
-
-  @include mat.icon-overrides((color: #e9eef3,
-    ));
-
-}
-
 .canvas-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(280px, 32vw, 380px);
@@ -31,7 +24,7 @@ $green-shadow: #0e997938;
   position: relative;
 }
 
-.canvas-layout.inspector-collapsed {
+.canvas-layout.inspector-collapsed:not(.inspector-overlap) {
   grid-template-columns: minmax(0, 1fr) 72px;
 }
 
@@ -331,7 +324,7 @@ $green-shadow: #0e997938;
   align-self: start;
 }
 
-.inspector.inspector-collapsed {
+.inspector.inspector-collapsed:not(.inspector-overlap) {
   max-height: none;
   border: 0px;
   position: sticky;
@@ -353,6 +346,25 @@ $green-shadow: #0e997938;
 
 .inspector.inspector-overlap .inspector-body {
   padding-right: 8px;
+}
+
+.inspector.inspector-overlap.inspector-collapsed {
+  width: auto;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.inspector.inspector-overlap.inspector-collapsed .inspector-collapsed-panel {
+  flex: none;
+  padding: 0;
+}
+
+.inspector.inspector-overlap.inspector-collapsed .inspector-expand-button {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
 }
 
 .inspector-header {
@@ -525,6 +537,10 @@ $green-shadow: #0e997938;
   place-items: center;
   gap: 8px;
   text-align: center;
+
+  @include mat.icon-overrides((
+    color: #e9eef3,
+  ));
 }
 
 .inspector-expand-button {

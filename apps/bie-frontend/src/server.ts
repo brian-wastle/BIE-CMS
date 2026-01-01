@@ -144,7 +144,8 @@ app.use(protectedPaths, async (req, res, next) => {
 });
 
 const angularApp = new AngularNodeAppEngine();
-app.all('*', (req, res, next) => {
+// Express 5 (path-to-regexp v8) requires the '{*param}' syntax for catch-all routes.
+app.all('/{*splat}', (req, res, next) => {
   angularApp.handle(req)
     .then((response) => response ? writeResponseToNodeResponse(response, res) : next())
     .catch(next);

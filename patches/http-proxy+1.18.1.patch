@@ -1,0 +1,53 @@
+diff --git a/node_modules/http-proxy/lib/http-proxy/common.js b/node_modules/http-proxy/lib/http-proxy/common.js
+index 6513e81..0bae26a 100644
+--- a/node_modules/http-proxy/lib/http-proxy/common.js
++++ b/node_modules/http-proxy/lib/http-proxy/common.js
+@@ -1,6 +1,21 @@
+ var common   = exports,
+     url      = require('url'),
+-    extend   = require('util')._extend,
++    extend   = typeof Object.assign === 'function' ? Object.assign : function (target) {
++      if (target == null) {
++        target = {};
++      }
++      for (var i = 1; i < arguments.length; i++) {
++        var source = arguments[i];
++        if (!source) {
++          continue;
++        }
++        var keys = Object.keys(source);
++        for (var j = 0; j < keys.length; j++) {
++          target[keys[j]] = source[keys[j]];
++        }
++      }
++      return target;
++    },
+     required = require('requires-port');
+ 
+ var upgradeHeader = /(^|,)\s*upgrade\s*($|,)/i,
+diff --git a/node_modules/http-proxy/lib/http-proxy/index.js b/node_modules/http-proxy/lib/http-proxy/index.js
+index 977a4b3..eae7edc 100644
+--- a/node_modules/http-proxy/lib/http-proxy/index.js
++++ b/node_modules/http-proxy/lib/http-proxy/index.js
+@@ -1,5 +1,20 @@
+ var httpProxy = module.exports,
+-    extend    = require('util')._extend,
++    extend    = typeof Object.assign === 'function' ? Object.assign : function (target) {
++      if (target == null) {
++        target = {};
++      }
++      for (var i = 1; i < arguments.length; i++) {
++        var source = arguments[i];
++        if (!source) {
++          continue;
++        }
++        var keys = Object.keys(source);
++        for (var j = 0; j < keys.length; j++) {
++          target[keys[j]] = source[keys[j]];
++        }
++      }
++      return target;
++    },
+     parse_url = require('url').parse,
+     EE3       = require('eventemitter3'),
+     http      = require('http'),

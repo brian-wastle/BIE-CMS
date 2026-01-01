@@ -21,6 +21,9 @@
   padding: 1.5rem 2rem;
   border-bottom: 1px solid #e2e2e2;
   background: #e8e9e8;
+  @media (max-width: 480px) { 
+    padding: 1.5rem 16px;
+  }
 }
 
 .brand a {

@@ -1,5 +1,5 @@
 <div class="canvas-layout" [class.inspector-collapsed]="!inspectorOpen()"
-  [class.inspector-overlap]="inspectorOpen() && inspectorOverlaps()">
+  [class.inspector-overlap]="inspectorOverlaps()">
 
   <div class="canvas-main">
     <div class="canvas-area">
@@ -139,7 +139,7 @@
   </div>
 
   <aside class="inspector" [class.inspector-collapsed]="!inspectorOpen()"
-    [class.inspector-overlap]="inspectorOpen() && inspectorOverlaps()">
+    [class.inspector-overlap]="inspectorOverlaps()">
     <div class="inspector-header">
       <h3>Inspector</h3>
       <button type="button" class="emerald-button" (click)="toggleInspector()">

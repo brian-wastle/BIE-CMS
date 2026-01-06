@@ -1,14 +1,11 @@
 import { z } from 'zod';
 
-// Enums
+/////////////////////////// Enums
+
 export const BlockTypeSchema = z.enum(['text', 'image', 'video', 'title', 'byline', 'background', 'divider']);
-export type BlockType = z.infer<typeof BlockTypeSchema>;
 
 export const AlignTypeSchema = z.enum(['flex-start', 'center', 'flex-end']);
 export type AlignType = z.infer<typeof AlignTypeSchema>;
-
-export const BreakpointIdSchema = z.enum(['mobile', 'tablet', 'desktop']);
-export type BreakpointId = z.infer<typeof BreakpointIdSchema>;
 
 export const ViewModeSchema = z.enum(['list', 'grid']);
 export type ViewMode = z.infer<typeof ViewModeSchema>;
@@ -16,7 +13,8 @@ export type ViewMode = z.infer<typeof ViewModeSchema>;
 export const BGStyleSchema = z.enum(['stretch', 'tile']);
 export type BGStyle = z.infer<typeof BGStyleSchema>;
 
-// Layout
+/////////////////////////// Layout
+
 export const GridPlacementSchema = z.object({
   row: z.coerce.number().int().nonnegative(), // Starting row
   colStart: z.coerce.number().int().nonnegative(), // Starting column
@@ -24,23 +22,6 @@ export const GridPlacementSchema = z.object({
   rowSpan: z.coerce.number().int().positive().optional(), // Height in rows
 });
 export type GridPlacement = z.infer<typeof GridPlacementSchema>;
-
-export const OverrideSchema = z.object({
-  fontSize: z.coerce.number().nullable().optional(),
-  layout: GridPlacementSchema.partial().optional(),
-  hAlign: AlignTypeSchema.optional(),
-  vAlign: AlignTypeSchema.optional(),
-});
-export type ResponsiveOverride = z.infer<typeof OverrideSchema>;
-
-export const ResponsiveOverridesSchema = z
-  .object({
-    mobile: OverrideSchema.optional(),
-    tablet: OverrideSchema.optional(),
-    desktop: OverrideSchema.optional(),
-  })
-  .partial();
-export type ResponsiveOverrides = z.infer<typeof ResponsiveOverridesSchema>;
 
 export const ImageStyleSchema = z
   .object({
@@ -50,7 +31,10 @@ export const ImageStyleSchema = z
 export type ImageStyle = z.infer<typeof ImageStyleSchema>;
 
 
-// Block base and component schemas
+/////////////////////////// Block base and component schemas
+// Each type is inferred from the respective zod schema
+// Each new type must be added to the BlockSchemas const
+
 const BlockBaseSchema = z.object({
   id: z.string(),
   type: BlockTypeSchema,
@@ -59,7 +43,6 @@ const BlockBaseSchema = z.object({
   color: z.string().optional(),
   hAlign: AlignTypeSchema,
   vAlign: AlignTypeSchema,
-  responsive: ResponsiveOverridesSchema.optional(),
 });
 
 export const TitleBlockSchema = BlockBaseSchema.extend({
@@ -124,6 +107,8 @@ const BlockSchemas = [
 export const AnyBlockSchema = z.discriminatedUnion('type', BlockSchemas);
 export type AnyBlock = z.infer<typeof AnyBlockSchema>; // Used during component creation/editing
 
+/////////////////////////// Block updates
+
 const BlockUpdateShape = BlockSchemas.reduce<Record<string, z.ZodTypeAny>>((shape, blockSchema) => {
   const partialShape = blockSchema.partial().shape as Record<string, z.ZodTypeAny>;
   Object.entries(partialShape).forEach(([key, value]) => {
@@ -135,27 +120,27 @@ const BlockUpdateShape = BlockSchemas.reduce<Record<string, z.ZodTypeAny>>((shap
   return shape;
 }, {});
 
-if (BlockUpdateShape.responsive) {
-  BlockUpdateShape.responsive = ResponsiveOverridesSchema.nullable().optional();
-}
-
 export const BlockUpdateSchema = z.object(BlockUpdateShape);
 
+// Wrap each value as a function to enable distributive behavior in the conditional
+// Function parameter types are contravariant in TS: union of functions -> intersection of the param types [Cherny 144]
 type UnionToIntersection<U> =
-  (U extends unknown ? (arg: U) => void : never) extends (arg: infer I) => void ? I : never;
-// Alias "Schema" as naked type param on left side of extends causes distributive behavior in TS
-// In this case, the union of all block schemas
+(U extends unknown ? (arg: U) => void : never) extends (arg: infer I) => void ? I : never;
+// Create a partial with all properties as optional
+// (typeof BlockSchemas)[number] - 'number' keys into any index of the array [Cherny 134]
 type BlockPatchUnion = (typeof BlockSchemas)[number] extends infer Schema
   ? Schema extends z.ZodTypeAny
     ? Partial<Omit<z.infer<Schema>, 'id' | 'type'>>
     : never
   : never;
 type BlockUpdateProps = UnionToIntersection<BlockPatchUnion>;
+// {t?:string} & {u?:string} --> {t?:string; url?:string}
 type Simplify<T> = { [K in keyof T]: T[K] };
 
 export type BlockUpdate = Simplify<z.infer<typeof BlockUpdateSchema> & BlockUpdateProps>;
 
-// Page models
+/////////////////////////// Page models
+
 export const DirectoryMetaSchema = z.object({
   directory: z.string().nullable(),
   itemCount: z.number().int(),
@@ -163,7 +148,43 @@ export const DirectoryMetaSchema = z.object({
 });
 export type DirectoryMeta = z.infer<typeof DirectoryMetaSchema>;
 
-export const PageMetaSchema = z.record(z.string(), z.unknown()).catch({});
+const JsonLdSchema = z.union([
+  z.string().trim(),
+  z.record(z.string(), z.unknown()),
+  z.array(z.record(z.string(), z.unknown())),
+]);
+
+const KeywordsSchema = z
+  .preprocess((value) => {
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((keyword) => keyword.trim())
+        .filter(Boolean);
+    }
+    return value;
+  }, z.array(z.string().trim().min(1).max(40)).max(12))
+  .optional();
+
+export const PageMetaSchema = z
+  .object({
+    seoTitle: z.string().trim().min(1).max(70).optional(),
+    description: z.string().trim().min(1).max(160).optional(),
+    keywords: KeywordsSchema,
+    canonicalUrl: z.string().trim().url().optional(),
+    robots: z.string().trim().max(120).optional(),
+    author: z.string().trim().max(80).optional(),
+    ogTitle: z.string().trim().min(1).max(70).optional(),
+    ogDescription: z.string().trim().min(1).max(200).optional(),
+    ogUrl: z.string().trim().url().optional(),
+    ogType: z.enum(['website', 'article', 'profile']).optional(),
+    twitterCard: z.enum(['summary', 'summary_large_image']).optional(),
+    twitterTitle: z.string().trim().min(1).max(70).optional(),
+    twitterDescription: z.string().trim().min(1).max(200).optional(),
+    jsonLd: JsonLdSchema.optional(),
+  })
+  .strip()
+  .catch({});
 export type PageMeta = z.infer<typeof PageMetaSchema>;
 
 export const PageStatusSchema = z.enum(['draft', 'published']);
@@ -204,23 +225,3 @@ export const PageSummarySchema = z.object({
   page: PageSchema,
 });
 export type PageSummary = z.infer<typeof PageSummarySchema>;
-
-export const PageDetailSchema = z.object({
-  page: PageSchema,
-});
-export type PageDetail = z.infer<typeof PageDetailSchema>;
-
-export const PageContentResponseSchema = z.object({
-  id: z.string(), // Page id
-  slug: z.string(),
-  title: z.string(),
-  status: PageStatusSchema,
-  updatedAt: z.string(),
-  blocks: z.array(AnyBlockSchema),
-  publishedAt: z.string().nullable().optional(),
-  meta: PageMetaSchema.optional(),
-});
-export type PageContentResponse = z.infer<typeof PageContentResponseSchema>;
-
-export const PageWithMetaSchema = PageContentResponseSchema;
-export type PageWithMeta = z.infer<typeof PageWithMetaSchema>;

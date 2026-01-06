@@ -1,6 +1,10 @@
 .homepage-wrapper {
     margin: 0 auto;
     padding: 0 4rem;
+    @media (min-width: 1270px) {
+        padding: 0 8rem;
+    }
+
     @media (max-width: 480px) {
         padding: 0 16px;
     }

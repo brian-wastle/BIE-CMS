@@ -180,6 +180,28 @@
         </div>
       </mat-expansion-panel>
 
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <h4>SEO</h4>
+        </mat-expansion-panel-header>
+        <div class="inspector-section inspector-seo">
+          <label>
+            <span>Meta description</span>
+            <textarea rows="3" placeholder="Describe this page" [ngModel]="pageMeta().description"
+              (ngModelChange)="onMetaDescriptionChange($event)"></textarea>
+          </label>
+          <label>
+            <span>Keywords</span>
+            <input type="text" placeholder="keyword, another keyword" [ngModel]="pageMeta().keywords"
+              (ngModelChange)="onMetaKeywordsChange($event)">
+          </label>
+          @if (keywordError(); as message) {
+          <p class="inspector-error">{{ message }}</p>
+          }
+          <p class="inspector-note">Separate keywords with commas.</p>
+        </div>
+      </mat-expansion-panel>
+
       @if (selected(); as block) {
       <mat-expansion-panel>
         <mat-expansion-panel-header>

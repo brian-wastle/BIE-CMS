@@ -33,6 +33,8 @@ type PageMetaState = {
   slug: string;
   slugRef: string | null;
   status: PageStatus;
+  description: string;
+  keywords: string;
 };
 
 const defaultPageMeta: PageMetaState = {
@@ -41,6 +43,8 @@ const defaultPageMeta: PageMetaState = {
   slug: '',
   slugRef: null,
   status: 'draft',
+  description: '',
+  keywords: '',
 };
 
 interface PreviewPreset {
@@ -143,6 +147,9 @@ export class CanvasComponent implements AfterViewInit {
   readonly loadingDraft = signal(false);
   readonly draftLoadError = signal<string | null>(null);
   private draftLoadSeq = 0; // Keep track of most recent pages query
+
+  // SEO
+  readonly keywordError = signal<string | null>(null);
 
   // Initial editor state and selected block as signal array
   blocks = signal<AnyBlock[]>(this.createDefaultBlocks());
@@ -252,6 +259,18 @@ export class CanvasComponent implements AfterViewInit {
     this.saveError.set(null);
   }
 
+  onMetaDescriptionChange(raw: string | null | undefined) {
+    const description = (raw ?? '').toString();
+    this.pageMeta.update(meta => ({ ...meta, description }));
+  }
+
+  onMetaKeywordsChange(raw: string | null | undefined) {
+    const keywords = (raw ?? '').toString();
+    const { invalid } = this.collectKeywords(keywords);
+    this.pageMeta.update(meta => ({ ...meta, keywords }));
+    this.keywordError.set(invalid.length ? `Remove invalid keywords: ${invalid.join(', ')}` : null);
+  }
+
   async saveDraft() {
     if (this.savingDraft() || this.publishingDraft() || this.loadingDraft()) {
       return;
@@ -353,12 +372,13 @@ export class CanvasComponent implements AfterViewInit {
   }
 
   private buildPageWritePayload(meta: PageMetaState): PageWrite {
+    const metaPayload = this.buildMetaPayload(meta);
     return {
       slug: meta.slug,
       title: meta.title,
       status: meta.status,
       blocks: this.blocks(),
-      meta: {},
+      ...(metaPayload ? { meta: metaPayload } : {}),
       publishedAt: null,
     };
   }
@@ -370,7 +390,10 @@ export class CanvasComponent implements AfterViewInit {
       slug: page.slug ?? '',
       slugRef: page.slug ?? null,
       status: page.status ?? 'draft',
+      description: typeof page.meta?.description === 'string' ? page.meta.description : '',
+      keywords: this.stringifyKeywords(page.meta?.keywords),
     });
+    this.keywordError.set(null);
     this.lastSavedAt.set(page.updatedAt ?? page.createdAt ?? null);
     this.blocks.set(page.blocks?.length ? page.blocks : this.createDefaultBlocks());
     this.selectedId.set(null);
@@ -406,6 +429,7 @@ export class CanvasComponent implements AfterViewInit {
 
   private resetEditor() {
     this.pageMeta.set({ ...defaultPageMeta });
+    this.keywordError.set(null);
     this.lastSavedAt.set(null);
     this.saveError.set(null);
     this.blocks.set(this.createDefaultBlocks());
@@ -1082,6 +1106,58 @@ export class CanvasComponent implements AfterViewInit {
       return '';
     }
     return filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  }
+
+  private buildMetaPayload(meta: PageMetaState): PageWrite['meta'] | undefined {
+    const description = meta.description.trim();
+    const { values: keywords } = this.collectKeywords(meta.keywords);
+    if (!description && !keywords.length) {
+      return undefined;
+    }
+    return {
+      ...(description ? { description } : {}),
+      ...(keywords.length ? { keywords } : {}),
+    };
+  }
+
+  private collectKeywords(raw: string | null | undefined): { values: string[]; invalid: string[] } {
+    if (!raw) {
+      return { values: [], invalid: [] };
+    }
+    const pattern = /^[A-Za-z0-9][A-Za-z0-9\s-]{0,38}$/;
+    const seen = new Set<string>();
+    const values: string[] = [];
+    const invalid: string[] = [];
+    raw
+      .split(',')
+      .map(entry => entry.trim())
+      .filter(Boolean)
+      .forEach(keyword => {
+        if (!pattern.test(keyword)) {
+          invalid.push(keyword);
+          return;
+        }
+        const normalized = keyword.toLowerCase();
+        if (seen.has(normalized)) {
+          return;
+        }
+        seen.add(normalized);
+        values.push(keyword);
+      });
+    return { values, invalid };
+  }
+
+  private stringifyKeywords(value: unknown): string {
+    if (Array.isArray(value)) {
+      return value
+        .map(entry => (typeof entry === 'string' ? entry.trim() : ''))
+        .filter(Boolean)
+        .join(', ');
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    return '';
   }
 
   private updateInspectorView() {

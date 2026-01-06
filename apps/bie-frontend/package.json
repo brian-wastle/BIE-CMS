@@ -8,7 +8,11 @@
     "build": "ng build",
     "watch": "ng build --watch",
     "test": "ng test",
-    "serve:ssr": "ng serve"
+    "build:ssr:dev": "ng build --configuration development",
+    "watch:ssr:dev": "ng build --configuration development --watch",
+    "serve:ssr:node": "nodemon --watch ../../dist/bie-frontend/browser/server --ext mjs,js,json --delay 0.5 --exec \"node ../../dist/bie-frontend/browser/server/server.mjs\"",
+    "serve:ssr:csr": "nodemon --watch ../../dist/bie-frontend/browser/browser --ext html,js,css,json --delay 0.5 --exec \"node ../../tools/serve-csr.cjs\"",
+    "serve:ssr": "npm-run-all build:ssr:dev --parallel watch:ssr:dev serve:ssr:node serve:ssr:csr"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
@@ -16,5 +20,8 @@
     "http-proxy-middleware": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "ngx-color": "^10.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   }
 }

@@ -507,6 +507,12 @@ $green-shadow: #0e997938;
   border-radius: 4px;
 }
 
+.inspector-error {
+  font-size: 13px;
+  color: $error;
+  margin: -4px 0 0;
+}
+
 .inspector-link {
   background: transparent;
   border: none;

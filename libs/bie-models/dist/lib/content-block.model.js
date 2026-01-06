@@ -1,36 +1,24 @@
 import { z } from 'zod';
-// Enums
+/////////////////////////// Enums
 export const BlockTypeSchema = z.enum(['text', 'image', 'video', 'title', 'byline', 'background', 'divider']);
 export const AlignTypeSchema = z.enum(['flex-start', 'center', 'flex-end']);
-export const BreakpointIdSchema = z.enum(['mobile', 'tablet', 'desktop']);
 export const ViewModeSchema = z.enum(['list', 'grid']);
 export const BGStyleSchema = z.enum(['stretch', 'tile']);
-// Layout
+/////////////////////////// Layout
 export const GridPlacementSchema = z.object({
     row: z.coerce.number().int().nonnegative(), // Starting row
     colStart: z.coerce.number().int().nonnegative(), // Starting column
     colSpan: z.coerce.number().int().positive(), // Width in columns
     rowSpan: z.coerce.number().int().positive().optional(), // Height in rows
 });
-export const OverrideSchema = z.object({
-    fontSize: z.coerce.number().nullable().optional(),
-    layout: GridPlacementSchema.partial().optional(),
-    hAlign: AlignTypeSchema.optional(),
-    vAlign: AlignTypeSchema.optional(),
-});
-export const ResponsiveOverridesSchema = z
-    .object({
-    mobile: OverrideSchema.optional(),
-    tablet: OverrideSchema.optional(),
-    desktop: OverrideSchema.optional(),
-})
-    .partial();
 export const ImageStyleSchema = z
     .object({
     columns: z.coerce.number().int().min(1).max(12).optional(),
 })
     .strict();
-// Block base and component schemas
+/////////////////////////// Block base and component schemas
+// Each type is inferred from the respective zod schema
+// Each new type must be added to the BlockSchemas const
 const BlockBaseSchema = z.object({
     id: z.string(),
     type: BlockTypeSchema,
@@ -39,7 +27,6 @@ const BlockBaseSchema = z.object({
     color: z.string().optional(),
     hAlign: AlignTypeSchema,
     vAlign: AlignTypeSchema,
-    responsive: ResponsiveOverridesSchema.optional(),
 });
 export const TitleBlockSchema = BlockBaseSchema.extend({
     type: z.literal('title'),
@@ -86,6 +73,7 @@ const BlockSchemas = [
     DividerBlockSchema,
 ];
 export const AnyBlockSchema = z.discriminatedUnion('type', BlockSchemas);
+/////////////////////////// Block updates
 const BlockUpdateShape = BlockSchemas.reduce((shape, blockSchema) => {
     const partialShape = blockSchema.partial().shape;
     Object.entries(partialShape).forEach(([key, value]) => {
@@ -96,17 +84,48 @@ const BlockUpdateShape = BlockSchemas.reduce((shape, blockSchema) => {
     });
     return shape;
 }, {});
-if (BlockUpdateShape.responsive) {
-    BlockUpdateShape.responsive = ResponsiveOverridesSchema.nullable().optional();
-}
 export const BlockUpdateSchema = z.object(BlockUpdateShape);
-// Page models
+/////////////////////////// Page models
 export const DirectoryMetaSchema = z.object({
     directory: z.string().nullable(),
     itemCount: z.number().int(),
     lastUploaded: z.string().nullable(),
 });
-export const PageMetaSchema = z.record(z.string(), z.unknown()).catch({});
+const JsonLdSchema = z.union([
+    z.string().trim(),
+    z.record(z.string(), z.unknown()),
+    z.array(z.record(z.string(), z.unknown())),
+]);
+const KeywordsSchema = z
+    .preprocess((value) => {
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map((keyword) => keyword.trim())
+            .filter(Boolean);
+    }
+    return value;
+}, z.array(z.string().trim().min(1).max(40)).max(12))
+    .optional();
+export const PageMetaSchema = z
+    .object({
+    seoTitle: z.string().trim().min(1).max(70).optional(),
+    description: z.string().trim().min(1).max(160).optional(),
+    keywords: KeywordsSchema,
+    canonicalUrl: z.string().trim().url().optional(),
+    robots: z.string().trim().max(120).optional(),
+    author: z.string().trim().max(80).optional(),
+    ogTitle: z.string().trim().min(1).max(70).optional(),
+    ogDescription: z.string().trim().min(1).max(200).optional(),
+    ogUrl: z.string().trim().url().optional(),
+    ogType: z.enum(['website', 'article', 'profile']).optional(),
+    twitterCard: z.enum(['summary', 'summary_large_image']).optional(),
+    twitterTitle: z.string().trim().min(1).max(70).optional(),
+    twitterDescription: z.string().trim().min(1).max(200).optional(),
+    jsonLd: JsonLdSchema.optional(),
+})
+    .strip()
+    .catch({});
 export const PageStatusSchema = z.enum(['draft', 'published']);
 export const PageSchema = z.object({
     id: z.string(),
@@ -135,17 +154,3 @@ export const PageUpdateSchema = PagePatchSchema.extend({
 export const PageSummarySchema = z.object({
     page: PageSchema,
 });
-export const PageDetailSchema = z.object({
-    page: PageSchema,
-});
-export const PageContentResponseSchema = z.object({
-    id: z.string(), // Page id
-    slug: z.string(),
-    title: z.string(),
-    status: PageStatusSchema,
-    updatedAt: z.string(),
-    blocks: z.array(AnyBlockSchema),
-    publishedAt: z.string().nullable().optional(),
-    meta: PageMetaSchema.optional(),
-});
-export const PageWithMetaSchema = PageContentResponseSchema;

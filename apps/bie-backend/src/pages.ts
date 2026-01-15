@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Pool, PoolClient } from 'pg';
 import {
+  GridSettingsDefaults,
   Page,
   PageSchema,
   PageSummary,
@@ -30,6 +31,7 @@ function mapVersionToPage(row: any): Page {
     status: row.status,
     title: row.title,
     blocks: row.blocks,
+    grid: row.grid,
     meta: row.meta ?? {},
     createdAt: new Date(row.version_created_at ?? row.created_at).toISOString(),
     updatedAt: new Date(row.version_updated_at ?? row.updated_at).toISOString(),
@@ -54,13 +56,14 @@ async function loadPageById(pageId: string, client: Pool | PoolClient = pool): P
       v.status,
       v.title,
       v.blocks,
+      v.grid,
       v.meta,
       v.created_at AS version_created_at,
       v.updated_at AS version_updated_at,
       v.published_at
     FROM pages p
     JOIN LATERAL (
-      SELECT status, title, blocks, meta, created_at, updated_at, published_at
+      SELECT status, title, blocks, grid, meta, created_at, updated_at, published_at
       FROM page_versions
       WHERE page_id = p.id
       ORDER BY created_at DESC
@@ -96,6 +99,7 @@ async function loadPublishedPageBySlug(slug: string): Promise<Page | null> {
       v.status,
       v.title,
       v.blocks,
+      v.grid,
       v.meta,
       v.created_at AS version_created_at,
       v.updated_at AS version_updated_at,
@@ -157,6 +161,7 @@ router.get('/published', async (req, res) => {
         v.status,
         v.title,
         v.blocks,
+        v.grid,
         v.meta,
         v.created_at AS version_created_at,
         v.updated_at AS version_updated_at,
@@ -261,13 +266,14 @@ router.get('/', async (req, res) => {
         v.status,
         v.title,
         v.blocks,
+        v.grid,
         v.meta,
         v.created_at AS version_created_at,
         v.updated_at AS version_updated_at,
         v.published_at
       FROM pages p
       JOIN LATERAL (
-        SELECT status, title, blocks, meta, created_at, updated_at, published_at
+        SELECT status, title, blocks, grid, meta, created_at, updated_at, published_at
         FROM page_versions
         WHERE page_id = p.id
         ORDER BY created_at DESC
@@ -341,6 +347,7 @@ router.post('/', async (req, res) => {
   const status = payload.status ?? 'draft';
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
   const blocksJson = JSON.stringify(payload.blocks);
+  const gridJson = JSON.stringify(payload.grid ?? GridSettingsDefaults);
   const metaJson = JSON.stringify(payload.meta ?? {});
 
   try {
@@ -363,11 +370,11 @@ router.post('/', async (req, res) => {
 
       const versionInsert = await client.query(
         `
-        INSERT INTO page_versions (page_id, version, status, title, blocks, meta, created_by, published_at)
-        VALUES ($1, 1, $2::page_version_status, $3, $4::jsonb, $5::jsonb, $6, $7::timestamptz)
+        INSERT INTO page_versions (page_id, version, status, title, blocks, grid, meta, created_by, published_at)
+        VALUES ($1, 1, $2::page_version_status, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7, $8::timestamptz)
         RETURNING id, page_id, version, status, title, blocks, meta, created_by, created_at, updated_at, published_at
         `,
-        [pageId, status, payload.title, blocksJson, metaJson, createdBy, publishedAt]
+        [pageId, status, payload.title, blocksJson, gridJson, metaJson, createdBy, publishedAt]
       );
 
       const version = versionInsert.rows[0];
@@ -423,6 +430,7 @@ router.put('/:slug', async (req, res) => {
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
   const slugParam = req.params.slug;
   const blocksJson = JSON.stringify(payload.blocks);
+  const gridJson = JSON.stringify(payload.grid ?? GridSettingsDefaults);
   const metaJson = JSON.stringify(payload.meta ?? {});
 
   try {
@@ -444,8 +452,8 @@ router.put('/:slug', async (req, res) => {
 
       const versionInsert = await client.query(
         `
-        INSERT INTO page_versions (page_id, version, status, title, blocks, meta, created_by, published_at)
-        VALUES ($1, $2, $3::page_version_status, $4, $5::jsonb, $6::jsonb, $7, $8::timestamptz)
+        INSERT INTO page_versions (page_id, version, status, title, blocks, grid, meta, created_by, published_at)
+        VALUES ($1, $2, $3::page_version_status, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9::timestamptz)
         RETURNING id, page_id, version, status, title, blocks, meta, created_by, created_at, updated_at, published_at
         `,
         [
@@ -454,6 +462,7 @@ router.put('/:slug', async (req, res) => {
           status,
           payload.title,
           blocksJson,
+          gridJson,
           metaJson,
           createdBy,
           publishedAt,

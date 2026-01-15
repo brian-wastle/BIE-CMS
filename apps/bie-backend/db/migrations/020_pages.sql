@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS page_versions(
   status page_version_status NOT NULL DEFAULT 'draft',
   title TEXT NOT NULL,
   blocks JSONB NOT NULL,
+  grid JSONB NOT NULL DEFAULT '{"columns":12,"gapPx":16,"rowHeight":48}'::jsonb,
   meta JSONB NOT NULL DEFAULT '{}',
   created_by TEXT,
   published_at TIMESTAMPTZ,

@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, TrackByFunction, computed, effect, forwardRef, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { AnyBlock, BGBlock, BylineBlock, DividerBlock, ImageBlock, Page, TextBlock, TitleBlock } from 'bie-models';
+import { AnyBlock, BGBlock, BylineBlock, DividerBlock, GridSettings, GridSettingsDefaults, ImageBlock, Page, TextBlock, TitleBlock } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -38,9 +38,9 @@ export class PublishedPageComponent {
   readonly error = signal<string | null>(null);
   readonly page = signal<Page | null>(null);
 
-  readonly gridColumns = 12;
-  readonly gridGapPx = 16;
-  readonly gridRowHeight = 48;
+  gridColumns: number = GridSettingsDefaults.columns;
+  gridGapPx: number = GridSettingsDefaults.gapPx;
+  gridRowHeight: number = GridSettingsDefaults.rowHeight;
 
   readonly pageBlocks = computed(() => {
     const current = this.page();
@@ -65,9 +65,11 @@ export class PublishedPageComponent {
         this.loading.set(true);
         this.page.set(null);
         this.error.set(null);
+        this.applyGridSettings(GridSettingsDefaults);
         return;
       }
       this.page.set(resolved.page);
+      this.applyGridSettings(resolved.page?.grid);
       this.error.set(resolved.error);
       this.loading.set(false);
     });
@@ -152,6 +154,20 @@ export class PublishedPageComponent {
   }
 
   trackByBlockId: TrackByFunction<AnyBlock> = (_index, block) => block.id;
+
+  private applyGridSettings(grid?: GridSettings | null) {
+    const next = this.normalizeGridSettings(grid);
+    this.gridColumns = next.columns;
+    this.gridGapPx = next.gapPx;
+    this.gridRowHeight = next.rowHeight;
+  }
+
+  private normalizeGridSettings(grid?: GridSettings | null): GridSettings {
+    const columns = Math.max(1, Math.min(24, Math.floor(grid?.columns ?? GridSettingsDefaults.columns)));
+    const gapPx = Math.max(0, Math.min(64, Math.floor(grid?.gapPx ?? GridSettingsDefaults.gapPx)));
+    const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridSettingsDefaults.rowHeight)));
+    return { columns, gapPx, rowHeight };
+  }
 
   private resolveBlockColSpan(block: AnyBlock, fallbackSpan: number) {
     if (this.isImageBlock(block)) {

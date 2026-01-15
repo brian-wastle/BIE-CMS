@@ -31,6 +31,17 @@ export declare const GridPlacementSchema: z.ZodObject<{
     rowSpan: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
 }, z.core.$strip>;
 export type GridPlacement = z.infer<typeof GridPlacementSchema>;
+export declare const GridSettingsDefaults: {
+    readonly columns: 12;
+    readonly gapPx: 16;
+    readonly rowHeight: 48;
+};
+export declare const GridSettingsSchema: z.ZodCatch<z.ZodObject<{
+    columns: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+    gapPx: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+    rowHeight: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+}, z.core.$strip>>;
+export type GridSettings = z.infer<typeof GridSettingsSchema>;
 export declare const ImageStyleSchema: z.ZodObject<{
     columns: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
 }, z.core.$strict>;
@@ -770,6 +781,11 @@ export declare const PageSchema: z.ZodObject<{
         }>;
         type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
+    grid: z.ZodDefault<z.ZodCatch<z.ZodObject<{
+        columns: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+        gapPx: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+        rowHeight: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+    }, z.core.$strip>>>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodObject<{
         seoTitle: z.ZodOptional<z.ZodString>;
         description: z.ZodOptional<z.ZodString>;
@@ -971,6 +987,11 @@ export declare const PageWriteSchema: z.ZodObject<{
         }>;
         type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
+    grid: z.ZodDefault<z.ZodCatch<z.ZodObject<{
+        columns: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+        gapPx: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+        rowHeight: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+    }, z.core.$strip>>>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodObject<{
         seoTitle: z.ZodOptional<z.ZodString>;
         description: z.ZodOptional<z.ZodString>;
@@ -1171,6 +1192,11 @@ export declare const PageUpdateSchema: z.ZodObject<{
         }>;
         type: z.ZodLiteral<"divider">;
     }, z.core.$strip>], "type">>;
+    grid: z.ZodDefault<z.ZodCatch<z.ZodObject<{
+        columns: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+        gapPx: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+        rowHeight: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+    }, z.core.$strip>>>;
     meta: z.ZodOptional<z.ZodCatch<z.ZodObject<{
         seoTitle: z.ZodOptional<z.ZodString>;
         description: z.ZodOptional<z.ZodString>;
@@ -1374,6 +1400,11 @@ export declare const PageSummarySchema: z.ZodObject<{
             }>;
             type: z.ZodLiteral<"divider">;
         }, z.core.$strip>], "type">>;
+        grid: z.ZodDefault<z.ZodCatch<z.ZodObject<{
+            columns: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+            gapPx: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+            rowHeight: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+        }, z.core.$strip>>>;
         meta: z.ZodOptional<z.ZodCatch<z.ZodObject<{
             seoTitle: z.ZodOptional<z.ZodString>;
             description: z.ZodOptional<z.ZodString>;

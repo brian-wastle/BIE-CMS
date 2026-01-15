@@ -11,6 +11,19 @@ export const GridPlacementSchema = z.object({
     colSpan: z.coerce.number().int().positive(), // Width in columns
     rowSpan: z.coerce.number().int().positive().optional(), // Height in rows
 });
+export const GridSettingsDefaults = {
+    columns: 12,
+    gapPx: 16,
+    rowHeight: 48,
+};
+export const GridSettingsSchema = z
+    .object({
+    columns: z.coerce.number().int().min(1).max(24).default(GridSettingsDefaults.columns),
+    gapPx: z.coerce.number().int().min(0).max(64).default(GridSettingsDefaults.gapPx),
+    rowHeight: z.coerce.number().int().min(8).max(256).default(GridSettingsDefaults.rowHeight),
+})
+    .strip()
+    .catch(GridSettingsDefaults);
 export const ImageStyleSchema = z
     .object({
     columns: z.coerce.number().int().min(1).max(12).optional(),
@@ -133,6 +146,7 @@ export const PageSchema = z.object({
     status: PageStatusSchema,
     title: z.string(),
     blocks: z.array(AnyBlockSchema),
+    grid: GridSettingsSchema.default(GridSettingsDefaults),
     meta: PageMetaSchema.optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -142,6 +156,7 @@ const PagePatchSchema = z.object({
     title: z.string().min(1),
     status: PageStatusSchema.optional(),
     blocks: z.array(AnyBlockSchema).nonempty('At least one block is required'),
+    grid: GridSettingsSchema.default(GridSettingsDefaults),
     meta: PageMetaSchema.optional(),
     publishedAt: z.string().nullable().optional(),
 });

@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { CurrentUserService } from '../../services/current-user/current-user.service';
 import { PagesService } from '../../services/pages/pages.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, Page, PageStatus, PageWrite, PageUpdate } from 'bie-models';
+import { AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, GridSettings, GridSettingsDefaults, Page, PageStatus, PageWrite, PageUpdate } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -82,10 +82,10 @@ const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
 })
 export class CanvasComponent implements AfterViewInit {
   // Grid settings
-  columns = 12;
-  gapPx = 16;
+  columns: number = GridSettingsDefaults.columns;
+  gapPx: number = GridSettingsDefaults.gapPx;
   readonly maxColumns = 24;
-  tileRowHeight = 48;
+  tileRowHeight: number = GridSettingsDefaults.rowHeight;
   readonly rowHeightPresets = [24, 32, 40, 48, 56, 64];
 
   // View settings
@@ -378,8 +378,17 @@ export class CanvasComponent implements AfterViewInit {
       title: meta.title,
       status: meta.status,
       blocks: this.blocks(),
+      grid: this.getCurrentGridSettings(),
       ...(metaPayload ? { meta: metaPayload } : {}),
       publishedAt: null,
+    };
+  }
+
+  private getCurrentGridSettings(): GridSettings {
+    return {
+      columns: this.columns,
+      gapPx: this.gapPx,
+      rowHeight: this.tileRowHeight,
     };
   }
 
@@ -395,6 +404,7 @@ export class CanvasComponent implements AfterViewInit {
     });
     this.keywordError.set(null);
     this.lastSavedAt.set(page.updatedAt ?? page.createdAt ?? null);
+    this.applyGridSettings(page.grid);
     this.blocks.set(page.blocks?.length ? page.blocks : this.createDefaultBlocks());
     this.selectedId.set(null);
     this.saveError.set(null);
@@ -432,8 +442,23 @@ export class CanvasComponent implements AfterViewInit {
     this.keywordError.set(null);
     this.lastSavedAt.set(null);
     this.saveError.set(null);
+    this.applyGridSettings(GridSettingsDefaults);
     this.blocks.set(this.createDefaultBlocks());
     this.selectedId.set(null);
+  }
+
+  private applyGridSettings(grid?: GridSettings | null) {
+    const next = this.normalizeGridSettings(grid);
+    this.columns = next.columns;
+    this.gapPx = next.gapPx;
+    this.tileRowHeight = next.rowHeight;
+  }
+
+  private normalizeGridSettings(grid?: GridSettings | null): GridSettings {
+    const columns = Math.max(1, Math.min(this.maxColumns, Math.floor(grid?.columns ?? GridSettingsDefaults.columns)));
+    const gapPx = Math.max(0, Math.min(64, Math.floor(grid?.gapPx ?? GridSettingsDefaults.gapPx)));
+    const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridSettingsDefaults.rowHeight)));
+    return { columns, gapPx, rowHeight };
   }
 
   selectedId = signal<string | null>(null);
@@ -791,18 +816,7 @@ export class CanvasComponent implements AfterViewInit {
   }
 
   onLayoutChange(block: AnyBlock, layout: GridPlacement) {
-    const current = this.blocks();
-    const validated = this.tryPlace(block.id, layout, current);
-    if (!validated) {
-      this.blocks.update(arr => arr.map(b => {
-        if (b.id !== block.id || !b.layout) {
-          return b;
-        }
-        return { ...b, layout: { ...b.layout } };
-      }));
-      return;
-    }
-    this.onBlockUpdate(block, { layout: validated });
+    this.onBlockUpdate(block, { layout });
   }
 
   onPreviewCanvasClick(event: MouseEvent) {
@@ -1018,81 +1032,85 @@ export class CanvasComponent implements AfterViewInit {
       console.warn('[Canvas] onBlockUpdate skipped (invalid patch)', { blockId: block.id, patch });
       return;
     }
-    this.blocks.update(arr => arr.map(b => {
-      if (b.id !== block.id) {
-        return b;
-      }
-      let next = { ...b };
-
+    this.blocks.update(arr => {
+      let working = arr;
       if (normalized.layout) {
-        const layout = this.tryPlace(b.id, normalized.layout, arr);
-        if (layout) {
-          next.layout = layout;
+        const reflowed = this.applyLayoutWithPushdown(block.id, normalized.layout, working);
+        if (!reflowed) {
+          console.warn('[Canvas] onBlockUpdate layout reflow failed', { blockId: block.id, layout: normalized.layout });
+          return arr;
         }
+        working = reflowed;
       }
+      return working.map(b => {
+        if (b.id !== block.id) {
+          return b;
+        }
+        let next = { ...b };
 
-      if (Object.prototype.hasOwnProperty.call(normalized, 'fontSize')) {
-        if (normalized.fontSize === null) {
-          delete next.fontSize;
-        } else {
-          next.fontSize = normalized.fontSize;
+        if (Object.prototype.hasOwnProperty.call(normalized, 'fontSize')) {
+          if (normalized.fontSize === null) {
+            delete next.fontSize;
+          } else {
+            next.fontSize = normalized.fontSize;
+          }
         }
-      }
-      if (normalized.hAlign) {
-        next.hAlign = normalized.hAlign;
-      }
-      if (normalized.vAlign) {
-        next.vAlign = normalized.vAlign;
-      }
+        if (normalized.hAlign) {
+          next.hAlign = normalized.hAlign;
+        }
+        if (normalized.vAlign) {
+          next.vAlign = normalized.vAlign;
+        }
 
-      if (this.isTitleBlock(next) || this.isTextBlock(next)) {
-        if (Object.prototype.hasOwnProperty.call(normalized, 'text')) {
-          next = { ...next, text: normalized.text ?? '' };
-        }
-      } else if (this.isImageBlock(next)) {
-        next = {
-          ...next,
-          ...(normalized.src !== undefined ? { src: normalized.src ?? '' } : {}),
-          ...(normalized.alt !== undefined ? { alt: normalized.alt } : {}),
-          ...(normalized.mediaHandle !== undefined ? { mediaHandle: normalized.mediaHandle ?? null } : {}),
-          ...(normalized.imageStyle !== undefined ? { imageStyle: normalized.imageStyle ?? undefined } : {}),
-        };
-        const layoutColSpan = next.layout?.colSpan;
-        if (typeof layoutColSpan === 'number' && Number.isFinite(layoutColSpan)) {
+        if (this.isTitleBlock(next) || this.isTextBlock(next)) {
+          if (Object.prototype.hasOwnProperty.call(normalized, 'text')) {
+            next = { ...next, text: normalized.text ?? '' };
+          }
+        } else if (this.isImageBlock(next)) {
           next = {
             ...next,
-            imageStyle: { ...(next.imageStyle ?? {}), columns: layoutColSpan },
+            ...(normalized.src !== undefined ? { src: normalized.src ?? '' } : {}),
+            ...(normalized.alt !== undefined ? { alt: normalized.alt } : {}),
+            ...(normalized.mediaHandle !== undefined ? { mediaHandle: normalized.mediaHandle ?? null } : {}),
+            ...(normalized.imageStyle !== undefined ? { imageStyle: normalized.imageStyle ?? undefined } : {}),
+          };
+          const layoutColSpan = next.layout?.colSpan;
+          if (typeof layoutColSpan === 'number' && Number.isFinite(layoutColSpan)) {
+            next = {
+              ...next,
+              imageStyle: { ...(next.imageStyle ?? {}), columns: layoutColSpan },
+            };
+          }
+        } else if (this.isVideoBlock(next)) {
+          const prevState = {
+            videoId: next.videoId,
+            videoUrl: next.videoUrl,
+            caption: next.caption,
+          };
+          next = {
+            ...next,
+            ...(normalized.videoId !== undefined ? { videoId: normalized.videoId ?? next.videoId } : {}),
+            ...(normalized.videoUrl !== undefined ? { videoUrl: normalized.videoUrl ?? next.videoUrl } : {}),
+            ...(normalized.caption !== undefined ? { caption: normalized.caption ?? null } : {}),
+          };
+        } else if (this.isBylineBlock(next)) {
+          next = {
+            ...next,
+            ...(normalized.author !== undefined ? { author: normalized.author ?? next.author } : {}),
+            ...(normalized.publishedAt !== undefined ? { publishedAt: normalized.publishedAt ?? undefined } : {}),
+          };
+        } else if (this.isBackgroundBlock(next)) {
+          next = {
+            ...next,
+            ...(normalized.src !== undefined ? { src: normalized.src ?? '' } : {}),
+            ...(normalized.mediaHandle !== undefined ? { mediaHandle: normalized.mediaHandle ?? null } : {}),
+            ...(normalized.color !== undefined ? { color: normalized.color ?? '' } : {}),
+            ...(normalized.bgStyle !== undefined ? { bgStyle: normalized.bgStyle ?? 'stretch' } : {}),
           };
         }
-      } else if (this.isVideoBlock(next)) {
-        const prevState = {
-          videoId: next.videoId,
-          videoUrl: next.videoUrl,
-          caption: next.caption,
-        };
-        next = {
-          ...next,
-          ...(normalized.videoId !== undefined ? { videoId: normalized.videoId ?? next.videoId } : {}),
-          ...(normalized.videoUrl !== undefined ? { videoUrl: normalized.videoUrl ?? next.videoUrl } : {}),
-          ...(normalized.caption !== undefined ? { caption: normalized.caption ?? null } : {}),
-        };
-      } else if (this.isBylineBlock(next)) {
-        next = {
-          ...next,
-          ...(normalized.author !== undefined ? { author: normalized.author ?? next.author } : {}),
-          ...(normalized.publishedAt !== undefined ? { publishedAt: normalized.publishedAt ?? undefined } : {}),
-        };
-      } else if (this.isBackgroundBlock(next)) {
-        next = {
-          ...next,
-          ...(normalized.src !== undefined ? { src: normalized.src ?? '' } : {}),
-          ...(normalized.mediaHandle !== undefined ? { mediaHandle: normalized.mediaHandle ?? null } : {}),
-          ...(normalized.color !== undefined ? { color: normalized.color ?? '' } : {}),
-          ...(normalized.bgStyle !== undefined ? { bgStyle: normalized.bgStyle ?? 'stretch' } : {}),
-        };
-      }
-      return next;
-    }));
+        return next;
+      });
+    });
   }
 
   private normalizeEditorHtml(value: string | null | undefined) {
@@ -1236,6 +1254,7 @@ export class CanvasComponent implements AfterViewInit {
     return a.id.localeCompare(b.id);
   }
 
+  // Helper to clamp blocks within current margins
   private clampLayout(desired: GridPlacement, total = this.columns): GridPlacement {
     const totalCols = total;
     const row = Math.max(1, desired?.row ?? 1);
@@ -1264,6 +1283,111 @@ export class CanvasComponent implements AfterViewInit {
     return this.clampLayout({ ...desired, row }, total);
   }
 
+  private applyLayoutWithPushdown(blockId: string, desired: GridPlacement, blocks: AnyBlock[], total = this.columns): AnyBlock[] | null {
+    const targetExists = blocks.some(entry => entry.id === blockId);
+    if (!targetExists) {
+      return null;
+    }
+    const override = this.clampLayout(desired, total);
+    const entries = blocks.map((entry, index) => {
+      const baseLayout = entry.layout
+        ? this.clampLayout(entry.layout, total)
+        : this.clampLayout(
+            {
+              row: index + 1,
+              colStart: 1,
+              colSpan: total,
+              rowSpan: 1,
+            },
+            total
+          );
+      const layout = entry.id === blockId ? override : baseLayout;
+      return { block: entry, layout };
+    });
+    return this.cascadeLayouts(entries, blocks, total, blockId);
+  }
+
+  private cascadeLayouts(
+    entries: { block: AnyBlock; layout: GridPlacement }[],
+    blocks: AnyBlock[],
+    total: number,
+    priorityId?: string
+  ): AnyBlock[] {
+    if (!entries.length) {
+      return blocks;
+    }
+    const sorted = [...entries].sort((a, b) => this.compareCascadeEntries(a, b, priorityId));
+    const columnHeights = new Array(total + 2).fill(1);
+    const placed = new Map<string, GridPlacement>();
+    for (const entry of sorted) {
+      const span = Math.max(1, entry.layout.rowSpan ?? 1);
+      const startCol = entry.layout.colStart;
+      const endCol = startCol + entry.layout.colSpan - 1;
+      let row = entry.layout.row;
+      for (let col = startCol; col <= endCol; col += 1) {
+        const available = columnHeights[col] ?? 1;
+        row = Math.max(row, available);
+      }
+      const placement: GridPlacement = { ...entry.layout, row };
+      placed.set(entry.block.id, placement);
+      const releaseRow = row + span;
+      for (let col = startCol; col <= endCol; col += 1) {
+        columnHeights[col] = releaseRow;
+      }
+    }
+    return blocks.map(block => {
+      const placement = placed.get(block.id);
+      if (!placement) {
+        return block;
+      }
+      if (this.sameLayout(block.layout, placement)) {
+        return block;
+      }
+      return { ...block, layout: placement };
+    });
+  }
+
+  private compareCascadeEntries(
+    a: { block: AnyBlock; layout: GridPlacement },
+    b: { block: AnyBlock; layout: GridPlacement },
+    priorityId?: string
+  ) {
+    const rowDiff = a.layout.row - b.layout.row;
+    if (rowDiff !== 0) {
+      return rowDiff;
+    }
+    if (priorityId) {
+      if (a.block.id === priorityId && b.block.id !== priorityId) {
+        return -1;
+      }
+      if (b.block.id === priorityId && a.block.id !== priorityId) {
+        return 1;
+      }
+    }
+    const colDiff = a.layout.colStart - b.layout.colStart;
+    if (colDiff !== 0) {
+      return colDiff;
+    }
+    return a.block.id.localeCompare(b.block.id);
+  }
+
+  // Compare grid placement between 2 blocks
+  private sameLayout(a?: GridPlacement | null, b?: GridPlacement | null): boolean {
+    if (!a && !b) {
+      return true;
+    }
+    if (!a || !b) {
+      return false;
+    }
+    return (
+      a.row === b.row &&
+      a.colStart === b.colStart &&
+      a.colSpan === b.colSpan &&
+      (a.rowSpan ?? 1) === (b.rowSpan ?? 1)
+    );
+  }
+
+  // Checks to see if moving a block will overlap an existing one during reflow
   private hasOverlap(blockId: string, layout: GridPlacement, blocks: AnyBlock[]) {
     const startRow = layout.row;
     const endRow = startRow + (layout.rowSpan ?? 1) - 1;
@@ -1286,13 +1410,15 @@ export class CanvasComponent implements AfterViewInit {
     });
   }
 
+  // Sets a title and byline block at the top of a new page
   private createDefaultBlocks(): AnyBlock[] {
     const title = this.pageMeta().title ?? '';
+    const totalCols = Math.max(1, this.columns);
     return [
       {
         id: 't1',
         type: 'title',
-        layout: { row: 1, colStart: 1, colSpan: 12, rowSpan: 2 },
+        layout: { row: 1, colStart: 1, colSpan: totalCols, rowSpan: 2 },
         hAlign: 'flex-start',
         vAlign: 'center',
         text: title,
@@ -1300,7 +1426,7 @@ export class CanvasComponent implements AfterViewInit {
       {
         id: 'b1',
         type: 'byline',
-        layout: { row: 3, colStart: 1, colSpan: 12, rowSpan: 2 },
+        layout: { row: 3, colStart: 1, colSpan: totalCols, rowSpan: 2 },
         hAlign: 'flex-start',
         vAlign: 'center',
         author: this.currentAuthor(),
@@ -1309,6 +1435,7 @@ export class CanvasComponent implements AfterViewInit {
     ];
   }
 
+  // Convert a title to a valid URI value
   private slugify(value: string) {
     return value
       .toLowerCase()

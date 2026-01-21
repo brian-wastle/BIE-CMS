@@ -1035,7 +1035,7 @@ export class CanvasComponent implements AfterViewInit {
     this.blocks.update(arr => {
       let working = arr;
       if (normalized.layout) {
-        const reflowed = this.applyLayoutWithPushdown(block.id, normalized.layout, working);
+        const reflowed = this.shiftBlockDown(block.id, normalized.layout, working);
         if (!reflowed) {
           console.warn('[Canvas] onBlockUpdate layout reflow failed', { blockId: block.id, layout: normalized.layout });
           return arr;
@@ -1283,7 +1283,7 @@ export class CanvasComponent implements AfterViewInit {
     return this.clampLayout({ ...desired, row }, total);
   }
 
-  private applyLayoutWithPushdown(blockId: string, desired: GridPlacement, blocks: AnyBlock[], total = this.columns): AnyBlock[] | null {
+  private shiftBlockDown(blockId: string, desired: GridPlacement, blocks: AnyBlock[], total = this.columns): AnyBlock[] | null {
     const targetExists = blocks.some(entry => entry.id === blockId);
     if (!targetExists) {
       return null;
@@ -1304,10 +1304,10 @@ export class CanvasComponent implements AfterViewInit {
       const layout = entry.id === blockId ? override : baseLayout;
       return { block: entry, layout };
     });
-    return this.cascadeLayouts(entries, blocks, total, blockId);
+    return this.cascadeReflow(entries, blocks, total, blockId);
   }
 
-  private cascadeLayouts(
+  private cascadeReflow(
     entries: { block: AnyBlock; layout: GridPlacement }[],
     blocks: AnyBlock[],
     total: number,
@@ -1316,7 +1316,7 @@ export class CanvasComponent implements AfterViewInit {
     if (!entries.length) {
       return blocks;
     }
-    const sorted = [...entries].sort((a, b) => this.compareCascadeEntries(a, b, priorityId));
+    const sorted = [...entries].sort((a, b) => this.compareEntries(a, b, priorityId));
     const columnHeights = new Array(total + 2).fill(1);
     const placed = new Map<string, GridPlacement>();
     for (const entry of sorted) {
@@ -1347,7 +1347,7 @@ export class CanvasComponent implements AfterViewInit {
     });
   }
 
-  private compareCascadeEntries(
+  private compareEntries(
     a: { block: AnyBlock; layout: GridPlacement },
     b: { block: AnyBlock; layout: GridPlacement },
     priorityId?: string

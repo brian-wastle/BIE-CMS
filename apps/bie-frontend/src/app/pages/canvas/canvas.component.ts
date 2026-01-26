@@ -547,12 +547,12 @@ export class CanvasComponent implements AfterViewInit {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
       const nextRow = this.nextRow(arr);
-      const layout = this.autoPlace(id, {
+      const layout = this.clampLayout({
         row: nextRow,
         colStart: 1,
         colSpan: this.columns,
         rowSpan: 2,
-      }, arr);
+      });
       return [
         ...arr,
         {
@@ -572,12 +572,12 @@ export class CanvasComponent implements AfterViewInit {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
       const nextRow = this.nextRow(arr);
-      const layout = this.autoPlace(id, {
+      const layout = this.clampLayout({
         row: nextRow,
         colStart: 1,
         colSpan: this.columns,
         rowSpan: 2,
-      }, arr);
+      });
       return [
         ...arr,
         {
@@ -596,12 +596,12 @@ export class CanvasComponent implements AfterViewInit {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
       const nextRow = this.nextRow(arr);
-      const layout = this.autoPlace(id, {
+      const layout = this.clampLayout({
         row: nextRow,
         colStart: 1,
         colSpan: Math.min(this.columns, 8),
         rowSpan: 4,
-      }, arr);
+      });
       return [
         ...arr,
         {
@@ -620,12 +620,12 @@ export class CanvasComponent implements AfterViewInit {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
       const nextRow = this.nextRow(arr);
-      const layout = this.autoPlace(id, {
+      const layout = this.clampLayout({
         row: nextRow,
         colStart: 1,
         colSpan: Math.min(this.columns, 4),
         rowSpan: 3,
-      }, arr);
+      });
       return [
         ...arr,
         {
@@ -646,12 +646,12 @@ export class CanvasComponent implements AfterViewInit {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
       const nextRow = this.nextRow(arr);
-      const layout = this.autoPlace(id, {
+      const layout = this.clampLayout({
         row: nextRow,
         colStart: 1,
         colSpan: Math.min(this.columns, 2),
         rowSpan: 3,
-      }, arr);
+      });
       return [
         ...arr,
         {
@@ -673,12 +673,12 @@ export class CanvasComponent implements AfterViewInit {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
       const nextRow = this.nextRow(arr);
-      const layout = this.autoPlace(id, {
+      const layout = this.clampLayout({
         row: nextRow,
         colStart: 1,
         colSpan: this.columns,
         rowSpan: 1,
-      }, arr);
+      });
       return [
         ...arr,
         {
@@ -697,12 +697,12 @@ export class CanvasComponent implements AfterViewInit {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
       const nextRow = this.nextRow(arr);
-      const layout = this.autoPlace(id, {
+      const layout = this.clampLayout({
         row: nextRow,
         colStart: 1,
         colSpan: this.columns,
         rowSpan: 6,
-      }, arr);
+      });
       return [
         ...arr,
         {
@@ -723,13 +723,7 @@ export class CanvasComponent implements AfterViewInit {
 
   // Remove a component
   remove(id: string) {
-    this.blocks.update(arr => {
-      const remaining = arr.filter(b => b.id !== id);
-      const sorted = [...remaining].sort((a, b) => this.compareByLayout(a, b));
-      const normalized = this.reindexRows(sorted);
-      const byId = new Map(normalized.map(block => [block.id, block]));
-      return remaining.map(block => byId.get(block.id) ?? block);
-    });
+    this.blocks.update(arr => arr.filter(b => b.id !== id));
     if (this.selectedId() === id) this.selectedId.set(null);
   }
 
@@ -742,12 +736,24 @@ export class CanvasComponent implements AfterViewInit {
       this.isTextBlock(block) || this.isBackgroundBlock(block) || this.isVideoBlock(block) || this.isImageBlock(block) || this.isDividerBlock(block);
     const alignItems = stretchContent ? 'stretch' : hAlign;
     const justifyContent = stretchContent ? 'stretch' : vAlign;
+    const zIndex = this.getBlockZIndex(block);
     return {
       'grid-column': `${layout.colStart} / span ${layout.colSpan}`,
       'grid-row': `${layout.row} / span ${layout.rowSpan ?? 1}`,
       'align-items': alignItems,
-      'justify-content': justifyContent
+      'justify-content': justifyContent,
+      'z-index': zIndex,
     };
+  }
+
+  private getBlockZIndex(block: AnyBlock): number {
+    if (this.isBackgroundBlock(block)) {
+      return 1;
+    }
+    if (this.isImageBlock(block) || this.isVideoBlock(block)) {
+      return 2;
+    }
+    return 3;
   }
 
   autoSize(blockId: string, contentHeight: number) {
@@ -755,9 +761,8 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     const targetRows = this.rowsForContentHeight(contentHeight);
-    this.blocks.update(blocks => {
-      let changed = false;
-      const resized = blocks.map(block => {
+    this.blocks.update(blocks =>
+      blocks.map(block => {
         if (block.id !== blockId || !this.isTextBlock(block) || !block.layout) {
           return block;
         }
@@ -765,20 +770,12 @@ export class CanvasComponent implements AfterViewInit {
         if (currentSpan === targetRows) {
           return block;
         }
-        changed = true;
         return {
           ...block,
           layout: { ...block.layout, rowSpan: targetRows },
         };
-      });
-      if (!changed) {
-        return blocks;
-      }
-      const sorted = [...resized].sort((a, b) => this.compareByLayout(a, b));
-      const normalized = this.reindexRows(sorted);
-      const byId = new Map(normalized.map(entry => [entry.id, entry]));
-      return resized.map(block => byId.get(block.id) ?? block);
-    });
+      })
+    );
   }
 
   setColumns(val: number) {
@@ -786,12 +783,18 @@ export class CanvasComponent implements AfterViewInit {
     if (next === this.columns) {
       return;
     }
-    const reflowed = this.reflowColumns(next);
-    if (!reflowed) {
-      return;
-    }
     this.columns = next;
-    this.blocks.set(reflowed);
+    this.blocks.update(blocks =>
+      blocks.map(block => {
+        if (!block.layout) {
+          return block;
+        }
+        return {
+          ...block,
+          layout: this.clampLayout(block.layout, next),
+        };
+      })
+    );
   }
 
   setGap(val: number) {
@@ -1032,22 +1035,16 @@ export class CanvasComponent implements AfterViewInit {
       console.warn('[Canvas] onBlockUpdate skipped (invalid patch)', { blockId: block.id, patch });
       return;
     }
-    this.blocks.update(arr => {
-      let working = arr;
-      if (normalized.layout) {
-        const reflowed = this.shiftBlockDown(block.id, normalized.layout, working);
-        if (!reflowed) {
-          console.warn('[Canvas] onBlockUpdate layout reflow failed', { blockId: block.id, layout: normalized.layout });
-          return arr;
-        }
-        working = reflowed;
-      }
-      return working.map(b => {
+    this.blocks.update(arr =>
+      arr.map(b => {
         if (b.id !== block.id) {
           return b;
         }
         let next = { ...b };
 
+        if (normalized.layout) {
+          next.layout = this.clampLayout(normalized.layout);
+        }
         if (Object.prototype.hasOwnProperty.call(normalized, 'fontSize')) {
           if (normalized.fontSize === null) {
             delete next.fontSize;
@@ -1109,8 +1106,8 @@ export class CanvasComponent implements AfterViewInit {
           };
         }
         return next;
-      });
-    });
+      })
+    );
   }
 
   private normalizeEditorHtml(value: string | null | undefined) {
@@ -1220,40 +1217,6 @@ export class CanvasComponent implements AfterViewInit {
     return Math.max(1, Math.ceil((paddedHeight + rowGap) / (rowHeight + rowGap)));
   }
 
-  // Stack each block's rows without gaps
-  private reindexRows(blocks: AnyBlock[]) {
-    let currentRow = 1;
-    return blocks.map((block) => {
-      const span = Math.max(1, block.layout?.rowSpan ?? 1);
-      const layout = this.clampLayout({
-        ...(block.layout ?? { row: currentRow, colStart: 1, colSpan: this.columns, rowSpan: span }),
-        row: currentRow,
-        rowSpan: span,
-      });
-      currentRow += span;
-      return {
-        ...block,
-        layout,
-      };
-    });
-  }
-
-  // Reshuffles layout when column count is changed
-  private reflowColumns(total: number) {
-    const sorted = [...this.pageBlocks()];
-    const placed: AnyBlock[] = [];
-    for (const block of sorted) {
-      const seed = block.layout ?? { row: this.nextRow(placed), colStart: 1, colSpan: total, rowSpan: 1 };
-      const layout = this.tryPlace(block.id, seed, placed, total);
-      if (!layout) {
-        return null;
-      }
-      placed.push({ ...block, layout });
-    }
-    const byId = new Map(placed.map(entry => [entry.id, entry]));
-    return this.blocks().map(block => byId.get(block.id) ?? block);
-  }
-
   // Sort by row then column
   private compareByLayout(a: AnyBlock, b: AnyBlock) {
     const rowDiff = (a.layout?.row ?? 0) - (b.layout?.row ?? 0);
@@ -1276,151 +1239,6 @@ export class CanvasComponent implements AfterViewInit {
     const colStart = Math.max(1, Math.min(desired?.colStart ?? 1, maxStart));
     const rowSpan = Math.max(1, desired?.rowSpan ?? 1);
     return { row, colStart, colSpan, rowSpan };
-  }
-
-  private tryPlace(blockId: string, desired: GridPlacement, blocks: AnyBlock[], total = this.columns) {
-    const layout = this.clampLayout(desired, total);
-    return this.hasOverlap(blockId, layout, blocks) ? null : layout;
-  }
-
-  private autoPlace(blockId: string, desired: GridPlacement, blocks: AnyBlock[], total = this.columns) {
-    let row = desired.row ?? this.nextRow(blocks);
-    const attempts = blocks.length + 12;
-    for (let i = 0; i < attempts; i += 1) {
-      const layout = this.tryPlace(blockId, { ...desired, row }, blocks, total);
-      if (layout) {
-        return layout;
-      }
-      row += 1;
-    }
-    return this.clampLayout({ ...desired, row }, total);
-  }
-
-  private shiftBlockDown(blockId: string, desired: GridPlacement, blocks: AnyBlock[], total = this.columns): AnyBlock[] | null {
-    const targetExists = blocks.some(entry => entry.id === blockId);
-    if (!targetExists) {
-      return null;
-    }
-    const override = this.clampLayout(desired, total);
-    const entries = blocks.map((entry, index) => {
-      const baseLayout = entry.layout
-        ? this.clampLayout(entry.layout, total)
-        : this.clampLayout(
-            {
-              row: index + 1,
-              colStart: 1,
-              colSpan: total,
-              rowSpan: 1,
-            },
-            total
-          );
-      const layout = entry.id === blockId ? override : baseLayout;
-      return { block: entry, layout };
-    });
-    return this.cascadeReflow(entries, blocks, total, blockId);
-  }
-
-  private cascadeReflow(
-    entries: { block: AnyBlock; layout: GridPlacement }[],
-    blocks: AnyBlock[],
-    total: number,
-    priorityId?: string
-  ): AnyBlock[] {
-    if (!entries.length) {
-      return blocks;
-    }
-    const sorted = [...entries].sort((a, b) => this.compareEntries(a, b, priorityId));
-    const columnHeights = new Array(total + 2).fill(1);
-    const placed = new Map<string, GridPlacement>();
-    for (const entry of sorted) {
-      const span = Math.max(1, entry.layout.rowSpan ?? 1);
-      const startCol = entry.layout.colStart;
-      const endCol = startCol + entry.layout.colSpan - 1;
-      let row = entry.layout.row;
-      for (let col = startCol; col <= endCol; col += 1) {
-        const available = columnHeights[col] ?? 1;
-        row = Math.max(row, available);
-      }
-      const placement: GridPlacement = { ...entry.layout, row };
-      placed.set(entry.block.id, placement);
-      const releaseRow = row + span;
-      for (let col = startCol; col <= endCol; col += 1) {
-        columnHeights[col] = releaseRow;
-      }
-    }
-    return blocks.map(block => {
-      const placement = placed.get(block.id);
-      if (!placement) {
-        return block;
-      }
-      if (this.sameLayout(block.layout, placement)) {
-        return block;
-      }
-      return { ...block, layout: placement };
-    });
-  }
-
-  private compareEntries(
-    a: { block: AnyBlock; layout: GridPlacement },
-    b: { block: AnyBlock; layout: GridPlacement },
-    priorityId?: string
-  ) {
-    const rowDiff = a.layout.row - b.layout.row;
-    if (rowDiff !== 0) {
-      return rowDiff;
-    }
-    if (priorityId) {
-      if (a.block.id === priorityId && b.block.id !== priorityId) {
-        return -1;
-      }
-      if (b.block.id === priorityId && a.block.id !== priorityId) {
-        return 1;
-      }
-    }
-    const colDiff = a.layout.colStart - b.layout.colStart;
-    if (colDiff !== 0) {
-      return colDiff;
-    }
-    return a.block.id.localeCompare(b.block.id);
-  }
-
-  // Compare grid placement between 2 blocks
-  private sameLayout(a?: GridPlacement | null, b?: GridPlacement | null): boolean {
-    if (!a && !b) {
-      return true;
-    }
-    if (!a || !b) {
-      return false;
-    }
-    return (
-      a.row === b.row &&
-      a.colStart === b.colStart &&
-      a.colSpan === b.colSpan &&
-      (a.rowSpan ?? 1) === (b.rowSpan ?? 1)
-    );
-  }
-
-  // Checks to see if moving a block will overlap an existing one during reflow
-  private hasOverlap(blockId: string, layout: GridPlacement, blocks: AnyBlock[]) {
-    const startRow = layout.row;
-    const endRow = startRow + (layout.rowSpan ?? 1) - 1;
-    const startCol = layout.colStart;
-    const endCol = startCol + layout.colSpan - 1;
-
-    return blocks.some(block => {
-      if (block.id === blockId || !block.layout) {
-        return false;
-      }
-      const other = this.clampLayout(block.layout);
-      const otherStartRow = other.row;
-      const otherEndRow = otherStartRow + (other.rowSpan ?? 1) - 1;
-      if (otherEndRow < startRow || endRow < otherStartRow) {
-        return false;
-      }
-      const otherStartCol = other.colStart;
-      const otherEndCol = otherStartCol + other.colSpan - 1;
-      return !(endCol < otherStartCol || otherEndCol < startCol);
-    });
   }
 
   // Sets a title and byline block at the top of a new page

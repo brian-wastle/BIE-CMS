@@ -32,8 +32,9 @@ export class TextBoxComponent extends BlockShell<TextBlock> implements AfterView
 
   readonly richContent = computed<SafeHtml>(() => {
     const raw = (this.block().text ?? '').trim();
-    const sanitized = this.sanitizer.sanitize(SecurityContext.HTML, raw);
-    const html = sanitized && sanitized.length ? sanitized : '<p>Add some text…</p>';
+    const sanitized = this.sanitizer.sanitize(SecurityContext.HTML, raw) ?? '';
+    const normalized = this.normalizeWhitespace(sanitized);
+    const html = normalized.length ? normalized : '<p>Add some text…</p>';
     return this.sanitizer.bypassSecurityTrustHtml(html);
   });
 
@@ -92,4 +93,15 @@ export class TextBoxComponent extends BlockShell<TextBlock> implements AfterView
     this.hostShell.autoSize!(this.block().id, this.pendingAutoSizeHeight);
     this.pendingAutoSizeHeight = 0;
   }
+
+  // Strip-and-replace HTML character entity references with normal spaces
+  private normalizeWhitespace(html: string): string {
+    if (!html) {
+      return '';
+    }
+    return html
+      .replace(/\u00a0/g, ' ')
+      .replace(/&(nbsp|#160|#x0*a0);/gi, ' ');
+  }
+
 }

@@ -1115,7 +1115,20 @@ export class CanvasComponent implements AfterViewInit {
 
   private normalizeEditorHtml(value: string | null | undefined) {
     const trimmed = (value ?? '').trim();
-    return trimmed === '<p><br></p>' ? '' : trimmed;
+    const normalized = this.decodeNbsp(trimmed);
+    if (!normalized || normalized === '<p><br></p>') {
+      return '';
+    }
+    return normalized;
+  }
+
+  private decodeNbsp(html: string) {
+    if (!html) {
+      return '';
+    }
+    return html
+      .replace(/\u00a0/g, ' ')
+      .replace(/&(nbsp|#160|#x0*a0);/gi, ' ');
   }
 
   // Strip file extension, and replace underscores/dashes with spaces

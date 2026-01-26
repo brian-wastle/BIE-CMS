@@ -443,12 +443,19 @@ router.put('/:slug', async (req, res) => {
       if (payload.slug) {
         await client.query(`UPDATE pages SET slug = $1 WHERE id = $2`, [payload.slug, resolvedPageId]);
       }
-
+      // Increase page version by 1
       const { rows: nextVersionRows } = await client.query(
         `SELECT COALESCE(MAX(version), 0) + 1 AS next_version FROM page_versions WHERE page_id = $1`,
         [resolvedPageId]
       );
       const nextVersion = Number(nextVersionRows[0]?.next_version ?? 1);
+      // Change published status to draft to allow save
+      if (status === 'published') {
+        await client.query(
+          `UPDATE page_versions SET status = 'draft' WHERE page_id = $1 AND status = 'published'`,
+          [resolvedPageId]
+        );
+      }
 
       const versionInsert = await client.query(
         `
@@ -470,13 +477,6 @@ router.put('/:slug', async (req, res) => {
       );
 
       const version = versionInsert.rows[0];
-
-      if (status === 'published') {
-        await client.query(
-          `UPDATE page_versions SET status = 'draft' WHERE page_id = $1 AND id <> $2 AND status = 'published'`,
-          [resolvedPageId, version.id]
-        );
-      }
 
       await client.query(
         `

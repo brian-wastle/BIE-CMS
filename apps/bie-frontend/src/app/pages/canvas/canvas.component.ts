@@ -291,7 +291,8 @@ export class CanvasComponent implements AfterViewInit {
     this.saveError.set(null);
     try {
       let page: Page;
-      const basePayload = this.buildPageWritePayload(meta);
+      const draftMeta: PageMetaState = { ...meta, status: 'draft' };
+      const basePayload = this.buildPageWritePayload(draftMeta);
       if (meta.id || meta.slugRef) {
         const ref = meta.slugRef ?? meta.id ?? slug;
         const updatePayload: PageUpdate = { ...basePayload, slug };

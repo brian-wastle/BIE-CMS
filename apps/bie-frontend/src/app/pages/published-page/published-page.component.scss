@@ -55,6 +55,15 @@
   }
 
   .article-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 16px;
     padding: 1rem;
+  }
+
+  .article-grid .block {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+    width: 100%;
   }
 }

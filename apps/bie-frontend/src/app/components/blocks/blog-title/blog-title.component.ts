@@ -12,6 +12,17 @@ import { BlockShell } from '../block-shell/block-shell';
 export class BlogTitleComponent extends BlockShell<TitleBlock> {
   readonly titleContent = computed(() => this.block().text ?? '');
 
+  readonly textAlign = computed(() => {
+    const align = this.block().hAlign;
+    if (align === 'center') {
+      return 'center';
+    }
+    if (align === 'flex-end') {
+      return 'right';
+    }
+    return 'left';
+  });
+
   readonly fontSizes = computed(() => {
     const base = this.block().fontSize ?? 48;
     const clamp = (value: number) => Math.max(12, Math.round(value));

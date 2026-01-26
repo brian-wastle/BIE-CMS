@@ -2,7 +2,8 @@
   [style.--title-font-desktop.px]="fontSizes().desktop"
   [style.--title-font-tablet.px]="fontSizes().tablet"
   [style.--title-font-mobile.px]="fontSizes().mobile"
-  [style.color]="block().color || null">
+  [style.color]="block().color || null"
+  [style.text-align]="textAlign()">
   <h1 class="title-line">
     {{ titleContent() || 'Page Title' }}
   </h1>

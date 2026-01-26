@@ -1,5 +1,5 @@
 import express from 'express';
-import { PageSchema, PageSummarySchema, PageUpdateSchema, PageWriteSchema, } from 'bie-models';
+import { GridSettingsDefaults, PageSchema, PageSummarySchema, PageUpdateSchema, PageWriteSchema, } from 'bie-models';
 import { requireAccess } from './auth.js';
 import { pool, withTransaction } from './db.js';
 const router = express.Router();
@@ -14,6 +14,7 @@ function mapVersionToPage(row) {
         status: row.status,
         title: row.title,
         blocks: row.blocks,
+        grid: row.grid,
         meta: row.meta ?? {},
         createdAt: new Date(row.version_created_at ?? row.created_at).toISOString(),
         updatedAt: new Date(row.version_updated_at ?? row.updated_at).toISOString(),
@@ -32,13 +33,14 @@ async function loadPageById(pageId, client = pool) {
       v.status,
       v.title,
       v.blocks,
+      v.grid,
       v.meta,
       v.created_at AS version_created_at,
       v.updated_at AS version_updated_at,
       v.published_at
     FROM pages p
     JOIN LATERAL (
-      SELECT status, title, blocks, meta, created_at, updated_at, published_at
+      SELECT status, title, blocks, grid, meta, created_at, updated_at, published_at
       FROM page_versions
       WHERE page_id = p.id
       ORDER BY created_at DESC
@@ -67,6 +69,7 @@ async function loadPublishedPageBySlug(slug) {
       v.status,
       v.title,
       v.blocks,
+      v.grid,
       v.meta,
       v.created_at AS version_created_at,
       v.updated_at AS version_updated_at,
@@ -117,6 +120,7 @@ router.get('/published', async (req, res) => {
         v.status,
         v.title,
         v.blocks,
+        v.grid,
         v.meta,
         v.created_at AS version_created_at,
         v.updated_at AS version_updated_at,
@@ -205,13 +209,14 @@ router.get('/', async (req, res) => {
         v.status,
         v.title,
         v.blocks,
+        v.grid,
         v.meta,
         v.created_at AS version_created_at,
         v.updated_at AS version_updated_at,
         v.published_at
       FROM pages p
       JOIN LATERAL (
-        SELECT status, title, blocks, meta, created_at, updated_at, published_at
+        SELECT status, title, blocks, grid, meta, created_at, updated_at, published_at
         FROM page_versions
         WHERE page_id = p.id
         ORDER BY created_at DESC
@@ -276,6 +281,7 @@ router.post('/', async (req, res) => {
     const status = payload.status ?? 'draft';
     const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
     const blocksJson = JSON.stringify(payload.blocks);
+    const gridJson = JSON.stringify(payload.grid ?? GridSettingsDefaults);
     const metaJson = JSON.stringify(payload.meta ?? {});
     try {
         const pageId = await withTransaction(async (client) => {
@@ -290,10 +296,10 @@ router.post('/', async (req, res) => {
             }
             const pageId = pageInsert.rows[0].id;
             const versionInsert = await client.query(`
-        INSERT INTO page_versions (page_id, version, status, title, blocks, meta, created_by, published_at)
-        VALUES ($1, 1, $2::page_version_status, $3, $4::jsonb, $5::jsonb, $6, $7::timestamptz)
+        INSERT INTO page_versions (page_id, version, status, title, blocks, grid, meta, created_by, published_at)
+        VALUES ($1, 1, $2::page_version_status, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7, $8::timestamptz)
         RETURNING id, page_id, version, status, title, blocks, meta, created_by, created_at, updated_at, published_at
-        `, [pageId, status, payload.title, blocksJson, metaJson, createdBy, publishedAt]);
+        `, [pageId, status, payload.title, blocksJson, gridJson, metaJson, createdBy, publishedAt]);
             const version = versionInsert.rows[0];
             if (status === 'published') {
                 await client.query(`UPDATE page_versions SET status = 'draft' WHERE page_id = $1 AND id <> $2 AND status = 'published'`, [pageId, version.id]);
@@ -336,6 +342,7 @@ router.put('/:slug', async (req, res) => {
     const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
     const slugParam = req.params.slug;
     const blocksJson = JSON.stringify(payload.blocks);
+    const gridJson = JSON.stringify(payload.grid ?? GridSettingsDefaults);
     const metaJson = JSON.stringify(payload.meta ?? {});
     try {
         const pageId = await withTransaction(async (client) => {
@@ -348,9 +355,12 @@ router.put('/:slug', async (req, res) => {
             }
             const { rows: nextVersionRows } = await client.query(`SELECT COALESCE(MAX(version), 0) + 1 AS next_version FROM page_versions WHERE page_id = $1`, [resolvedPageId]);
             const nextVersion = Number(nextVersionRows[0]?.next_version ?? 1);
+            if (status === 'published') {
+                await client.query(`UPDATE page_versions SET status = 'draft' WHERE page_id = $1 AND status = 'published'`, [resolvedPageId]);
+            }
             const versionInsert = await client.query(`
-        INSERT INTO page_versions (page_id, version, status, title, blocks, meta, created_by, published_at)
-        VALUES ($1, $2, $3::page_version_status, $4, $5::jsonb, $6::jsonb, $7, $8::timestamptz)
+        INSERT INTO page_versions (page_id, version, status, title, blocks, grid, meta, created_by, published_at)
+        VALUES ($1, $2, $3::page_version_status, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9::timestamptz)
         RETURNING id, page_id, version, status, title, blocks, meta, created_by, created_at, updated_at, published_at
         `, [
                 resolvedPageId,
@@ -358,14 +368,12 @@ router.put('/:slug', async (req, res) => {
                 status,
                 payload.title,
                 blocksJson,
+                gridJson,
                 metaJson,
                 createdBy,
                 publishedAt,
             ]);
             const version = versionInsert.rows[0];
-            if (status === 'published') {
-                await client.query(`UPDATE page_versions SET status = 'draft' WHERE page_id = $1 AND id <> $2 AND status = 'published'`, [resolvedPageId, version.id]);
-            }
             await client.query(`
         UPDATE pages SET
           latest_version_id = $1,

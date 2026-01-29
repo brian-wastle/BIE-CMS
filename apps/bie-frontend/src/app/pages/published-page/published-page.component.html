@@ -13,7 +13,8 @@
       <section class="article-grid"
         [style.--cols]="gridColumns"
         [style.--gap.px]="gridGapPx"
-        [style.--rowHeight.px]="gridRowHeight">
+        [style.--rowHeight.px]="gridRowHeight"
+        [style.--maxWidthPx.px]="gridMaxWidthPx > 0 ? gridMaxWidthPx : null">
         @if (pageBlocks().length) {
           @for (block of pageBlocks(); track trackByBlockId($index, block)) {
             <div class="block" [ngStyle]="blockStyle(block)">
@@ -26,6 +27,9 @@
               }
               @if (isTextBlock(block)) {
               <app-textbox [block]="block"></app-textbox>
+              }
+              @if (isInlineTextBlock(block)) {
+              <app-inline-media-text [block]="block"></app-inline-media-text>
               }
               @if (isImageBlock(block)) {
               <app-imagebox [block]="block"></app-imagebox>

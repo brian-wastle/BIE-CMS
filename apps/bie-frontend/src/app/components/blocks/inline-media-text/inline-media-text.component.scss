@@ -1,0 +1,122 @@
+.inline-media-text {
+  width: 100%;
+  position: relative;
+  clear: both;
+}
+
+.inline-media-text::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+.inline-text-content {
+  font-size: var(--text-font-desktop, 18px);
+  line-height: 1.65;
+  color: #1f2933;
+  width: 100%;
+  min-width: 0;
+
+  p {
+    margin: 0 0 1.2em;
+  }
+
+  ul,
+  ol {
+    padding-left: 1.5em;
+    margin: 0 0 1.2em;
+  }
+}
+
+.inline-figure {
+  margin: 0 1rem 1rem 0;
+  max-width: min(320px, 45%);
+  text-align: center;
+  font-size: 0.85rem;
+  color: #475569;
+
+  &.size-small {
+    max-width: min(200px, 30%);
+  }
+
+  &.size-medium {
+    max-width: min(320px, 45%);
+  }
+
+  &.size-large {
+    max-width: min(420px, 60%);
+  }
+}
+
+.inline-figure img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+}
+
+.inline-figure figcaption {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+}
+
+.inline-figure-placeholder {
+  border: 1px dashed #cbd5f5;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.inline-figure.placement-left,
+.inline-figure.placement-top-left,
+.inline-figure.placement-bottom-left {
+  float: left;
+  margin-right: 1.2rem;
+  margin-left: 0;
+}
+
+.inline-figure.placement-right,
+.inline-figure.placement-top-right,
+.inline-figure.placement-bottom-right {
+  float: right;
+  margin-left: 1.2rem;
+  margin-right: 0;
+}
+
+.inline-figure.placement-top-center,
+.inline-figure.placement-bottom-center {
+  float: none;
+  margin: 0 auto 1rem;
+  max-width: 70%;
+}
+
+.inline-media-empty {
+  border: 1px dashed #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #475569;
+  background: #f8fafc;
+}
+
+@media (max-width: 960px) {
+  .inline-text-content {
+    font-size: var(--text-font-tablet, 16px);
+    line-height: 1.7;
+  }
+}
+
+@media (max-width: 600px) {
+  .inline-text-content {
+    font-size: var(--text-font-mobile, 15px);
+    line-height: 1.75;
+  }
+
+  .inline-figure {
+    float: none !important;
+    margin: 0 0 1rem 0;
+    max-width: 100%;
+  }
+}

@@ -2,7 +2,16 @@ import { z } from 'zod';
 
 /////////////////////////// Enums
 
-export const BlockTypeSchema = z.enum(['text', 'image', 'video', 'title', 'byline', 'background', 'divider']);
+export const BlockTypeSchema = z.enum([
+  'text',
+  'image',
+  'video',
+  'title',
+  'byline',
+  'background',
+  'divider',
+  'InlineText',
+]);
 
 export const AlignTypeSchema = z.enum(['flex-start', 'center', 'flex-end']);
 export type AlignType = z.infer<typeof AlignTypeSchema>;
@@ -15,18 +24,11 @@ export type BGStyle = z.infer<typeof BGStyleSchema>;
 
 /////////////////////////// Layout
 
-export const GridPlacementSchema = z.object({
-  row: z.coerce.number().int().nonnegative(), // Starting row
-  colStart: z.coerce.number().int().nonnegative(), // Starting column
-  colSpan: z.coerce.number().int().positive(), // Width in columns
-  rowSpan: z.coerce.number().int().positive().optional(), // Height in rows
-});
-export type GridPlacement = z.infer<typeof GridPlacementSchema>;
-
 export const GridSettingsDefaults = {
   columns: 12,
   gapPx: 16,
   rowHeight: 48,
+  maxWidthPx: 1200,
 } as const;
 
 export const GridSettingsSchema = z
@@ -34,10 +36,19 @@ export const GridSettingsSchema = z
     columns: z.coerce.number().int().min(1).max(24).default(GridSettingsDefaults.columns),
     gapPx: z.coerce.number().int().min(0).max(64).default(GridSettingsDefaults.gapPx),
     rowHeight: z.coerce.number().int().min(8).max(256).default(GridSettingsDefaults.rowHeight),
+    maxWidthPx: z.coerce.number().int().min(0).max(4096).default(GridSettingsDefaults.maxWidthPx),
   })
   .strip()
   .catch(GridSettingsDefaults);
 export type GridSettings = z.infer<typeof GridSettingsSchema>;
+
+export const GridPlacementSchema = z.object({
+  row: z.coerce.number().int().nonnegative(),
+  colStart: z.coerce.number().int().nonnegative(),
+  colSpan: z.coerce.number().int().positive(),
+  rowSpan: z.coerce.number().int().positive().optional(),
+});
+export type GridPlacement = z.infer<typeof GridPlacementSchema>;
 
 export const ImageStyleSchema = z
   .object({
@@ -46,11 +57,26 @@ export const ImageStyleSchema = z
   .strict();
 export type ImageStyle = z.infer<typeof ImageStyleSchema>;
 
+export const InlinePlacementSchema = z.enum([
+  'top-left',
+  'top-center',
+  'top-right',
+  'left',
+  'right',
+  'bottom-left',
+  'bottom-center',
+  'bottom-right',
+]);
+export type InlinePlacement = z.infer<typeof InlinePlacementSchema>;
+
+export const InlineImageSizeSchema = z.enum(['small', 'medium', 'large']);
+export type InlineImageSize = z.infer<typeof InlineImageSizeSchema>;
 
 /////////////////////////// Block base and component schemas
 // Each type is inferred from the respective zod schema
-// Each new type must be added to the BlockSchemas const
+// Each new type must be added to the BlockTypeSchema const at top of file
 
+// Abstract zod object with shared block properties
 const BlockBaseSchema = z.object({
   id: z.string(),
   type: BlockTypeSchema,
@@ -79,6 +105,26 @@ export const TextBlockSchema = BlockBaseSchema.extend({
   text: z.string(), 
 });
 export type TextBlock = z.infer<typeof TextBlockSchema>;
+
+export const InlineImageSchema = z
+  .object({
+    id: z.string(),
+    src: z.string(),
+    alt: z.string().optional(),
+    caption: z.string().optional(),
+    placement: InlinePlacementSchema.default('left'),
+    size: InlineImageSizeSchema.default('medium'),
+    mediaHandle: z.string().nullable().optional(),
+  })
+  .strip();
+export type InlineImage = z.infer<typeof InlineImageSchema>;
+
+export const InlineTextBlockSchema = BlockBaseSchema.extend({
+  type: z.literal('InlineText'),
+  text: z.string(),
+  images: z.array(InlineImageSchema).max(4),
+});
+export type InlineTextBlock = z.infer<typeof InlineTextBlockSchema>;
 
 export const ImageBlockSchema = BlockBaseSchema.extend({
   type: z.literal('image'),
@@ -114,6 +160,7 @@ const BlockSchemas = [
   TitleBlockSchema,
   BylineBlockSchema,
   TextBlockSchema,
+  InlineTextBlockSchema,
   VideoBlockSchema,
   ImageBlockSchema,
   BGBlockSchema,
@@ -125,6 +172,9 @@ export type AnyBlock = z.infer<typeof AnyBlockSchema>; // Used during component 
 
 /////////////////////////// Block updates
 
+// Distributive conditional type to create a union/partial of all patchable props from all block types
+// Reduce on BlockSchemas type array, loops through each Zod object to create the partial skipping id and type props
+// Returns shape, which is a flattened record: {text: z.string().optional(), src: z.string().optional(), ... }
 const BlockUpdateShape = BlockSchemas.reduce<Record<string, z.ZodTypeAny>>((shape, blockSchema) => {
   const partialShape = blockSchema.partial().shape as Record<string, z.ZodTypeAny>;
   Object.entries(partialShape).forEach(([key, value]) => {
@@ -135,13 +185,13 @@ const BlockUpdateShape = BlockSchemas.reduce<Record<string, z.ZodTypeAny>>((shap
   });
   return shape;
 }, {});
-
 export const BlockUpdateSchema = z.object(BlockUpdateShape);
 
-// Wrap each value as a function to enable distributive behavior in the conditional
-// Function parameter types are contravariant in TS: union of functions -> intersection of the param types [Cherny 144]
+// Wrapping each value as a function enables distributive behavior in the conditional
+// Function parameter types are contravariant in TS: a union of functions yields the intersection of the param types [Cherny 144]
 type UnionToIntersection<U> =
 (U extends unknown ? (arg: U) => void : never) extends (arg: infer I) => void ? I : never;
+
 // Create a partial with all properties as optional
 // (typeof BlockSchemas)[number] - 'number' keys into any index of the array [Cherny 134]
 type BlockPatchUnion = (typeof BlockSchemas)[number] extends infer Schema
@@ -150,6 +200,7 @@ type BlockPatchUnion = (typeof BlockSchemas)[number] extends infer Schema
     : never
   : never;
 type BlockUpdateProps = UnionToIntersection<BlockPatchUnion>;
+
 // {t?:string} & {u?:string} --> {t?:string; url?:string}
 type Simplify<T> = { [K in keyof T]: T[K] };
 
@@ -157,6 +208,7 @@ export type BlockUpdate = Simplify<z.infer<typeof BlockUpdateSchema> & BlockUpda
 
 /////////////////////////// Page models
 
+// Interface for media directories created by media upload page
 export const DirectoryMetaSchema = z.object({
   directory: z.string().nullable(),
   itemCount: z.number().int(),
@@ -164,12 +216,14 @@ export const DirectoryMetaSchema = z.object({
 });
 export type DirectoryMeta = z.infer<typeof DirectoryMetaSchema>;
 
+// JSON-LD injected into page head
 const JsonLdSchema = z.union([
   z.string().trim(),
   z.record(z.string(), z.unknown()),
   z.array(z.record(z.string(), z.unknown())),
 ]);
 
+// Accepts an array of strings or will run preprocess function to split a string on commas and separate into an array of up to 12 strings, 1-40 chars each
 const KeywordsSchema = z
   .preprocess((value) => {
     if (typeof value === 'string') {
@@ -206,6 +260,7 @@ export type PageMeta = z.infer<typeof PageMetaSchema>;
 export const PageStatusSchema = z.enum(['draft', 'published']);
 export type PageStatus = z.infer<typeof PageStatusSchema>;
 
+// Published page data type
 export const PageSchema = z.object({
   id: z.string(),
   slug: z.string(),
@@ -220,6 +275,7 @@ export const PageSchema = z.object({
 });
 export type Page = z.infer<typeof PageSchema>;
 
+// Used for updating block schema in canvas editor
 const PagePatchSchema = z.object({
   title: z.string().min(1),
   status: PageStatusSchema.optional(),

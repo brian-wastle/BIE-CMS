@@ -195,9 +195,9 @@ $green-shadow: #0e997938;
   min-height: 100px;
   padding: 8px;
   background: $white;
-  margin: 0 auto;
-  width: 100%;
-  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  width: min(100%, var(--maxWidthPx, 9999px));
 }
 
 .canvas-preview .block {
@@ -399,6 +399,42 @@ $green-shadow: #0e997938;
 .inspector-section {
   display: grid;
   gap: 12px;
+}
+
+.inspector-inline-media {
+  gap: 16px;
+}
+
+.inline-media-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inline-media-actions .palette-button {
+  width: auto;
+  padding: 0.45rem 1.2rem;
+  align-self: flex-start;
+}
+
+.inline-media-card {
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  background: #fff;
+}
+
+.inline-media-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inspector-link.danger {
+  color: $error;
 }
 
 .inspector-richtext {

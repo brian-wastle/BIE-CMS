@@ -1,0 +1,40 @@
+<div #inlineRoot class="inline-media-text" [style.--text-font-desktop.px]="fontSizes().desktop"
+  [style.--text-font-tablet.px]="fontSizes().tablet" [style.--text-font-mobile.px]="fontSizes().mobile">
+  @for (image of imagesBefore(); track trackImage($index, image)) {
+    <figure class="inline-figure" [ngClass]="figureClasses(image)">
+      @if (hasSource(image)) {
+        <img [src]="image.src" [alt]="image.alt ?? ''">
+      } @else {
+        <div class="inline-figure-placeholder">
+          <p>No image selected</p>
+        </div>
+      }
+      @if ((image.caption ?? '').trim().length) {
+        <figcaption>{{ image.caption }}</figcaption>
+      }
+    </figure>
+  }
+
+  <div class="inline-text-content" [innerHTML]="richContent()"></div>
+
+  @for (image of imagesAfter(); track trackImage($index, image)) {
+    <figure class="inline-figure" [ngClass]="figureClasses(image)">
+      @if (hasSource(image)) {
+        <img [src]="image.src" [alt]="image.alt ?? ''">
+      } @else {
+        <div class="inline-figure-placeholder">
+          <p>No image selected</p>
+        </div>
+      }
+      @if ((image.caption ?? '').trim().length) {
+        <figcaption>{{ image.caption }}</figcaption>
+      }
+    </figure>
+  }
+
+  @if (!hasImages()) {
+    <div class="inline-media-empty">
+      <p>Add inline images from the inspector to wrap text around media.</p>
+    </div>
+  }
+</div>

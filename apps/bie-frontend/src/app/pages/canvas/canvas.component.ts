@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { CurrentUserService } from '../../services/current-user/current-user.service';
 import { PagesService } from '../../services/pages/pages.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, GridSettings, GridSettingsDefaults, Page, PageStatus, PageWrite, PageUpdate } from 'bie-models';
+import { AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, GridSettings, GridSettingsDefaults, Page, PageStatus, PageWrite, PageUpdate, InlineTextBlock, InlineImage } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -22,6 +22,9 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
 import { extractYoutubeId } from '../../utils/youtube';
 import { VideoBoxComponent } from '../../components/blocks/videobox/videobox.component';
+import { InlineMediaTextInspectorComponent, InlineTextComponent, createInlineImage, normalizeInlineImages } from '../../components/blocks/inline-media-text/inline-media-text.component';
+import { ImageBoxInspectorComponent } from '../../components/blocks/imagebox/imagebox-inspector.component';
+import { rowsForContentHeight } from '../../shared/grid-layout';
 
 // TODO: touch gesture handler for preview-frame area
 
@@ -54,7 +57,6 @@ interface PreviewPreset {
   description: string;
 }
 
-const BLOCK_VERTICAL_PADDING = 16; // matches .block's padding (8px top/bottom)
 const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
 
 @Component({
@@ -65,7 +67,10 @@ const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
     MatIconModule,
     TextBoxComponent,
     ImageBoxComponent,
+    ImageBoxInspectorComponent,
     VideoBoxComponent,
+    InlineTextComponent,
+    InlineMediaTextInspectorComponent,
     BlogTitleComponent,
     BlogBylineComponent,
     MediaBrowserCarouselComponent,
@@ -84,10 +89,11 @@ export class CanvasComponent implements AfterViewInit {
   // Grid settings
   columns: number = GridSettingsDefaults.columns;
   gapPx: number = GridSettingsDefaults.gapPx;
+  maxWidthPx: number = GridSettingsDefaults.maxWidthPx;
   readonly maxColumns = 24;
+  readonly maxGridWidthPx = 4096;
   tileRowHeight: number = GridSettingsDefaults.rowHeight;
   readonly rowHeightPresets = [24, 32, 40, 48, 56, 64];
-
   // View settings
   readonly previewPresets: PreviewPreset[] = [
     { id: 'responsive', label: 'Fit to Window', widthPx: null, description: 'Responsive (fluid)' },
@@ -390,6 +396,7 @@ export class CanvasComponent implements AfterViewInit {
       columns: this.columns,
       gapPx: this.gapPx,
       rowHeight: this.tileRowHeight,
+      maxWidthPx: this.maxWidthPx,
     };
   }
 
@@ -453,13 +460,18 @@ export class CanvasComponent implements AfterViewInit {
     this.columns = next.columns;
     this.gapPx = next.gapPx;
     this.tileRowHeight = next.rowHeight;
+    this.maxWidthPx = next.maxWidthPx;
   }
 
   private normalizeGridSettings(grid?: GridSettings | null): GridSettings {
     const columns = Math.max(1, Math.min(this.maxColumns, Math.floor(grid?.columns ?? GridSettingsDefaults.columns)));
     const gapPx = Math.max(0, Math.min(64, Math.floor(grid?.gapPx ?? GridSettingsDefaults.gapPx)));
     const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridSettingsDefaults.rowHeight)));
-    return { columns, gapPx, rowHeight };
+    const maxWidthPx = Math.max(
+      0,
+      Math.min(this.maxGridWidthPx, Math.floor(grid?.maxWidthPx ?? GridSettingsDefaults.maxWidthPx))
+    );
+    return { columns, gapPx, rowHeight, maxWidthPx };
   }
 
   selectedId = signal<string | null>(null);
@@ -526,15 +538,22 @@ export class CanvasComponent implements AfterViewInit {
   isTitleBlock(block: AnyBlock): block is TitleBlock { return block.type === 'title'; }
   isBylineBlock(block: AnyBlock): block is BylineBlock { return block.type === 'byline'; }
   isTextBlock(block: AnyBlock): block is TextBlock { return block.type === 'text'; }
+  isInlineTextBlock(block: AnyBlock): block is InlineTextBlock { return block.type === 'InlineText'; }
   isVideoBlock(block: AnyBlock): block is VideoBlock { return block.type === 'video'; }
   isImageBlock(block: AnyBlock): block is ImageBlock { return block.type === 'image'; }
   isBackgroundBlock(block: AnyBlock): block is BGBlock { return block.type === 'background'; }
   isDividerBlock(block: AnyBlock): block is DividerBlock { return block.type === 'divider'; }
-  supportsFontSize(block: AnyBlock | null): block is TitleBlock | TextBlock | BylineBlock {
+  supportsFontSize(block: AnyBlock | null): block is TitleBlock | TextBlock | BylineBlock | InlineTextBlock {
     if (!block) {
       return false;
     }
-    return this.isTitleBlock(block) || this.isTextBlock(block) || this.isBylineBlock(block);
+    return this.isTitleBlock(block) || this.isTextBlock(block) || this.isInlineTextBlock(block) || this.isBylineBlock(block);
+  }
+  supportsRichText(block: AnyBlock | null): block is TextBlock | InlineTextBlock {
+    if (!block) {
+      return false;
+    }
+    return this.isTextBlock(block) || this.isInlineTextBlock(block);
   }
   supportsColor(block: AnyBlock | null): block is TitleBlock | BylineBlock {
     if (!block) {
@@ -613,6 +632,32 @@ export class CanvasComponent implements AfterViewInit {
           vAlign: "flex-start",
           text: ''
         } as TextBlock];
+    });
+    this.selectedId.set(id);
+  }
+
+  addInlineText() {
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+    this.blocks.update(arr => {
+      const nextRow = this.nextRow(arr);
+      const layout = this.clampLayout({
+        row: nextRow,
+        colStart: 1,
+        colSpan: Math.min(this.columns, 8),
+        rowSpan: 5,
+      });
+      return [
+        ...arr,
+        {
+          id,
+          type: 'InlineText',
+          layout,
+          hAlign: 'flex-start',
+          vAlign: 'flex-start',
+          text: '',
+          images: [createInlineImage('left')],
+        } as InlineTextBlock,
+      ];
     });
     this.selectedId.set(id);
   }
@@ -734,7 +779,12 @@ export class CanvasComponent implements AfterViewInit {
     const hAlign = block.hAlign ?? 'flex-start';
     const vAlign = block.vAlign ?? 'flex-start';
     const stretchContent =
-      this.isTextBlock(block) || this.isBackgroundBlock(block) || this.isVideoBlock(block) || this.isImageBlock(block) || this.isDividerBlock(block);
+      this.isTextBlock(block) ||
+      this.isInlineTextBlock(block) ||
+      this.isBackgroundBlock(block) ||
+      this.isVideoBlock(block) ||
+      this.isImageBlock(block) ||
+      this.isDividerBlock(block);
     const alignItems = stretchContent ? 'stretch' : hAlign;
     const justifyContent = stretchContent ? 'stretch' : vAlign;
     const zIndex = this.getBlockZIndex(block);
@@ -761,7 +811,7 @@ export class CanvasComponent implements AfterViewInit {
     if (!Number.isFinite(contentHeight) || contentHeight <= 0) {
       return;
     }
-    const targetRows = this.rowsForContentHeight(contentHeight);
+    const targetRows = rowsForContentHeight(contentHeight, this.tileRowHeight, this.gapPx);
     this.blocks.update(blocks =>
       blocks.map(block => {
         if (block.id !== blockId || !this.isTextBlock(block) || !block.layout) {
@@ -801,6 +851,14 @@ export class CanvasComponent implements AfterViewInit {
   setGap(val: number) {
     const next = Math.max(0, Math.min(Math.floor(val || 0), 64));
     this.gapPx = next;
+  }
+
+  setMaxWidth(val: number) {
+    const next = Math.max(0, Math.min(Math.floor(val || 0), this.maxGridWidthPx));
+    if (next === this.maxWidthPx) {
+      return;
+    }
+    this.maxWidthPx = next;
   }
 
   setRowHeight(val: number) {
@@ -900,7 +958,7 @@ export class CanvasComponent implements AfterViewInit {
 
   onInspectorMediaSelected(item: MediaItem) {
     const target = this.selected();
-    if (!target) {
+    if (!target || !this.isBackgroundBlock(target)) {
       return;
     }
     const cdn = item.cdnUrl?.trim() ?? '';
@@ -913,21 +971,7 @@ export class CanvasComponent implements AfterViewInit {
       src: nextSrc,
       mediaHandle: item.handle
     };
-    if (this.isImageBlock(target)) {
-      if (!target.alt?.trim()) {
-        patch.alt = this.buildAltSuggestion(item.filename);
-      }
-      this.onBlockUpdate(target, patch);
-    } else if (this.isBackgroundBlock(target)) {
-      this.onBlockUpdate(target, patch);
-    }
-  }
-
-  clearImageBlock(block: ImageBlock) {
-    if (!this.isImageBlock(block)) {
-      return;
-    }
-    this.onBlockUpdate(block, { src: '', alt: '', mediaHandle: null });
+    this.onBlockUpdate(target, patch);
   }
 
   clearBackgroundImage(block: BGBlock) {
@@ -971,8 +1015,8 @@ export class CanvasComponent implements AfterViewInit {
     this.onBlockUpdate(block, { bgStyle: parsed.data });
   }
 
-  onTextContentChange(block: TextBlock, html: string | null | undefined) {
-    if (!this.isTextBlock(block)) {
+  onRichTextContentChange(block: TextBlock | InlineTextBlock, html: string | null | undefined) {
+    if (!this.supportsRichText(block)) {
       return;
     }
     const next = this.normalizeEditorHtml(html);
@@ -1060,9 +1104,17 @@ export class CanvasComponent implements AfterViewInit {
           next.vAlign = normalized.vAlign;
         }
 
-        if (this.isTitleBlock(next) || this.isTextBlock(next)) {
+        if (this.isTitleBlock(next) || this.isTextBlock(next) || this.isInlineTextBlock(next)) {
           if (Object.prototype.hasOwnProperty.call(normalized, 'text')) {
             next = { ...next, text: normalized.text ?? '' };
+          }
+        }
+        if (this.isInlineTextBlock(next)) {
+          if (Object.prototype.hasOwnProperty.call(normalized, 'images')) {
+            const inlineImages = (normalized.images as InlineImage[] | null | undefined) ?? [];
+            next = { ...next, images: normalizeInlineImages(inlineImages) };
+          } else if (!Array.isArray(next.images)) {
+            next = { ...next, images: [] };
           }
         } else if (this.isImageBlock(next)) {
           next = {
@@ -1127,14 +1179,6 @@ export class CanvasComponent implements AfterViewInit {
     return html
       .replace(/\u00a0/g, ' ')
       .replace(/&(nbsp|#160|#x0*a0);/gi, ' ');
-  }
-
-  // Strip file extension, and replace underscores/dashes with spaces
-  private buildAltSuggestion(filename: string | null | undefined) {
-    if (!filename) {
-      return '';
-    }
-    return filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
   }
 
   private buildMetaPayload(meta: PageMetaState): PageWrite['meta'] | undefined {
@@ -1209,13 +1253,6 @@ export class CanvasComponent implements AfterViewInit {
       return Math.max(max, rowEnd);
     }, 0);
     return lastRow + 1;
-  }
-
-  private rowsForContentHeight(contentHeight: number) {
-    const rowHeight = Math.max(1, this.tileRowHeight);
-    const rowGap = Math.max(0, this.gapPx);
-    const paddedHeight = Math.max(0, contentHeight + BLOCK_VERTICAL_PADDING);
-    return Math.max(1, Math.ceil((paddedHeight + rowGap) / (rowHeight + rowGap)));
   }
 
   // Sort by row then column

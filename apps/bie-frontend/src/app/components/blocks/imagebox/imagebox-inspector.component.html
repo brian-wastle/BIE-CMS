@@ -1,0 +1,22 @@
+<div class="imagebox-inspector">
+  <label>
+    <span>Alt text</span>
+    <input type="text" [ngModel]="alt()" (ngModelChange)="onAltChange($event)">
+  </label>
+
+  <mat-expansion-panel>
+    <mat-expansion-panel-header>
+      <h5>Media Library</h5>
+    </mat-expansion-panel-header>
+    <div class="inspector-section inspector-section-media">
+      <button type="button" class="inspector-link" (click)="clearImage()" [disabled]="!canClearImage()">
+        Clear image
+      </button>
+      <div class="inspector-media-browser">
+        <app-media-browser-carousel [allowDelete]="false" [viewMode]="'grid'"
+          [selectedHandle]="mediaHandle()" (mediaSelected)="onMediaSelected($event)">
+        </app-media-browser-carousel>
+      </div>
+    </div>
+  </mat-expansion-panel>
+</div>

@@ -12,7 +12,6 @@ import { HorizontalRuleBlockComponent } from '../../components/blocks/horizontal
 import { InlineTextComponent } from '../../components/blocks/inline-media-text/inline-media-text.component';
 import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
 import { PublishedPageResolverResult } from '../../resolvers/published-page.resolver';
-import { rowsForContentHeight } from '../../shared/grid-layout';
 
 @Component({
   selector: 'app-published-page',
@@ -54,8 +53,6 @@ export class PublishedPageComponent {
     }
     return [...current.blocks].sort((a, b) => this.compareByLayout(a, b));
   });
-  private readonly dynamicRowSpans = signal<Map<string, number>>(new Map());
-
   readonly publishedDisplay = computed(() => {
     const current = this.page();
     if (!current) {
@@ -72,14 +69,12 @@ export class PublishedPageComponent {
         this.page.set(null);
         this.error.set(null);
         this.applyGridSettings(GridSettingsDefaults);
-        this.dynamicRowSpans.set(new Map());
         return;
       }
       this.page.set(resolved.page);
       this.applyGridSettings(resolved.page?.grid);
       this.error.set(resolved.error);
       this.loading.set(false);
-      this.dynamicRowSpans.set(new Map());
     });
   }
 
@@ -90,7 +85,6 @@ export class PublishedPageComponent {
       colSpan: this.gridColumns,
       rowSpan: 1,
     };
-    const overrideRowSpan = this.dynamicRowSpans().get(block.id);
     const colSpan = this.resolveBlockColSpan(block, layout.colSpan);
     const hAlign = block.hAlign ?? 'flex-start';
     const vAlign = block.vAlign ?? 'flex-start';
@@ -99,7 +93,7 @@ export class PublishedPageComponent {
     const alignItems = stretchContent ? 'stretch' : hAlign;
     const justifyContent = stretchContent ? 'stretch' : vAlign;
     const zIndex = this.getBlockZIndex(block);
-    const rowSpan = Math.max(1, overrideRowSpan ?? layout.rowSpan ?? 1);
+    const rowSpan = Math.max(1, layout.rowSpan ?? 1);
     return {
       'grid-column': `${layout.colStart} / span ${colSpan}`,
       'grid-row': `${layout.row} / span ${rowSpan}`,
@@ -107,30 +101,6 @@ export class PublishedPageComponent {
       'justify-content': justifyContent,
       'z-index': zIndex,
     };
-  }
-
-  // BlockShell contract
-  autoSize(blockId: string, contentHeight: number) {
-    if (!Number.isFinite(contentHeight) || contentHeight <= 0) {
-      this.dynamicRowSpans.update(current => {
-        if (!current.has(blockId)) {
-          return current;
-        }
-        const next = new Map(current);
-        next.delete(blockId);
-        return next;
-      });
-      return;
-    }
-    const targetRows = rowsForContentHeight(contentHeight, this.gridRowHeight, this.gridGapPx);
-    this.dynamicRowSpans.update(current => {
-      if (current.get(blockId) === targetRows) {
-        return current;
-      }
-      const next = new Map(current);
-      next.set(blockId, targetRows);
-      return next;
-    });
   }
 
   formatDate(value: string | null | undefined) {

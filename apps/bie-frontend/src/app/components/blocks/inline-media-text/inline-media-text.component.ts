@@ -1,80 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { AfterViewInit, Component, ElementRef, OnDestroy, SecurityContext, ViewChild, computed, inject, input, output } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, SecurityContext, ViewChild, computed, effect, inject } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { InlineImage, InlinePlacement, InlineTextBlock, InlineImageSize } from 'bie-models';
-import type { MediaItem } from '../../../services/media-library/media-library.service';
-import { MediaBrowserCarouselComponent } from '../../media-browser-carousel/media-browser-carousel.component';
+import { InlineImage, InlinePlacement, InlineTextBlock } from 'bie-models';
 import { BLOCK_SHELL, BlockShell } from '../block-shell/block-shell';
-
-export const INLINE_MEDIA_PLACEMENTS: InlinePlacement[] = [
-  'top-left',
-  'top-center',
-  'top-right',
-  'left',
-  'right',
-  'bottom-left',
-  'bottom-center',
-  'bottom-right',
-];
-
-export const INLINE_MEDIA_SIZES: InlineImageSize[] = ['small', 'medium', 'large'];
-export const INLINE_MEDIA_IMAGE_LIMIT = 4;
-
-export function createInlineImage(placement: InlinePlacement = 'left'): InlineImage {
-  return {
-    id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
-    placement,
-    size: 'medium',
-    src: '',
-    alt: '',
-    caption: '',
-    mediaHandle: null,
-  };
-}
-
-export function parseInlinePlacement(raw: string | InlinePlacement | null | undefined): InlinePlacement {
-  const candidate = (raw ?? '').toString() as InlinePlacement;
-  if (INLINE_MEDIA_PLACEMENTS.includes(candidate)) {
-    return candidate;
-  }
-  return INLINE_MEDIA_PLACEMENTS[0];
-}
-
-export function parseInlineImageSize(raw: string | InlineImageSize | null | undefined): InlineImageSize {
-  const candidate = (raw ?? '').toString() as InlineImageSize;
-  if (INLINE_MEDIA_SIZES.includes(candidate)) {
-    return candidate;
-  }
-  return 'medium';
-}
-
-export function normalizeInlineImages(input: InlineImage[] | null | undefined): InlineImage[] {
-  if (!Array.isArray(input)) {
-    return [];
-  }
-  return input
-    .slice(0, INLINE_MEDIA_IMAGE_LIMIT)
-    .map((image, index) => {
-      const placement = INLINE_MEDIA_PLACEMENTS.includes(image.placement)
-        ? image.placement
-        : INLINE_MEDIA_PLACEMENTS[0];
-      const size = INLINE_MEDIA_SIZES.includes(image.size as InlineImageSize)
-        ? (image.size as InlineImageSize)
-        : 'medium';
-      const id = (image.id ?? '').trim() || `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
-      return {
-        id,
-        placement,
-        size,
-        src: (image.src ?? '').trim(),
-        alt: image.alt ?? '',
-        caption: image.caption ?? '',
-        mediaHandle: image.mediaHandle ?? null,
-      };
-    });
-}
 
 @Component({
   selector: 'app-inline-media-text',
@@ -84,18 +12,27 @@ export function normalizeInlineImages(input: InlineImage[] | null | undefined): 
 })
 export class InlineTextComponent extends BlockShell<InlineTextBlock> implements AfterViewInit, OnDestroy {
   @ViewChild('inlineRoot', { static: true }) inlineRoot!: ElementRef<HTMLElement>;
+  @ViewChild('inlineText', { static: true }) inlineText!: ElementRef<HTMLElement>;
 
   private readonly sanitizer = inject(DomSanitizer);
   private readonly hostShell = inject(BLOCK_SHELL, { skipSelf: true });
+  private readonly cdr = inject(ChangeDetectorRef);
   private resizeObserver: ResizeObserver | null = null;
+  private figureObserver: ResizeObserver | null = null;
+  private observedFigures = new Set<HTMLElement>();
   private pendingHeight = 0;
   private autosizeFrame: number | null = null;
+  private offsetsFrame: number | null = null;
+  private figureOffsets = new Map<string, number>();
+  private viewReady = false;
 
-  private readonly bottomPlacements = new Set<InlinePlacement>([
-    'bottom-left',
-    'bottom-center',
-    'bottom-right',
-  ]);
+  private readonly centerPlacements = new Set<InlinePlacement>();
+
+  private readonly offsetsEffect = effect(() => {
+    // Track image structure changes so we can refresh alignment.
+    this.block().images ?? [];
+    this.requestFigureOffsetUpdate();
+  });
 
   readonly fontSizes = computed(() => {
     const base = this.block().fontSize ?? 18;
@@ -117,39 +54,51 @@ export class InlineTextComponent extends BlockShell<InlineTextBlock> implements 
 
   readonly imagesBefore = computed<InlineImage[]>(() => {
     const images = this.block().images ?? [];
-    return images.filter(image => !this.bottomPlacements.has(image.placement));
-  });
-
-  readonly imagesAfter = computed<InlineImage[]>(() => {
-    const images = this.block().images ?? [];
-    return images.filter(image => this.bottomPlacements.has(image.placement));
+    return images;
   });
 
   readonly hasImages = computed(() => (this.block().images ?? []).length > 0);
 
   ngAfterViewInit(): void {
+    this.viewReady = true;
+    const element = this.inlineRoot.nativeElement;
     if (typeof ResizeObserver === 'undefined') {
-      this.queueAutoSize(this.inlineRoot.nativeElement.offsetHeight);
+      this.queueAutoSize(element.offsetHeight);
+      this.requestFigureOffsetUpdate();
       return;
     }
-    const element = this.inlineRoot.nativeElement;
     this.resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height ?? element.offsetHeight;
       this.queueAutoSize(height);
+      this.requestFigureOffsetUpdate();
     });
     this.resizeObserver.observe(element);
+
+    this.figureObserver = new ResizeObserver(() => this.requestFigureOffsetUpdate());
+    this.figureObserver.observe(this.inlineText.nativeElement);
+
     this.queueAutoSize(element.offsetHeight);
+    this.requestFigureOffsetUpdate();
   }
 
   ngOnDestroy(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
+    this.figureObserver?.disconnect();
+    this.figureObserver = null;
+    this.observedFigures.clear();
     if (this.autosizeFrame != null) {
       cancelAnimationFrame(this.autosizeFrame);
     }
     this.autosizeFrame = null;
+    if (this.offsetsFrame != null) {
+      cancelAnimationFrame(this.offsetsFrame);
+    }
+    this.offsetsFrame = null;
     this.pendingHeight = 0;
+    this.figureOffsets.clear();
+    this.offsetsEffect.destroy();
   }
 
   hasSource(image: InlineImage | null | undefined): boolean {
@@ -170,6 +119,10 @@ export class InlineTextComponent extends BlockShell<InlineTextBlock> implements 
 
   figureClasses(image: InlineImage): string[] {
     return [this.placementClass(image.placement), this.sizeClass(image.size)];
+  }
+
+  figureOffset(image: InlineImage): number {
+    return this.figureOffsets.get(image.id) ?? 0;
   }
 
   trackImage(_index: number, image: InlineImage): string {
@@ -195,129 +148,103 @@ export class InlineTextComponent extends BlockShell<InlineTextBlock> implements 
     this.pendingHeight = 0;
   }
 
+  private requestFigureOffsetUpdate() {
+    if (!this.viewReady) {
+      return;
+    }
+    if (this.offsetsFrame != null) {
+      return;
+    }
+    this.offsetsFrame = requestAnimationFrame(() => {
+      this.offsetsFrame = null;
+      this.observeCurrentFigures();
+      this.updateFigureOffsets();
+    });
+  }
+
+  private observeCurrentFigures() {
+    if (!this.figureObserver) {
+      return;
+    }
+    const root = this.inlineRoot.nativeElement;
+    const nextObserved = new Set<HTMLElement>();
+    root.querySelectorAll<HTMLElement>('figure.inline-figure').forEach(figure => {
+      nextObserved.add(figure);
+      if (!this.observedFigures.has(figure)) {
+        this.figureObserver!.observe(figure);
+      }
+    });
+    for (const figure of this.observedFigures) {
+      if (!nextObserved.has(figure)) {
+        this.figureObserver.unobserve(figure);
+      }
+    }
+    this.observedFigures = nextObserved;
+  }
+
+  private updateFigureOffsets() {
+    const textEl = this.inlineText?.nativeElement;
+    const root = this.inlineRoot?.nativeElement;
+    if (!textEl || !root) {
+      return;
+    }
+    const textHeight = textEl.offsetHeight;
+    if (!textHeight) {
+      if (this.figureOffsets.size) {
+        this.figureOffsets.clear();
+        this.cdr.detectChanges();
+      }
+      return;
+    }
+    const images = this.block().images ?? [];
+    const nextOffsets = new Map<string, number>();
+    root.querySelectorAll<HTMLElement>('figure.inline-figure').forEach(figure => {
+      const id = figure.dataset['imageId'];
+      if (!id) {
+        return;
+      }
+      const image = images.find(candidate => candidate.id === id);
+      if (!image) {
+        return;
+      }
+      const offset = this.calculateOffset(textHeight, figure.offsetHeight, image.placement);
+      if (offset > 0) {
+        nextOffsets.set(id, offset);
+      }
+    });
+    if (this.areOffsetsEqual(this.figureOffsets, nextOffsets)) {
+      return;
+    }
+    this.figureOffsets = nextOffsets;
+    this.cdr.detectChanges();
+  }
+
+  private calculateOffset(textHeight: number, figureHeight: number, placement: InlinePlacement): number {
+    if (!textHeight || !figureHeight) {
+      return 0;
+    }
+    if (this.centerPlacements.has(placement)) {
+      return Math.max(0, (textHeight - figureHeight) / 2);
+    }
+    return 0;
+  }
+
+  private areOffsetsEqual(current: Map<string, number>, next: Map<string, number>): boolean {
+    if (current.size !== next.size) {
+      return false;
+    }
+    for (const [key, value] of next) {
+      if (current.get(key) !== value) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private normalizeWhitespace(html: string): string {
     if (!html) {
       return '';
     }
     return html.replace(/\u00a0/g, ' ').replace(/&(nbsp|#160|#x0*a0);/gi, ' ');
-  }
-}
-
-@Component({
-  selector: 'app-inline-media-text-inspector',
-  standalone: true,
-  imports: [CommonModule, FormsModule, MatExpansionModule, MediaBrowserCarouselComponent],
-  templateUrl: './inline-media-text-inspector.component.html',
-  styleUrls: ['./inline-media-text-inspector.component.scss'],
-})
-export class InlineMediaTextInspectorComponent {
-  readonly block = input.required<InlineTextBlock>();
-  readonly imagesChange = output<InlineImage[]>();
-
-  readonly images = computed<InlineImage[]>(() => this.block().images ?? []);
-  readonly placements = INLINE_MEDIA_PLACEMENTS;
-  readonly sizes = INLINE_MEDIA_SIZES;
-  readonly maxImages = INLINE_MEDIA_IMAGE_LIMIT;
-
-  addInlineImage() {
-    if (this.images().length >= this.maxImages) {
-      return;
-    }
-    const defaultPlacement = this.placements[this.images().length] ?? this.placements[0];
-    const next = [...this.images(), createInlineImage(defaultPlacement)];
-    this.emitImages(next);
-  }
-
-  removeInlineImage(imageId: string) {
-    this.emitImages(this.images().filter(image => image.id !== imageId));
-  }
-
-  onPlacementChange(imageId: string, raw: InlinePlacement | string | null | undefined) {
-    const placement = parseInlinePlacement(raw);
-    this.emitImages(
-      this.images().map(image => (image.id === imageId ? { ...image, placement } : image)),
-    );
-  }
-
-  onSizeChange(imageId: string, raw: InlineImageSize | string | null | undefined) {
-    const size = parseInlineImageSize(raw);
-    this.emitImages(
-      this.images().map(image => (image.id === imageId ? { ...image, size } : image)),
-    );
-  }
-
-  onSrcChange(imageId: string, raw: string | null | undefined) {
-    const src = (raw ?? '').toString().trim();
-    this.emitImages(
-      this.images().map(image =>
-        image.id === imageId
-          ? {
-            ...image,
-            src,
-            mediaHandle: src && src === (image.src ?? '').trim() ? image.mediaHandle : null,
-          }
-          : image,
-      ),
-    );
-  }
-
-  onAltChange(imageId: string, raw: string | null | undefined) {
-    const alt = (raw ?? '').toString();
-    this.emitImages(
-      this.images().map(image => (image.id === imageId ? { ...image, alt } : image)),
-    );
-  }
-
-  onCaptionChange(imageId: string, raw: string | null | undefined) {
-    const caption = (raw ?? '').toString();
-    this.emitImages(
-      this.images().map(image => (image.id === imageId ? { ...image, caption } : image)),
-    );
-  }
-
-  onMediaSelected(imageId: string, item: MediaItem) {
-    const cdn = item.cdnUrl?.trim() ?? '';
-    const storage = item.storagePath?.trim() ?? '';
-    const src = cdn || storage;
-    if (!src) {
-      return;
-    }
-    this.emitImages(
-      this.images().map(image => {
-        if (image.id !== imageId) {
-          return image;
-        }
-        const shouldSetAlt = !(image.alt ?? '').trim();
-        return {
-          ...image,
-          src,
-          mediaHandle: item.handle,
-          alt: shouldSetAlt ? this.buildAltSuggestion(item.filename) : image.alt,
-        };
-      }),
-    );
-  }
-
-  clearInlineImageMedia(imageId: string) {
-    this.emitImages(
-      this.images().map(image =>
-        image.id === imageId ? { ...image, src: '', mediaHandle: null } : image,
-      ),
-    );
-  }
-
-  trackImage(_index: number, image: InlineImage) {
-    return image.id;
-  }
-
-  private emitImages(images: InlineImage[]) {
-    this.imagesChange.emit(normalizeInlineImages(images));
-  }
-
-  private buildAltSuggestion(filename: string | null | undefined) {
-    if (!filename) {
-      return '';
-    }
-    return filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
   }
 }

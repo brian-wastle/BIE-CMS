@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { CurrentUserService } from '../../services/current-user/current-user.service';
 import { PagesService } from '../../services/pages/pages.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, GridSettings, GridSettingsDefaults, Page, PageStatus, PageWrite, PageUpdate, InlineTextBlock, InlineImage } from 'bie-models';
+import { AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, GridSettings, GridSettingsDefaults, Page, PageStatus, PageWrite, PageUpdate, InlineTextBlock, InlinePlacement, InlineImage, InlineImageSize } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -14,7 +14,6 @@ import { ImageBoxComponent } from '../../components/blocks/imagebox/imagebox.com
 import { BackgroundBlockComponent } from '../../components/blocks/background-block/background-block.component';
 import { HorizontalRuleBlockComponent } from '../../components/blocks/horizontal-rule-block/horizontal-rule-block.component';
 import { ColorPickerInputComponent } from '../../components/color-picker-input/color-picker-input.component';
-import { MediaBrowserCarouselComponent } from '../../components/media-browser-carousel/media-browser-carousel.component';
 import { LayoutControlsComponent } from '../../components/layout-controls/layout-controls.component';
 import { RichTextEditorComponent } from '../../components/rich-text-editor/rich-text-editor.component';
 import type { MediaItem } from '../../services/media-library/media-library.service';
@@ -22,8 +21,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
 import { extractYoutubeId } from '../../utils/youtube';
 import { VideoBoxComponent } from '../../components/blocks/videobox/videobox.component';
-import { InlineMediaTextInspectorComponent, InlineTextComponent, createInlineImage, normalizeInlineImages } from '../../components/blocks/inline-media-text/inline-media-text.component';
-import { ImageBoxInspectorComponent } from '../../components/blocks/imagebox/imagebox-inspector.component';
+import { InlineTextComponent } from '../../components/blocks/inline-media-text/inline-media-text.component';
+import { MediaBrowserCarouselComponent } from '../../components/media-browser-carousel/media-browser-carousel.component';
 import { rowsForContentHeight } from '../../shared/grid-layout';
 
 // TODO: touch gesture handler for preview-frame area
@@ -67,19 +66,17 @@ const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
     MatIconModule,
     TextBoxComponent,
     ImageBoxComponent,
-    ImageBoxInspectorComponent,
     VideoBoxComponent,
     InlineTextComponent,
-    InlineMediaTextInspectorComponent,
     BlogTitleComponent,
     BlogBylineComponent,
-    MediaBrowserCarouselComponent,
     LayoutControlsComponent,
     MatExpansionModule,
     RichTextEditorComponent,
     BackgroundBlockComponent,
     HorizontalRuleBlockComponent,
-    ColorPickerInputComponent
+    ColorPickerInputComponent,
+    MediaBrowserCarouselComponent
   ],
   providers: [{ provide: BLOCK_SHELL, useExisting: forwardRef(() => CanvasComponent) }],
   templateUrl: './canvas.component.html',
@@ -94,6 +91,9 @@ export class CanvasComponent implements AfterViewInit {
   readonly maxGridWidthPx = 4096;
   tileRowHeight: number = GridSettingsDefaults.rowHeight;
   readonly rowHeightPresets = [24, 32, 40, 48, 56, 64];
+  readonly InlinePlacements: InlinePlacement[] = ['top-left', 'top-right'];
+  readonly InlineImageSizes: InlineImageSize[] = ['small', 'medium', 'large'];
+  readonly maxInlineImages = 4;
   // View settings
   readonly previewPresets: PreviewPreset[] = [
     { id: 'responsive', label: 'Fit to Window', widthPx: null, description: 'Responsive (fluid)' },
@@ -413,9 +413,24 @@ export class CanvasComponent implements AfterViewInit {
     this.keywordError.set(null);
     this.lastSavedAt.set(page.updatedAt ?? page.createdAt ?? null);
     this.applyGridSettings(page.grid);
-    this.blocks.set(page.blocks?.length ? page.blocks : this.createDefaultBlocks());
+    this.blocks.set(this.normalizeLoadedBlocks(page.blocks));
     this.selectedId.set(null);
     this.saveError.set(null);
+  }
+
+  private normalizeLoadedBlocks(blocks: AnyBlock[] | null | undefined): AnyBlock[] {
+    if (!Array.isArray(blocks) || !blocks.length) {
+      return this.createDefaultBlocks();
+    }
+    return blocks.map(block => {
+      if (!this.isInlineTextBlock(block)) {
+        return block;
+      }
+      return {
+        ...block,
+        images: this.normalizeInlineImages(block.images),
+      };
+    });
   }
 
   private async loadDraft(ref: string) {
@@ -655,7 +670,7 @@ export class CanvasComponent implements AfterViewInit {
           hAlign: 'flex-start',
           vAlign: 'flex-start',
           text: '',
-          images: [createInlineImage('left')],
+          images: [this.createInlineImage('left')],
         } as InlineTextBlock,
       ];
     });
@@ -814,7 +829,11 @@ export class CanvasComponent implements AfterViewInit {
     const targetRows = rowsForContentHeight(contentHeight, this.tileRowHeight, this.gapPx);
     this.blocks.update(blocks =>
       blocks.map(block => {
-        if (block.id !== blockId || !this.isTextBlock(block) || !block.layout) {
+        if (
+          block.id !== blockId ||
+          (!this.isTextBlock(block) && !this.isInlineTextBlock(block)) ||
+          !block.layout
+        ) {
           return block;
         }
         const currentSpan = Math.max(1, block.layout.rowSpan ?? 1);
@@ -891,6 +910,201 @@ export class CanvasComponent implements AfterViewInit {
     this.select(blockId);
   }
 
+  addInlineImage(block: InlineTextBlock) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    if ((block.images ?? []).length >= this.maxInlineImages) {
+      return;
+    }
+    const defaultPlacement =
+      this.InlinePlacements[(block.images ?? []).length] ?? this.InlinePlacements[0];
+    this.updateInlineImages(block, images => [...images, this.createInlineImage(defaultPlacement)]);
+  }
+
+  removeInlineImage(block: InlineTextBlock, imageId: string) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    this.updateInlineImages(block, images => images.filter(image => image.id !== imageId));
+  }
+
+  onInlineImagePlacementChange(
+    block: InlineTextBlock,
+    imageId: string,
+    raw: InlinePlacement | string | null | undefined,
+  ) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    const placement = this.parseInlinePlacement(raw);
+    this.updateInlineImages(block, images =>
+      images.map(image => (image.id === imageId ? { ...image, placement } : image)),
+    );
+  }
+
+  onInlineImageSizeChange(
+    block: InlineTextBlock,
+    imageId: string,
+    raw: InlineImageSize | string | null | undefined,
+  ) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    const size = this.parseInlineImageSize(raw);
+    this.updateInlineImages(block, images =>
+      images.map(image => (image.id === imageId ? { ...image, size } : image)),
+    );
+  }
+
+  onInlineImageSrcChange(block: InlineTextBlock, imageId: string, raw: string | null | undefined) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    const src = (raw ?? '').toString().trim();
+    this.updateInlineImages(block, images =>
+      images.map(image =>
+        image.id === imageId
+          ? {
+            ...image,
+            src,
+            mediaHandle: src && src === (image.src ?? '').trim() ? image.mediaHandle : null,
+          }
+          : image,
+      ),
+    );
+  }
+
+  onInlineImageAltChange(block: InlineTextBlock, imageId: string, raw: string | null | undefined) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    const alt = (raw ?? '').toString();
+    this.updateInlineImages(block, images =>
+      images.map(image => (image.id === imageId ? { ...image, alt } : image)),
+    );
+  }
+
+  onInlineImageCaptionChange(block: InlineTextBlock, imageId: string, raw: string | null | undefined) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    const caption = (raw ?? '').toString();
+    this.updateInlineImages(block, images =>
+      images.map(image => (image.id === imageId ? { ...image, caption } : image)),
+    );
+  }
+
+  onInlineImageMediaSelected(block: InlineTextBlock, imageId: string, item: MediaItem) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    const cdn = item.cdnUrl?.trim() ?? '';
+    const storage = item.storagePath?.trim() ?? '';
+    const src = cdn || storage;
+    if (!src) {
+      return;
+    }
+    this.updateInlineImages(block, images =>
+      images.map(image => {
+        if (image.id !== imageId) {
+          return image;
+        }
+        const shouldSetAlt = !(image.alt ?? '').trim();
+        return {
+          ...image,
+          src,
+          mediaHandle: item.handle,
+          alt: shouldSetAlt ? this.buildAltSuggestion(item.filename) : image.alt,
+        };
+      }),
+    );
+  }
+
+  clearInlineImageMedia(block: InlineTextBlock, imageId: string) {
+    if (!this.isInlineTextBlock(block)) {
+      return;
+    }
+    this.updateInlineImages(block, images =>
+      images.map(image =>
+        image.id === imageId ? { ...image, src: '', mediaHandle: null } : image,
+      ),
+    );
+  }
+
+  onInspectorMediaSelected(item: MediaItem) {
+    const target = this.selected();
+    if (!target) {
+      return;
+    }
+    const cdn = item.cdnUrl?.trim() ?? '';
+    const storage = item.storagePath?.trim() ?? '';
+    const nextSrc = cdn || storage;
+    if (!nextSrc) {
+      return;
+    }
+    const patch: BlockUpdate = {
+      src: nextSrc,
+      mediaHandle: item.handle
+    };
+    if (this.isImageBlock(target)) {
+      if (!target.alt?.trim()) {
+        patch.alt = this.buildAltSuggestion(item.filename);
+      }
+      this.onBlockUpdate(target, patch);
+    } else if (this.isBackgroundBlock(target)) {
+      this.onBlockUpdate(target, patch);
+    }
+  }
+
+  clearImageBlock(block: ImageBlock) {
+    if (!this.isImageBlock(block)) {
+      return;
+    }
+    this.onBlockUpdate(block, { src: '', alt: '', mediaHandle: null });
+  }
+
+  clearBackgroundImage(block: BGBlock) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    this.onBlockUpdate(block, { src: '', mediaHandle: null });
+  }
+
+  clearBackgroundColor(block: BGBlock) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    this.onBlockUpdate(block, { color: '' });
+  }
+
+  onBackgroundColorChange(block: BGBlock, raw: string | null | undefined) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    const color = (raw ?? '').trim();
+    this.onBlockUpdate(block, { color });
+  }
+
+  onBackgroundImageUrlChange(block: BGBlock, raw: string | null | undefined) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    const src = (raw ?? '').trim();
+    this.onBlockUpdate(block, { src });
+  }
+
+  onBackgroundStyleChange(block: BGBlock, raw: string | null | undefined) {
+    if (!this.isBackgroundBlock(block)) {
+      return;
+    }
+    const parsed = BGStyleSchema.safeParse(raw);
+    if (!parsed.success) {
+      return;
+    }
+    this.onBlockUpdate(block, { bgStyle: parsed.data });
+  }
+
   onFontSizeInput(block: AnyBlock, raw: string | number | null | undefined) {
     if (!this.supportsFontSize(block)) {
       return;
@@ -954,65 +1168,6 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     this.onBlockUpdate(block, { vAlign: parsed.data });
-  }
-
-  onInspectorMediaSelected(item: MediaItem) {
-    const target = this.selected();
-    if (!target || !this.isBackgroundBlock(target)) {
-      return;
-    }
-    const cdn = item.cdnUrl?.trim() ?? '';
-    const storage = item.storagePath?.trim() ?? '';
-    const nextSrc = cdn || storage;
-    if (!nextSrc) {
-      return;
-    }
-    const patch: BlockUpdate = {
-      src: nextSrc,
-      mediaHandle: item.handle
-    };
-    this.onBlockUpdate(target, patch);
-  }
-
-  clearBackgroundImage(block: BGBlock) {
-    if (!this.isBackgroundBlock(block)) {
-      return;
-    }
-    this.onBlockUpdate(block, { src: '', mediaHandle: null });
-  }
-
-  clearBackgroundColor(block: BGBlock) {
-    if (!this.isBackgroundBlock(block)) {
-      return;
-    }
-    this.onBlockUpdate(block, { color: '' });
-  }
-
-  onBackgroundColorChange(block: BGBlock, raw: string | null | undefined) {
-    if (!this.isBackgroundBlock(block)) {
-      return;
-    }
-    const color = (raw ?? '').trim();
-    this.onBlockUpdate(block, { color });
-  }
-
-  onBackgroundImageUrlChange(block: BGBlock, raw: string | null | undefined) {
-    if (!this.isBackgroundBlock(block)) {
-      return;
-    }
-    const src = (raw ?? '').trim();
-    this.onBlockUpdate(block, { src });
-  }
-
-  onBackgroundStyleChange(block: BGBlock, raw: string | null | undefined) {
-    if (!this.isBackgroundBlock(block)) {
-      return;
-    }
-    const parsed = BGStyleSchema.safeParse(raw);
-    if (!parsed.success) {
-      return;
-    }
-    this.onBlockUpdate(block, { bgStyle: parsed.data });
   }
 
   onRichTextContentChange(block: TextBlock | InlineTextBlock, html: string | null | undefined) {
@@ -1112,7 +1267,7 @@ export class CanvasComponent implements AfterViewInit {
         if (this.isInlineTextBlock(next)) {
           if (Object.prototype.hasOwnProperty.call(normalized, 'images')) {
             const inlineImages = (normalized.images as InlineImage[] | null | undefined) ?? [];
-            next = { ...next, images: normalizeInlineImages(inlineImages) };
+            next = { ...next, images: this.normalizeInlineImages(inlineImages) };
           } else if (!Array.isArray(next.images)) {
             next = { ...next, images: [] };
           }
@@ -1231,6 +1386,75 @@ export class CanvasComponent implements AfterViewInit {
       return value;
     }
     return '';
+  }
+
+  private updateInlineImages(
+    block: InlineTextBlock,
+    transform: (images: InlineImage[]) => InlineImage[],
+  ) {
+    const current = Array.isArray(block.images) ? block.images : [];
+    const next = transform([...current]);
+    this.onBlockUpdate(block, { images: this.normalizeInlineImages(next) });
+  }
+
+  private createInlineImage(placement: InlinePlacement = 'top-left'): InlineImage {
+    return {
+      id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
+      placement,
+      size: 'medium',
+      src: '',
+      alt: '',
+      caption: '',
+      mediaHandle: null,
+    };
+  }
+
+  private parseInlinePlacement(raw: string | InlinePlacement | null | undefined): InlinePlacement {
+    const candidate = (raw ?? '').toString() as InlinePlacement;
+    if (this.InlinePlacements.includes(candidate)) {
+      return candidate;
+    }
+    return 'top-left';
+  }
+
+  private parseInlineImageSize(raw: string | InlineImageSize | null | undefined): InlineImageSize {
+    const candidate = (raw ?? '').toString() as InlineImageSize;
+    if (this.InlineImageSizes.includes(candidate)) {
+      return candidate;
+    }
+    return 'medium';
+  }
+
+  private normalizeInlineImages(input: InlineImage[] | null | undefined): InlineImage[] {
+    if (!Array.isArray(input)) {
+      return [];
+    }
+    return input
+      .slice(0, this.maxInlineImages)
+      .map((image, index) => {
+        const placement = this.parseInlinePlacement(image.placement);
+        const size = this.InlineImageSizes.includes(image.size as InlineImageSize)
+          ? (image.size as InlineImageSize)
+          : 'medium';
+        const id = (image.id ?? '').trim() || `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
+        return {
+          id,
+          placement,
+          size,
+          src: (image.src ?? '').trim(),
+          alt: image.alt ?? '',
+          caption: image.caption ?? '',
+          mediaHandle: image.mediaHandle ?? null,
+        };
+      });
+  }
+
+  // Strip file extension, and replace underscores/dashes with spaces
+  private buildAltSuggestion(filename: string | null | undefined) {
+    if (!filename) {
+      return '';
+    }
+    return filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
   }
 
   private updateInspectorView() {

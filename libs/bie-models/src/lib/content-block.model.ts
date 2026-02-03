@@ -57,16 +57,7 @@ export const ImageStyleSchema = z
   .strict();
 export type ImageStyle = z.infer<typeof ImageStyleSchema>;
 
-export const InlinePlacementSchema = z.enum([
-  'top-left',
-  'top-center',
-  'top-right',
-  'left',
-  'right',
-  'bottom-left',
-  'bottom-center',
-  'bottom-right',
-]);
+export const InlinePlacementSchema = z.enum(['top-left', 'top-right']);
 export type InlinePlacement = z.infer<typeof InlinePlacementSchema>;
 
 export const InlineImageSizeSchema = z.enum(['small', 'medium', 'large']);
@@ -112,7 +103,7 @@ export const InlineImageSchema = z
     src: z.string(),
     alt: z.string().optional(),
     caption: z.string().optional(),
-    placement: InlinePlacementSchema.default('left'),
+    placement: InlinePlacementSchema.default('top-left'),
     size: InlineImageSizeSchema.default('medium'),
     mediaHandle: z.string().nullable().optional(),
   })

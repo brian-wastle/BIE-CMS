@@ -224,8 +224,6 @@
         </app-layout-controls>
       </mat-expansion-panel>
 
-
-
       @if (supportsFontSize(block)) {
       <mat-expansion-panel>
         <mat-expansion-panel-header>
@@ -264,9 +262,68 @@
         <mat-expansion-panel-header>
           <h4>Inline media</h4>
         </mat-expansion-panel-header>
-        <app-inline-media-text-inspector [block]="block"
-          (imagesChange)="onBlockUpdate(block, { images: $event })">
-        </app-inline-media-text-inspector>
+        <div class="inspector-section inspector-inline-media">
+          <div class="inline-media-actions">
+            <button type="button" class="palette-button" (click)="addInlineImage(block)"
+              [disabled]="block.images.length >= maxInlineImages">
+              + Add inline image
+            </button>
+            <p class="inspector-note">Place up to {{ maxInlineImages }} images around this text block.</p>
+          </div>
+          @if (!(block.images.length)) {
+          <p class="inspector-empty">No inline images yet.</p>
+          }
+          @for (image of block.images; track image.id; let i = $index) {
+          <div class="inline-media-card">
+            <div class="inline-media-card-header">
+              <h5>Image {{ i + 1 }}</h5>
+              <button type="button" class="inspector-link danger" (click)="removeInlineImage(block, image.id)">
+                Remove
+              </button>
+            </div>
+            <label>
+              <span>Placement</span>
+              <select [ngModel]="image.placement"
+                (ngModelChange)="onInlineImagePlacementChange(block, image.id, $event)">
+                @for (placement of InlinePlacements; track placement) {
+                <option [ngValue]="placement">{{ placement | titlecase }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Size</span>
+              <select [ngModel]="image.size"
+                (ngModelChange)="onInlineImageSizeChange(block, image.id, $event)">
+                @for (size of InlineImageSizes; track size) {
+                <option [ngValue]="size">{{ size | titlecase }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Alt text</span>
+              <input type="text" [ngModel]="image.alt" (ngModelChange)="onInlineImageAltChange(block, image.id, $event)">
+            </label>
+            <label>
+              <span>Caption</span>
+              <input type="text" [ngModel]="image.caption"
+                (ngModelChange)="onInlineImageCaptionChange(block, image.id, $event)">
+            </label>
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <h5>Media library</h5>
+              </mat-expansion-panel-header>
+              <div class="inspector-section inspector-section-media">
+                <button type="button" class="inspector-link" (click)="clearInlineImageMedia(block, image.id)"
+                  [disabled]="!(image.src || '').trim()">Clear image</button>
+                <app-media-browser-carousel [allowDelete]="false" [viewMode]="'grid'"
+                  [selectedHandle]="image.mediaHandle ?? null"
+                  (mediaSelected)="onInlineImageMediaSelected(block, image.id, $event)">
+                </app-media-browser-carousel>
+              </div>
+            </mat-expansion-panel>
+          </div>
+          }
+        </div>
       </mat-expansion-panel>
       }
       @if (isImageBlock(block)) {
@@ -274,8 +331,25 @@
         <mat-expansion-panel-header>
           <h4>Image settings</h4>
         </mat-expansion-panel-header>
-        <app-imagebox-inspector [block]="block" (patch)="onBlockUpdate(block, $event)">
-        </app-imagebox-inspector>
+        <label>Alt text
+          <input type="text" [ngModel]="block.alt" (ngModelChange)="onBlockUpdate(block, { alt: $event })">
+        </label>
+
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <h5>Media Library</h5>
+          </mat-expansion-panel-header>
+          <div class="inspector-section inspector-section-media">
+            <button type="button" class="inspector-link" (click)="clearImageBlock(block)" [disabled]="!block.src">
+              Clear image
+            </button>
+            <div class="inspector-media-browser">
+              <app-media-browser-carousel [allowDelete]="false" [viewMode]="'grid'"
+                [selectedHandle]="block.mediaHandle ?? null" (mediaSelected)="onInspectorMediaSelected($event)">
+              </app-media-browser-carousel>
+            </div>
+          </div>
+        </mat-expansion-panel>
       </mat-expansion-panel>
       }
       @if (isVideoBlock(block)) {

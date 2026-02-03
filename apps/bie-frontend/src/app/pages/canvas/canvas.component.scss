@@ -16,6 +16,11 @@ $error: #f87171;
 $error-soft: #f8717133;
 $green-shadow: #0e997938;
 
+:host {
+  display: block;
+  font-family: "Google Sans Code", "Roboto", sans-serif;
+}
+
 .canvas-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(280px, 32vw, 380px);
@@ -191,17 +196,20 @@ $green-shadow: #0e997938;
   display: grid;
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
   grid-auto-rows: var(--rowHeight, 48px);
-  gap: var(--gap, 20px);
+  gap: var(--gap, 16px);
   min-height: 100px;
-  padding: 8px;
-  background: $white;
+  padding: 1.5rem;
+  border-radius: 0;
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
   margin-left: auto;
   margin-right: auto;
   width: min(100%, var(--maxWidthPx, 9999px));
 }
 
 .canvas-preview .block {
-  border: 1px dashed rgba(15,23,42,.35);
+  border: 1px dashed rgba(15, 23, 42, 0.35);
   border-radius: 8px;
 }
 

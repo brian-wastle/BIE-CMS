@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, TrackByFunction, computed, effect, forwardRef, inject, signal } from '@angular/core';
+import { Component, computed, effect, forwardRef, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { AnyBlock, BGBlock, BylineBlock, DividerBlock, GridSettings, GridSettingsDefaults, ImageBlock, InlineTextBlock, Page, TextBlock, TitleBlock, VideoBlock } from 'bie-models';
+import { AlignType, AnyBlock, BGBlock, BylineBlock, DividerBlock, GridSettings, GridSettingsDefaults, ImageBlock, InlineTextBlock, Page, TextBlock, TitleBlock, VideoBlock } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -12,6 +12,10 @@ import { HorizontalRuleBlockComponent } from '../../components/blocks/horizontal
 import { InlineTextComponent } from '../../components/blocks/inline-media-text/inline-media-text.component';
 import { BLOCK_SHELL } from '../../components/blocks/block-shell/block-shell';
 import { PublishedPageResolverResult } from '../../resolvers/published-page.resolver';
+
+type FlowItem =
+  | { kind: 'block'; block: AnyBlock }
+  | { kind: 'spacer'; id: string; rows: number; heightPx: number };
 
 @Component({
   selector: 'app-published-page',
@@ -40,11 +44,11 @@ export class PublishedPageComponent {
   readonly error = signal<string | null>(null);
   readonly page = signal<Page | null>(null);
 
-  gridColumns: number = GridSettingsDefaults.columns;
-  gridGapPx: number = GridSettingsDefaults.gapPx;
-  gridRowHeight: number = GridSettingsDefaults.rowHeight;
-  gridMaxWidthPx: number = GridSettingsDefaults.maxWidthPx;
-  private readonly maxGridWidthPx = 4096;
+  readonly contentGapPx = signal<number>(GridSettingsDefaults.gapPx);
+  readonly contentMaxWidthPx = signal<number>(GridSettingsDefaults.maxWidthPx);
+  readonly contentRowHeightPx = signal<number>(GridSettingsDefaults.rowHeight);
+  readonly contentColumns = signal<number>(GridSettingsDefaults.columns);
+  private readonly maxContentWidthPx = 4096;
 
   readonly pageBlocks = computed(() => {
     const current = this.page();
@@ -53,6 +57,54 @@ export class PublishedPageComponent {
     }
     return [...current.blocks].sort((a, b) => this.compareByLayout(a, b));
   });
+  readonly flowItems = computed<FlowItem[]>(() => {
+    const blocks = this.pageBlocks();
+    if (!blocks.length) {
+      return [];
+    }
+    let cursor = 1;
+    const items: FlowItem[] = [];
+    for (const block of blocks) {
+      const layout = block.layout;
+      const rowGap = this.resolveRowGap(layout, cursor);
+      if (rowGap > 0) {
+        items.push({
+          kind: 'spacer',
+          id: `spacer-${block.id}-${cursor}`,
+          rows: rowGap,
+          heightPx: this.calculateSpacerHeight(rowGap),
+        });
+      }
+      items.push({ kind: 'block', block });
+      const rowSpan = Math.max(1, layout?.rowSpan ?? 1);
+      const rowStart = Math.max(1, cursor + rowGap);
+      cursor = rowStart + rowSpan;
+    }
+    return items;
+  });
+  readonly blockStyle = (block: AnyBlock) => {
+    const columns = Math.max(1, this.contentColumns());
+    const layout = block.layout;
+    if (!layout || columns <= 1) {
+      return { width: '100%', 'margin-left': '0', 'align-self': this.resolveAlignSelf(block.hAlign) };
+    }
+    const colSpan = Math.max(1, Math.min(layout.colSpan ?? columns, columns));
+    const maxStart = columns - colSpan + 1;
+    const colStart = Math.max(1, Math.min(layout.colStart ?? 1, maxStart));
+    const widthPercent = (colSpan / columns) * 100;
+    const offsetPercent = ((colStart - 1) / columns) * 100;
+    const styles: Record<string, string> = {
+      width: `${widthPercent}%`,
+      'max-width': '100%',
+      'align-self': this.resolveAlignSelf(block.hAlign),
+    };
+    if (offsetPercent > 0) {
+      styles['margin-left'] = `${offsetPercent}%`;
+    } else {
+      styles['margin-left'] = '0';
+    }
+    return styles;
+  };
   readonly publishedDisplay = computed(() => {
     const current = this.page();
     if (!current) {
@@ -68,39 +120,14 @@ export class PublishedPageComponent {
         this.loading.set(true);
         this.page.set(null);
         this.error.set(null);
-        this.applyGridSettings(GridSettingsDefaults);
+        this.applyFlowSettings(GridSettingsDefaults);
         return;
       }
+      this.applyFlowSettings(resolved.page?.grid);
       this.page.set(resolved.page);
-      this.applyGridSettings(resolved.page?.grid);
       this.error.set(resolved.error);
       this.loading.set(false);
     });
-  }
-
-  blockStyle(block: AnyBlock) {
-    const layout = block.layout ?? {
-      row: 1,
-      colStart: 1,
-      colSpan: this.gridColumns,
-      rowSpan: 1,
-    };
-    const colSpan = this.resolveBlockColSpan(block, layout.colSpan);
-    const hAlign = block.hAlign ?? 'flex-start';
-    const vAlign = block.vAlign ?? 'flex-start';
-    const stretchContent =
-      this.isTextBlock(block) || this.isInlineTextBlock(block) || this.isBackgroundBlock(block) || this.isImageBlock(block);
-    const alignItems = stretchContent ? 'stretch' : hAlign;
-    const justifyContent = stretchContent ? 'stretch' : vAlign;
-    const zIndex = this.getBlockZIndex(block);
-    const rowSpan = Math.max(1, layout.rowSpan ?? 1);
-    return {
-      'grid-column': `${layout.colStart} / span ${colSpan}`,
-      'grid-row': `${layout.row} / span ${rowSpan}`,
-      'align-items': alignItems,
-      'justify-content': justifyContent,
-      'z-index': zIndex,
-    };
   }
 
   formatDate(value: string | null | undefined) {
@@ -164,52 +191,59 @@ export class PublishedPageComponent {
     return a.id.localeCompare(b.id);
   }
 
-  trackByBlockId: TrackByFunction<AnyBlock> = (_index, block) => block.id;
-
-  private applyGridSettings(grid?: GridSettings | null) {
-    const next = this.normalizeGridSettings(grid);
-    this.gridColumns = next.columns;
-    this.gridGapPx = next.gapPx;
-    this.gridRowHeight = next.rowHeight;
-    this.gridMaxWidthPx = next.maxWidthPx;
+  trackFlowItem(_index: number, item: FlowItem): string {
+    return item.kind === 'spacer' ? item.id : item.block.id;
   }
 
-  private normalizeGridSettings(grid?: GridSettings | null): GridSettings {
-    const columns = Math.max(1, Math.min(24, Math.floor(grid?.columns ?? GridSettingsDefaults.columns)));
+  private resolveAlignSelf(align: AlignType | undefined): string {
+    switch (align) {
+      case 'center':
+        return 'center';
+      case 'flex-end':
+        return 'flex-end';
+      default:
+        return 'flex-start';
+    }
+  }
+
+  private resolveRowGap(layout: AnyBlock['layout'], cursor: number): number {
+    if (!layout) {
+      return 0;
+    }
+    if (typeof layout.rowGap === 'number' && Number.isFinite(layout.rowGap)) {
+      return Math.max(0, Math.floor(layout.rowGap));
+    }
+    if (typeof layout.row === 'number' && Number.isFinite(layout.row)) {
+      return Math.max(0, Math.floor(layout.row) - cursor);
+    }
+    return 0;
+  }
+
+  private calculateSpacerHeight(rows: number): number {
+    if (!rows || rows <= 0) {
+      return 0;
+    }
+    const rowHeight = Math.max(1, this.contentRowHeightPx());
+    const gap = Math.max(0, this.contentGapPx());
+    return rows * rowHeight + Math.max(0, rows - 1) * gap;
+  }
+
+  private applyFlowSettings(grid?: GridSettings | null) {
+    const next = this.normalizeFlowSettings(grid);
+    this.contentGapPx.set(next.gapPx);
+    this.contentMaxWidthPx.set(next.maxWidthPx);
+    this.contentRowHeightPx.set(next.rowHeight);
+    this.contentColumns.set(next.columns);
+  }
+
+  private normalizeFlowSettings(grid?: GridSettings | null): { gapPx: number; maxWidthPx: number; rowHeight: number; columns: number } {
     const gapPx = Math.max(0, Math.min(64, Math.floor(grid?.gapPx ?? GridSettingsDefaults.gapPx)));
-    const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridSettingsDefaults.rowHeight)));
     const maxWidthPx = Math.max(
       0,
-      Math.min(this.maxGridWidthPx, Math.floor(grid?.maxWidthPx ?? GridSettingsDefaults.maxWidthPx))
+      Math.min(this.maxContentWidthPx, Math.floor(grid?.maxWidthPx ?? GridSettingsDefaults.maxWidthPx))
     );
-    return { columns, gapPx, rowHeight, maxWidthPx };
-  }
-
-  private resolveBlockColSpan(block: AnyBlock, fallbackSpan: number) {
-    if (this.isImageBlock(block)) {
-      const override = this.normalizeColumns(block.imageStyle?.columns);
-      if (override != null) {
-        return override;
-      }
-    }
-    return this.normalizeColumns(fallbackSpan) ?? this.gridColumns;
-  }
-
-  private normalizeColumns(value: number | null | undefined) {
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return null;
-    }
-    const rounded = Math.round(value);
-    return Math.max(1, Math.min(this.gridColumns, rounded));
-  }
-
-  private getBlockZIndex(block: AnyBlock): number {
-    if (this.isBackgroundBlock(block)) {
-      return 1;
-    }
-    if (this.isImageBlock(block) || this.isVideoBlock(block)) {
-      return 2;
-    }
-    return 3;
+    const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridSettingsDefaults.rowHeight)));
+    const columns = Math.max(1, Math.min(24, Math.floor(grid?.columns ?? GridSettingsDefaults.columns)));
+    return { gapPx, maxWidthPx, rowHeight, columns };
   }
 }

@@ -103,7 +103,7 @@ export class CanvasComponent implements AfterViewInit {
     { id: 'hd', label: 'HD (1920px)', widthPx: 1920, description: 'HD monitor' },
   ];
   previewModeId = signal<PreviewModeId>('desktop');
-  previewZoom = signal(50);
+  previewZoom = signal(100);
   readonly previewPreset = computed(() => {
     return this.previewPresets.find(preset => preset.id === this.previewModeId()) ?? this.previewPresets[0];
   });
@@ -161,6 +161,10 @@ export class CanvasComponent implements AfterViewInit {
   blocks = signal<AnyBlock[]>(this.createDefaultBlocks());
   // Read-only version of blocks, sorted by row then column, for page flow
   pageBlocks = computed(() => [...this.blocks()].sort((a, b) => this.compareByLayout(a, b)));
+  private readonly rowReflowEffect = effect(() => {
+    const snapshot = this.blocks();
+    this.reflowRows(snapshot);
+  });
   private readonly titleBlockSyncEffect = effect(() => {
     const title = this.pageMeta().title ?? '';
     const blocks = this.blocks();
@@ -413,7 +417,9 @@ export class CanvasComponent implements AfterViewInit {
     this.keywordError.set(null);
     this.lastSavedAt.set(page.updatedAt ?? page.createdAt ?? null);
     this.applyGridSettings(page.grid);
-    this.blocks.set(this.normalizeLoadedBlocks(page.blocks));
+    const normalizedBlocks = this.normalizeLoadedBlocks(page.blocks);
+    const orderedBlocks = [...normalizedBlocks].sort((a, b) => this.compareByLayout(a, b));
+    this.blocks.set(orderedBlocks);
     this.selectedId.set(null);
     this.saveError.set(null);
   }
@@ -522,6 +528,9 @@ export class CanvasComponent implements AfterViewInit {
   setPreviewZoom(percent: number) {
     const next = Math.min(200, Math.max(25, Math.round(percent)));
     this.previewZoom.set(next);
+    if (this.viewReady) {
+      requestAnimationFrame(() => this.centerIfScrollable());
+    }
   }
 
   resetPreviewZoom() {
@@ -670,7 +679,7 @@ export class CanvasComponent implements AfterViewInit {
           hAlign: 'flex-start',
           vAlign: 'flex-start',
           text: '',
-          images: [this.createInlineImage('left')],
+          images: [this.createInlineImage('top-left')],
         } as InlineTextBlock,
       ];
     });
@@ -897,7 +906,28 @@ export class CanvasComponent implements AfterViewInit {
   }
 
   onLayoutChange(block: AnyBlock, layout: GridPlacement) {
-    this.onBlockUpdate(block, { layout });
+    const currentLayout = block.layout ?? this.clampLayout({
+      row: 1,
+      colStart: 1,
+      colSpan: this.columns,
+      rowSpan: 1,
+    });
+    const targetRow = Math.max(1, Math.floor(layout.row ?? currentLayout.row ?? 1));
+    const normalized = this.clampLayout({
+      ...currentLayout,
+      ...layout,
+      row: currentLayout.row ?? targetRow,
+      rowGap: layout.rowGap ?? currentLayout.rowGap ?? 0,
+    });
+    const layoutPatch: GridPlacement = {
+      ...normalized,
+      row: currentLayout.row ?? normalized.row,
+      rowGap: layout.rowGap ?? currentLayout.rowGap ?? 0,
+    };
+    this.onBlockUpdate(block, { layout: layoutPatch });
+    if ((currentLayout.row ?? 1) !== targetRow) {
+      this.moveBlockToRow(block.id, targetRow);
+    }
   }
 
   onPreviewCanvasClick(event: MouseEvent) {
@@ -1463,6 +1493,7 @@ export class CanvasComponent implements AfterViewInit {
     }
     const shouldOverlap = window.innerWidth <= 1024;
     this.inspectorOverlaps.set(shouldOverlap);
+    this.inspectorOpen.set(!shouldOverlap);
   }
 
   // Find last empty row
@@ -1477,6 +1508,90 @@ export class CanvasComponent implements AfterViewInit {
       return Math.max(max, rowEnd);
     }, 0);
     return lastRow + 1;
+  }
+
+  private reflowRows(snapshot?: AnyBlock[]) {
+    const blocks = snapshot ?? this.blocks();
+    if (!blocks.length) {
+      return;
+    }
+    let cursor = 1;
+    let changed = false;
+    const nextBlocks = blocks.map(block => {
+      const layout = this.clampLayout(
+        block.layout ?? { row: cursor, colStart: 1, colSpan: this.columns, rowSpan: 1 },
+        this.columns,
+      );
+      const rowGap = Math.max(0, layout.rowGap ?? 0);
+      const rowSpan = Math.max(1, layout.rowSpan ?? 1);
+      const row = Math.max(1, cursor + rowGap);
+      cursor = row + rowSpan;
+      const prevLayout = block.layout ?? layout;
+      const nextLayout = { ...layout, row, rowSpan, rowGap };
+      if (
+        prevLayout.row === nextLayout.row &&
+        prevLayout.rowSpan === nextLayout.rowSpan &&
+        (prevLayout.rowGap ?? 0) === nextLayout.rowGap &&
+        prevLayout.colStart === nextLayout.colStart &&
+        prevLayout.colSpan === nextLayout.colSpan
+      ) {
+        return block;
+      }
+      changed = true;
+      return {
+        ...block,
+        layout: nextLayout,
+      };
+    });
+    if (changed) {
+      this.blocks.set(nextBlocks);
+    }
+  }
+
+  private moveBlockToRow(blockId: string, targetRow: number) {
+    const ordered = [...this.blocks()];
+    const currentIndex = ordered.findIndex(block => block.id === blockId);
+    if (currentIndex < 0) {
+      return;
+    }
+    const [block] = ordered.splice(currentIndex, 1);
+    const { index, gap } = this.findInsertionPoint(ordered, targetRow);
+    const layout = this.clampLayout(block.layout ?? { row: targetRow, colStart: 1, colSpan: this.columns, rowSpan: 1 }, this.columns);
+    const updated: AnyBlock = {
+      ...block,
+      layout: {
+        ...layout,
+        rowGap: gap,
+      },
+    };
+    ordered.splice(index, 0, updated);
+    this.blocks.set(ordered);
+  }
+
+  private findInsertionPoint(blocks: AnyBlock[], targetRow: number): { index: number; gap: number } {
+    const desiredRow = Math.max(1, Math.floor(targetRow));
+    let cursor = 1;
+    let rowTarget = desiredRow;
+    for (let i = 0; i < blocks.length; i++) {
+      const layout = blocks[i].layout ?? { row: cursor, colStart: 1, colSpan: this.columns, rowSpan: 1, rowGap: 0 };
+      const gap = Math.max(0, layout.rowGap ?? 0);
+      const start = cursor + gap;
+      if (rowTarget <= start) {
+        return {
+          index: i,
+          gap: Math.max(0, rowTarget - cursor),
+        };
+      }
+      const span = Math.max(1, layout.rowSpan ?? 1);
+      cursor = start + span;
+      if (rowTarget < cursor) {
+        rowTarget = cursor;
+      }
+    }
+    return {
+      index: blocks.length,
+      gap: Math.max(0, rowTarget - cursor),
+    };
   }
 
   // Sort by row then column
@@ -1500,7 +1615,8 @@ export class CanvasComponent implements AfterViewInit {
     const maxStart = totalCols - colSpan + 1;
     const colStart = Math.max(1, Math.min(desired?.colStart ?? 1, maxStart));
     const rowSpan = Math.max(1, desired?.rowSpan ?? 1);
-    return { row, colStart, colSpan, rowSpan };
+    const rowGap = Math.max(0, desired?.rowGap ?? 0);
+    return { row, colStart, colSpan, rowSpan, rowGap };
   }
 
   // Sets a title and byline block at the top of a new page

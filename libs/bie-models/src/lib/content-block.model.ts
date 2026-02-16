@@ -47,6 +47,7 @@ export const GridPlacementSchema = z.object({
   colStart: z.coerce.number().int().nonnegative(),
   colSpan: z.coerce.number().int().positive(),
   rowSpan: z.coerce.number().int().positive().optional(),
+  rowGap: z.coerce.number().int().min(0).optional(),
 });
 export type GridPlacement = z.infer<typeof GridPlacementSchema>;
 

@@ -9,3 +9,4 @@ export function rowsForContentHeight(contentHeight: number, rowHeightPx: number,
   const paddedHeight = Math.max(0, contentHeight + BLOCK_VERTICAL_PADDING);
   return Math.max(1, Math.ceil((paddedHeight + rowGap) / (rowHeight + rowGap)));
 }
+ 

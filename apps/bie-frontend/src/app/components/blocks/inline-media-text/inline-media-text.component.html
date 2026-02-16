@@ -1,8 +1,7 @@
 <div #inlineRoot class="inline-media-text" [style.--text-font-desktop.px]="fontSizes().desktop"
   [style.--text-font-tablet.px]="fontSizes().tablet" [style.--text-font-mobile.px]="fontSizes().mobile">
 @for (image of imagesBefore(); track trackImage($index, image)) {
-  <figure class="inline-figure" [ngClass]="figureClasses(image)" [attr.data-image-id]="image.id"
-    [style.marginTop.px]="figureOffset(image)">
+  <figure class="inline-figure" [ngClass]="figureClasses(image)" [attr.data-image-id]="image.id">
     @if (hasSource(image)) {
       <img [src]="image.src" [alt]="image.alt ?? ''">
       } @else {

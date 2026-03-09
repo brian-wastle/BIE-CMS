@@ -53,6 +53,7 @@ export class CmsShellComponent implements OnInit {
   }
 
   toggleNavState() {
-    this.opened.set(!this.opened());
+    this.sidenavOpened = !this.sidenavOpened;
+    this.opened.set(this.sidenavOpened);
   }
 }

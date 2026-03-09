@@ -1,3 +1,27 @@
+@use 'sass:color';
+@use '@angular/material' as mat;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.recipe-gen-layout,
+.center-panel,
+.ingredients-input,
+.instructions-input,
+.notes-input,
+fieldset {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.recipe-gen-layout input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .recipe-gen-layout {
   background: #fff;
   padding: 2rem;

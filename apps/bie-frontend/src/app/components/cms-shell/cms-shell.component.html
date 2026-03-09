@@ -1,11 +1,11 @@
 <mat-sidenav-container class="app-container">
-  <mat-sidenav #sidenav class="app-sidenav" [mode]="sidenavMode" [opened]="sidenavOpened">
+  <mat-sidenav #sidenav class="app-sidenav" [mode]="sidenavMode" [(opened)]="sidenavOpened">
     <div class="flex-title">
       <div class="corner-title">
         <mat-toolbar class="toolbar-title">{{ title }}</mat-toolbar>
         <p class="cms-tagline">powered by <span style="font-style:italic">BIE-CMS</span></p>
       </div>
-      <button mat-icon-button (click)="toggleNavState(); sidenav.toggle()" aria-label="Toggle sidebar">
+      <button mat-icon-button (click)="toggleNavState()" aria-label="Toggle sidebar">
         <mat-icon>keyboard_arrow_left</mat-icon>
       </button>
     </div>
@@ -21,7 +21,7 @@
     <div class="top-header">
       @if (!opened()) {
       <div class="menu-toggle-flex">
-        <button mat-icon-button class="sidenav-toggle" (click)="toggleNavState(); sidenav.toggle()" aria-label="Toggle sidebar">
+        <button mat-icon-button class="sidenav-toggle" (click)="toggleNavState()" aria-label="Toggle sidebar">
           <mat-icon>menu</mat-icon>
         </button>
         <div><img [src]="arrowImg" alt="" /></div>

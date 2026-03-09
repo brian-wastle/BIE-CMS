@@ -1,42 +1,50 @@
 <div class="recipe-gen-layout">
   <div class="center-panel">
-
-    <div class="title-input"></div>
+    <div class="title-input">
+      <h3>Title</h3>
+      <input
+        id="recipe-title"
+        type="text"
+        [formControl]="titleControl"
+        placeholder="Enter recipe title"
+      />
+    </div>
 
     <div class="blurb-input">
       <h3>Description</h3>
+      <input
+        id="recipe-blurb"
+        type="text"
+        [formControl]="blurbControl"
+        placeholder="Enter a short description"
+      />
     </div>
 
-    <div class="ingredients-input" [formGroup]="ingredientForm">
+    <div class="ingredients-input">
       <h3>Ingredients</h3>
-      <div formArrayName="ingredients">
-        @for (control of ingredients.controls; track $index) {
-          <div class="ingredient-row">
-            <input
-              type="text"
-              [formControlName]="$index"
-              placeholder="Enter ingredient..."
-            />
-
-            <button type="button" (click)="removeIngredient($index)">
-              Remove
-            </button>
-          </div>
-        }
-      </div>
-
-      <button type="button" (click)="addIngredient()">
-        Add ingredient
-      </button>
+      <app-bullet-editor [(items)]="ingredients" />
     </div>
 
     <div class="instructions-input">
       <h3>Instructions</h3>
+      <app-bullet-editor [(items)]="instructions" />
     </div>
 
     <div class="notes-input">
       <h3>Notes</h3>
+      <app-bullet-editor [(items)]="notes" />
     </div>
 
+    <button type="button" (click)="submit()">Save recipe</button>
+
+    <pre>
+{{ {
+  title: titleControl.value,
+  blurb: blurbControl.value,
+  ingredients: ingredients(),
+  instructions: instructions(),
+  notes: notes(),
+} | json }}
+    </pre>
   </div>
 </div>

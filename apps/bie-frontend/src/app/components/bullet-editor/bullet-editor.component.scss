@@ -1,0 +1,71 @@
+:host {
+  display: block;
+}
+
+.bullet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.bullet-row {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
+  column-gap: 0.5rem;
+  width: 100%;
+}
+
+.bullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  font: inherit;
+  line-height: 1;
+  color: currentColor;
+  user-select: none;
+}
+
+.bullet-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.25rem;
+  padding: 0.375rem 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.4;
+  box-shadow: none;
+  appearance: none;
+}
+
+.bullet-input::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.bullet-input:focus {
+  outline: none;
+}
+
+.bullet-row:focus-within .bullet {
+  transform: scale(1.05);
+}
+
+.bullet-row + .bullet-row {
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  padding-top: 0.15rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bullet-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .bullet-row + .bullet-row {
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+}

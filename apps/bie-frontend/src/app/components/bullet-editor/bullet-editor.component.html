@@ -1,0 +1,16 @@
+<div class="bullet-list" (focusout)="onFocusOut()">
+  @for (row of rows(); track $index) {
+    <div class="bullet-row">
+      <span class="bullet" aria-hidden="true">•</span>
+      <input
+        #bulletInput
+        type="text"
+        class="bullet-input"
+        [value]="row"
+        (input)="onInput($index, bulletInput.value)"
+        (keydown.enter)="onEnter($index, $event)"
+        (keydown.backspace)="onBackspace($index, bulletInput, $event)"
+      />
+    </div>
+  }
+</div>

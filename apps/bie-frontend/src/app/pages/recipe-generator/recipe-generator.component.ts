@@ -1,54 +1,37 @@
-import { Component } from '@angular/core';
-import { FormGroup, FormControl, FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, signal } from '@angular/core';
+import { JsonPipe } from '@angular/common';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { BulletEditorComponent } from '../../components/bullet-editor/bullet-editor.component';
 
 @Component({
   selector: 'app-recipe-generator',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, BulletEditorComponent, JsonPipe],
   templateUrl: './recipe-generator.component.html',
   styleUrl: './recipe-generator.component.scss',
 })
 export class RecipeGeneratorComponent {
-  ingredientForm: FormGroup;
+  titleControl = new FormControl<string>('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.maxLength(42)],
+  });
 
-  constructor(private fb: FormBuilder) {
-    this.ingredientForm = this.fb.group({
-      ingredients: this.fb.array<FormControl<string>>([
-        this.createIngredientControl()
-      ])
-    });   
+  blurbControl = new FormControl<string>('', {
+    nonNullable: true,
+  });
+
+  ingredients = signal<string[]>([]);
+  instructions = signal<string[]>([]);
+  notes = signal<string[]>([]);
+
+  submit(): void {
+    const recipe = {
+      title: this.titleControl.value,
+      blurb: this.blurbControl.value,
+      ingredients: this.ingredients(),
+      instructions: this.instructions(),
+      notes: this.notes(),
+    };
+
+    console.log(recipe);
   }
-
-  // Title
-
-  // Blurb
-
-  // Ingredients
-  // Return all ingredients
-  get ingredients(): FormArray<FormControl<string>> {
-    return this.ingredientForm.get('ingredients') as FormArray<FormControl<string>>;
-  }
-
-  // Create new control
-  createIngredientControl(): FormControl<string> {
-    return this.fb.nonNullable.control('', Validators.required);
-  }
-
-  // Add an ingredient input 
-  addIngredient(): void {
-    this.ingredients.push(this.createIngredientControl());
-  }
-
-  // Remove an ingredient input 
-  removeIngredient(index: number): void {
-    if (this.ingredients.length === 1) {
-      this.ingredients.at(0).setValue('');
-      return;
-    }
-
-    this.ingredients.removeAt(index);
-  }
-
-  // Instructions
-  
-  // Notes
 }

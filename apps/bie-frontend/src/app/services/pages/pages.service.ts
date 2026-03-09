@@ -1,7 +1,7 @@
 import { Injectable, PLATFORM_ID, REQUEST, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type { Request } from 'express';
-import type { Page, PageSummary, PageUpdate, PageWrite } from 'bie-models';
+import type { Page, PageSummary, PageUpdatePayload, PageCreatePayload } from 'bie-models';
 import { AuthSessionService } from '../auth-session/auth-session.service';
 
 export interface PageListCursor {
@@ -105,7 +105,7 @@ export class PagesService {
   }
 
   // Create new blog
-  async post(payload: PageWrite): Promise<Page> {
+  async post(payload: PageCreatePayload): Promise<Page> {
     const body = JSON.stringify(payload);
     const res = await this.authSession.withAuthRetry(() =>
       fetch(this.buildApiUrl('/api/pages'), this.withServerCookies({
@@ -120,7 +120,7 @@ export class PagesService {
   }
 
   // Update an existing blog by slug
-  async update(slug: string, payload: PageUpdate): Promise<Page> {
+  async update(slug: string, payload: PageUpdatePayload): Promise<Page> {
     const body = JSON.stringify(payload);
     const res = await this.authSession.withAuthRetry(() =>
       fetch(this.buildApiUrl(`/api/pages/${encodeURIComponent(slug)}`), this.withServerCookies({

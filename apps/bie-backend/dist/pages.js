@@ -1,5 +1,5 @@
 import express from 'express';
-import { GridSettingsDefaults, PageSchema, PageSummarySchema, PageUpdateSchema, PageWriteSchema, } from 'bie-models';
+import { GridDefaults, PageSchema, PageSummarySchema, PageUpdateSchema, PageCreateSchema, } from 'bie-models';
 import { requireAccess } from './auth.js';
 import { pool, withTransaction } from './db.js';
 const router = express.Router();
@@ -268,7 +268,7 @@ router.get('/:slug', async (req, res) => {
 });
 // Post page to db
 router.post('/', async (req, res) => {
-    const parseResult = PageWriteSchema.safeParse(req.body);
+    const parseResult = PageCreateSchema.safeParse(req.body);
     if (!parseResult.success) {
         return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.issues });
     }
@@ -281,7 +281,7 @@ router.post('/', async (req, res) => {
     const status = payload.status ?? 'draft';
     const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
     const blocksJson = JSON.stringify(payload.blocks);
-    const gridJson = JSON.stringify(payload.grid ?? GridSettingsDefaults);
+    const gridJson = JSON.stringify(payload.grid ?? GridDefaults);
     const metaJson = JSON.stringify(payload.meta ?? {});
     try {
         const pageId = await withTransaction(async (client) => {
@@ -342,7 +342,7 @@ router.put('/:slug', async (req, res) => {
     const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
     const slugParam = req.params.slug;
     const blocksJson = JSON.stringify(payload.blocks);
-    const gridJson = JSON.stringify(payload.grid ?? GridSettingsDefaults);
+    const gridJson = JSON.stringify(payload.grid ?? GridDefaults);
     const metaJson = JSON.stringify(payload.meta ?? {});
     try {
         const pageId = await withTransaction(async (client) => {

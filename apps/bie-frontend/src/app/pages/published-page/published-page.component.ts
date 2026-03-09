@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, effect, forwardRef, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { AlignType, AnyBlock, BGBlock, BylineBlock, DividerBlock, GridSettings, GridSettingsDefaults, ImageBlock, InlineTextBlock, Page, TextBlock, TitleBlock, VideoBlock } from 'bie-models';
+import { AlignType, AnyBlock, BGBlock, BylineBlock, DividerBlock, GridSettings, GridDefaults, ImageBlock, InlineTextBlock, Page, TextBlock, TitleBlock, VideoBlock } from 'bie-models';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -44,10 +44,10 @@ export class PublishedPageComponent {
   readonly error = signal<string | null>(null);
   readonly page = signal<Page | null>(null);
 
-  readonly contentGapPx = signal<number>(GridSettingsDefaults.gapPx);
-  readonly contentMaxWidthPx = signal<number>(GridSettingsDefaults.maxWidthPx);
-  readonly contentRowHeightPx = signal<number>(GridSettingsDefaults.rowHeight);
-  readonly contentColumns = signal<number>(GridSettingsDefaults.columns);
+  readonly contentGapPx = signal<number>(GridDefaults.gapPx);
+  readonly contentMaxWidthPx = signal<number>(GridDefaults.maxWidthPx);
+  readonly contentRowHeightPx = signal<number>(GridDefaults.rowHeight);
+  readonly contentColumns = signal<number>(GridDefaults.columns);
   private readonly maxContentWidthPx = 4096;
 
   readonly pageBlocks = computed(() => {
@@ -120,7 +120,7 @@ export class PublishedPageComponent {
         this.loading.set(true);
         this.page.set(null);
         this.error.set(null);
-        this.applyFlowSettings(GridSettingsDefaults);
+        this.applyFlowSettings(GridDefaults);
         return;
       }
       this.applyFlowSettings(resolved.page?.grid);
@@ -237,13 +237,13 @@ export class PublishedPageComponent {
   }
 
   private normalizeFlowSettings(grid?: GridSettings | null): { gapPx: number; maxWidthPx: number; rowHeight: number; columns: number } {
-    const gapPx = Math.max(0, Math.min(64, Math.floor(grid?.gapPx ?? GridSettingsDefaults.gapPx)));
+    const gapPx = Math.max(0, Math.min(64, Math.floor(grid?.gapPx ?? GridDefaults.gapPx)));
     const maxWidthPx = Math.max(
       0,
-      Math.min(this.maxContentWidthPx, Math.floor(grid?.maxWidthPx ?? GridSettingsDefaults.maxWidthPx))
+      Math.min(this.maxContentWidthPx, Math.floor(grid?.maxWidthPx ?? GridDefaults.maxWidthPx))
     );
-    const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridSettingsDefaults.rowHeight)));
-    const columns = Math.max(1, Math.min(24, Math.floor(grid?.columns ?? GridSettingsDefaults.columns)));
+    const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridDefaults.rowHeight)));
+    const columns = Math.max(1, Math.min(24, Math.floor(grid?.columns ?? GridDefaults.columns)));
     return { gapPx, maxWidthPx, rowHeight, columns };
   }
 }

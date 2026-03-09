@@ -266,10 +266,10 @@
           @if (!(block.images.length)) {
           <p class="inspector-empty">No inline images yet.</p>
           }
-          @for (image of block.images; track image.id; let i = $index) {
+          @for (image of block.images; track image.id;) {
           <div class="inline-media-card">
             <div class="inline-media-card-header">
-              <h5>Image {{ i + 1 }}</h5>
+              <h5>Image {{ $index + 1 }}</h5>
               <button type="button" class="inspector-link danger" (click)="removeInlineImage(block, image.id)">
                 Remove
               </button>

@@ -24,7 +24,7 @@ export type BGStyle = z.infer<typeof BGStyleSchema>;
 
 /////////////////////////// Layout
 
-export const GridSettingsDefaults = {
+export const GridDefaults = {
   columns: 12,
   gapPx: 16,
   rowHeight: 48,
@@ -33,13 +33,12 @@ export const GridSettingsDefaults = {
 
 export const GridSettingsSchema = z
   .object({
-    columns: z.coerce.number().int().min(1).max(24).default(GridSettingsDefaults.columns),
-    gapPx: z.coerce.number().int().min(0).max(64).default(GridSettingsDefaults.gapPx),
-    rowHeight: z.coerce.number().int().min(8).max(256).default(GridSettingsDefaults.rowHeight),
-    maxWidthPx: z.coerce.number().int().min(0).max(4096).default(GridSettingsDefaults.maxWidthPx),
+    columns: z.coerce.number().int().min(1).max(24).default(GridDefaults.columns),
+    gapPx: z.coerce.number().int().min(0).max(64).default(GridDefaults.gapPx),
+    rowHeight: z.coerce.number().int().min(8).max(256).default(GridDefaults.rowHeight),
+    maxWidthPx: z.coerce.number().int().min(0).max(4096).default(GridDefaults.maxWidthPx),
   })
-  .strip()
-  .catch(GridSettingsDefaults);
+  .catch(GridDefaults);
 export type GridSettings = z.infer<typeof GridSettingsSchema>;
 
 export const GridPlacementSchema = z.object({
@@ -107,8 +106,7 @@ export const InlineImageSchema = z
     placement: InlinePlacementSchema.default('top-left'),
     size: InlineImageSizeSchema.default('medium'),
     mediaHandle: z.string().nullable().optional(),
-  })
-  .strip();
+  });
 export type InlineImage = z.infer<typeof InlineImageSchema>;
 
 export const InlineTextBlockSchema = BlockBaseSchema.extend({
@@ -165,7 +163,7 @@ export type AnyBlock = z.infer<typeof AnyBlockSchema>; // Used during component 
 /////////////////////////// Block updates
 
 // Distributive conditional type to create a union/partial of all patchable props from all block types
-// Reduce on BlockSchemas type array, loops through each Zod object to create the partial skipping id and type props
+// BlockSchemaShape reduces on the BlockSchemas type array, loops through each Zod object to create the partial (partialShape), skipping id and type props
 // Returns shape, which is a flattened record: {text: z.string().optional(), src: z.string().optional(), ... }
 const BlockUpdateShape = BlockSchemas.reduce<Record<string, z.ZodTypeAny>>((shape, blockSchema) => {
   const partialShape = blockSchema.partial().shape as Record<string, z.ZodTypeAny>;
@@ -238,14 +236,13 @@ export const PageMetaSchema = z
     author: z.string().trim().max(80).optional(),
     ogTitle: z.string().trim().min(1).max(70).optional(),
     ogDescription: z.string().trim().min(1).max(200).optional(),
-    ogUrl: z.string().trim().url().optional(),
+    ogUrl: z.url().optional(),
     ogType: z.enum(['website', 'article', 'profile']).optional(),
     twitterCard: z.enum(['summary', 'summary_large_image']).optional(),
     twitterTitle: z.string().trim().min(1).max(70).optional(),
     twitterDescription: z.string().trim().min(1).max(200).optional(),
     jsonLd: JsonLdSchema.optional(),
   })
-  .strip()
   .catch({});
 export type PageMeta = z.infer<typeof PageMetaSchema>;
 
@@ -259,7 +256,7 @@ export const PageSchema = z.object({
   status: PageStatusSchema,
   title: z.string(),
   blocks: z.array(AnyBlockSchema),
-  grid: GridSettingsSchema.default(GridSettingsDefaults),
+  grid: GridSettingsSchema.default(GridDefaults),
   meta: PageMetaSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -272,20 +269,21 @@ const PagePatchSchema = z.object({
   title: z.string().min(1),
   status: PageStatusSchema.optional(),
   blocks: z.array(AnyBlockSchema).nonempty('At least one block is required'),
-  grid: GridSettingsSchema.default(GridSettingsDefaults),
+  grid: GridSettingsSchema.default(GridDefaults),
   meta: PageMetaSchema.optional(),
   publishedAt: z.string().nullable().optional(),
 });
 
-export const PageWriteSchema = PagePatchSchema.extend({
+// Published page data
+export const PageCreateSchema = PagePatchSchema.extend({
   slug: z.string().min(1),
 });
-export type PageWrite = z.infer<typeof PageWriteSchema>;
+export type PageCreatePayload = z.infer<typeof PageCreateSchema>;
 
 export const PageUpdateSchema = PagePatchSchema.extend({
   slug: z.string().min(1).optional(),
 });
-export type PageUpdate = z.infer<typeof PageUpdateSchema>;
+export type PageUpdatePayload = z.infer<typeof PageUpdateSchema>;
 
 export const PageSummarySchema = z.object({
   page: PageSchema,

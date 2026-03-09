@@ -1,15 +1,15 @@
 import express from 'express';
 import type { Pool, PoolClient } from 'pg';
 import {
-  GridSettingsDefaults,
+  GridDefaults,
   Page,
   PageSchema,
   PageSummary,
   PageSummarySchema,
-  PageUpdate,
+  PageUpdatePayload,
   PageUpdateSchema,
-  PageWrite,
-  PageWriteSchema,
+  PageCreatePayload,
+  PageCreateSchema,
 } from 'bie-models';
 
 import { requireAccess } from './auth.js';
@@ -333,12 +333,12 @@ router.get('/:slug', async (req, res) => {
 
 // Post page to db
 router.post('/', async (req, res) => {
-  const parseResult = PageWriteSchema.safeParse(req.body);
+  const parseResult = PageCreateSchema.safeParse(req.body);
   if (!parseResult.success) {
     return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.issues });
   }
 
-  const payload: PageWrite = parseResult.data;
+  const payload: PageCreatePayload = parseResult.data;
   const createdBy = getAuthenticatedUserId(req);
   if (!createdBy) {
     console.error('Authenticated user missing on page create request');
@@ -347,7 +347,7 @@ router.post('/', async (req, res) => {
   const status = payload.status ?? 'draft';
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
   const blocksJson = JSON.stringify(payload.blocks);
-  const gridJson = JSON.stringify(payload.grid ?? GridSettingsDefaults);
+  const gridJson = JSON.stringify(payload.grid ?? GridDefaults);
   const metaJson = JSON.stringify(payload.meta ?? {});
 
   try {
@@ -420,7 +420,7 @@ router.put('/:slug', async (req, res) => {
     return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.issues });
   }
 
-  const payload: PageUpdate = parseResult.data;
+  const payload: PageUpdatePayload = parseResult.data;
   const createdBy = getAuthenticatedUserId(req);
   if (!createdBy) {
     console.error('Authenticated user missing on page update request');
@@ -430,7 +430,7 @@ router.put('/:slug', async (req, res) => {
   const publishedAt = payload.publishedAt ? new Date(payload.publishedAt).toISOString() : null;
   const slugParam = req.params.slug;
   const blocksJson = JSON.stringify(payload.blocks);
-  const gridJson = JSON.stringify(payload.grid ?? GridSettingsDefaults);
+  const gridJson = JSON.stringify(payload.grid ?? GridDefaults);
   const metaJson = JSON.stringify(payload.meta ?? {});
 
   try {

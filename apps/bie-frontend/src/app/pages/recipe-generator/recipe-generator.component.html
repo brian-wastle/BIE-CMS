@@ -1,0 +1,42 @@
+<div class="recipe-gen-layout">
+  <div class="center-panel">
+
+    <div class="title-input"></div>
+
+    <div class="blurb-input">
+      <h3>Description</h3>
+    </div>
+
+    <div class="ingredients-input" [formGroup]="ingredientForm">
+      <h3>Ingredients</h3>
+      <div formArrayName="ingredients">
+        @for (control of ingredients.controls; track $index) {
+          <div class="ingredient-row">
+            <input
+              type="text"
+              [formControlName]="$index"
+              placeholder="Enter ingredient..."
+            />
+
+            <button type="button" (click)="removeIngredient($index)">
+              Remove
+            </button>
+          </div>
+        }
+      </div>
+
+      <button type="button" (click)="addIngredient()">
+        Add ingredient
+      </button>
+    </div>
+
+    <div class="instructions-input">
+      <h3>Instructions</h3>
+    </div>
+
+    <div class="notes-input">
+      <h3>Notes</h3>
+    </div>
+
+  </div>
+</div>

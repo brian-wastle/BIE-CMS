@@ -6,7 +6,12 @@ import { ActivatedRoute } from '@angular/router';
 import { CurrentUserService } from '../../services/current-user/current-user.service';
 import { PagesService } from '../../services/pages/pages.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock, BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema, GridSettings, GridSettingsDefaults, Page, PageStatus, PageWrite, PageUpdate, InlineTextBlock, InlinePlacement, InlineImage, InlineImageSize } from 'bie-models';
+import {
+  AnyBlock, TextBlock, ImageBlock, VideoBlock, BylineBlock, TitleBlock, BGBlock, DividerBlock,
+  BlockUpdate, GridPlacement, AlignType, BlockUpdateSchema, AlignTypeSchema, BGStyleSchema,
+  GridSettings, GridDefaults, Page, PageStatus, PageCreatePayload, PageUpdatePayload, InlineTextBlock,
+  InlinePlacement, InlineImage, InlineImageSize
+} from 'bie-models';
 import { BlogTitleComponent } from '../../components/blocks/blog-title/blog-title.component';
 import { BlogBylineComponent } from '../../components/blocks/blog-byline/blog-byline.component';
 import { TextBoxComponent } from '../../components/blocks/textbox/textbox.component';
@@ -24,10 +29,10 @@ import { VideoBoxComponent } from '../../components/blocks/videobox/videobox.com
 import { InlineTextComponent } from '../../components/blocks/inline-media-text/inline-media-text.component';
 import { MediaBrowserCarouselComponent } from '../../components/media-browser-carousel/media-browser-carousel.component';
 import { rowsForContentHeight } from '../../shared/grid-layout';
-
-// TODO: touch gesture handler for preview-frame area
-
-type PreviewModeId = 'responsive' | 'mobile' | 'tablet' | 'desktop' | 'hd';
+import {
+  clampLayout, validateKeywords, compareByLayout, findInsertPoint, nextRow, normalizeEditorHtml,
+  normalizeInlineImages, parseInlineImageSize, parseInlinePlacement, reflowRows, slugify, stringifyKeywords
+} from './canvas-utils';
 
 type PageMetaState = {
   id: string | null;
@@ -39,7 +44,7 @@ type PageMetaState = {
   keywords: string;
 };
 
-const defaultPageMeta: PageMetaState = {
+const pageMetaState: PageMetaState = {
   id: null,
   title: '',
   slug: '',
@@ -48,6 +53,8 @@ const defaultPageMeta: PageMetaState = {
   description: '',
   keywords: '',
 };
+
+type PreviewModeId = 'responsive' | 'mobile' | 'tablet' | 'desktop' | 'hd';
 
 interface PreviewPreset {
   id: PreviewModeId;
@@ -84,12 +91,12 @@ const FontSizePatchSchema = BlockUpdateSchema.pick({ fontSize: true });
 })
 export class CanvasComponent implements AfterViewInit {
   // Grid settings
-  columns: number = GridSettingsDefaults.columns;
-  gapPx: number = GridSettingsDefaults.gapPx;
-  maxWidthPx: number = GridSettingsDefaults.maxWidthPx;
+  columns: number = GridDefaults.columns;
+  gapPx: number = GridDefaults.gapPx;
+  maxWidthPx: number = GridDefaults.maxWidthPx;
   readonly maxColumns = 24;
   readonly maxGridWidthPx = 4096;
-  tileRowHeight: number = GridSettingsDefaults.rowHeight;
+  tileRowHeight: number = GridDefaults.rowHeight;
   readonly rowHeightPresets = [24, 32, 40, 48, 56, 64];
   readonly InlinePlacements: InlinePlacement[] = ['top-left', 'top-right'];
   readonly InlineImageSizes: InlineImageSize[] = ['small', 'medium', 'large'];
@@ -144,7 +151,7 @@ export class CanvasComponent implements AfterViewInit {
   private readonly route = inject(ActivatedRoute);
 
   // Drafts
-  readonly pageMeta = signal<PageMetaState>({ ...defaultPageMeta });
+  readonly pageMeta = signal<PageMetaState>({ ...pageMetaState });
   readonly savingDraft = signal(false);
   readonly publishingDraft = signal(false);
   readonly deletingDraft = signal(false);
@@ -159,11 +166,16 @@ export class CanvasComponent implements AfterViewInit {
 
   // Initial editor state and selected block as signal array
   blocks = signal<AnyBlock[]>(this.createDefaultBlocks());
-  // Read-only version of blocks, sorted by row then column, for page flow
-  pageBlocks = computed(() => [...this.blocks()].sort((a, b) => this.compareByLayout(a, b)));
+  // Read-only version of blocks, sorted by row then column
+  pageBlocks = computed(() => [...this.blocks()].sort(compareByLayout));
+
+  // Re-sync Effects
   private readonly rowReflowEffect = effect(() => {
     const snapshot = this.blocks();
-    this.reflowRows(snapshot);
+    const { blocks, changed } = reflowRows(snapshot, this.columns);
+    if (changed) {
+      this.blocks.set(blocks);
+    }
   });
   private readonly titleBlockSyncEffect = effect(() => {
     const title = this.pageMeta().title ?? '';
@@ -206,6 +218,7 @@ export class CanvasComponent implements AfterViewInit {
     }
   });
 
+  // Draft status for saving/publishing
   readonly hasBlocks = computed(() => this.blocks().length > 0);
   readonly metadataReady = computed(() => Boolean(this.pageMeta().title.trim()) && Boolean(this.pageMeta().slug.trim()));
   readonly canSaveDraft = computed(
@@ -262,9 +275,35 @@ export class CanvasComponent implements AfterViewInit {
       });
   }
 
+  // Sets a title and byline block at the top of a new page
+  private createDefaultBlocks(): AnyBlock[] {
+    const title = this.pageMeta().title ?? '';
+    const totalCols = Math.max(1, this.columns);
+    return [
+      {
+        id: 't1',
+        type: 'title',
+        layout: { row: 1, colStart: 1, colSpan: totalCols, rowSpan: 2 },
+        hAlign: 'flex-start',
+        vAlign: 'center',
+        text: title,
+      } as TitleBlock,
+      {
+        id: 'b1',
+        type: 'byline',
+        layout: { row: 3, colStart: 1, colSpan: totalCols, rowSpan: 2 },
+        hAlign: 'flex-start',
+        vAlign: 'center',
+        author: this.currentAuthor(),
+        publishedAt: '',
+      } as BylineBlock,
+    ];
+  }
+
+  // Page meta helper functions
   onTitleChange(raw: string | null | undefined) {
     const title = raw ?? '';
-    const slug = this.slugify(title);
+    const slug = slugify(title);
     this.pageMeta.update(meta => ({ ...meta, title, slug }));
     this.saveError.set(null);
   }
@@ -276,11 +315,12 @@ export class CanvasComponent implements AfterViewInit {
 
   onMetaKeywordsChange(raw: string | null | undefined) {
     const keywords = (raw ?? '').toString();
-    const { invalid } = this.collectKeywords(keywords);
+    const { invalid } = validateKeywords(keywords);
     this.pageMeta.update(meta => ({ ...meta, keywords }));
     this.keywordError.set(invalid.length ? `Remove invalid keywords: ${invalid.join(', ')}` : null);
   }
 
+  // Save/publish/delete
   async saveDraft() {
     if (this.savingDraft() || this.publishingDraft() || this.loadingDraft()) {
       return;
@@ -302,10 +342,10 @@ export class CanvasComponent implements AfterViewInit {
     try {
       let page: Page;
       const draftMeta: PageMetaState = { ...meta, status: 'draft' };
-      const basePayload = this.buildPageWritePayload(draftMeta);
+      const basePayload = this.buildPageCreatePayload(draftMeta);
       if (meta.id || meta.slugRef) {
         const ref = meta.slugRef ?? meta.id ?? slug;
-        const updatePayload: PageUpdate = { ...basePayload, slug };
+        const updatePayload: PageUpdatePayload = { ...basePayload, slug };
         page = await this.pagesService.update(ref, updatePayload);
       } else {
         page = await this.pagesService.post(basePayload);
@@ -336,8 +376,8 @@ export class CanvasComponent implements AfterViewInit {
     this.saveError.set(null);
     try {
       let page: Page;
-      const payload: PageUpdate = {
-        ...this.buildPageWritePayload(meta),
+      const payload: PageUpdatePayload = {
+        ...this.buildPageCreatePayload(meta),
         status: 'published',
         publishedAt: new Date().toISOString(),
       };
@@ -382,7 +422,8 @@ export class CanvasComponent implements AfterViewInit {
     }
   }
 
-  private buildPageWritePayload(meta: PageMetaState): PageWrite {
+  // 
+  private buildPageCreatePayload(meta: PageMetaState): PageCreatePayload {
     const metaPayload = this.buildMetaPayload(meta);
     return {
       slug: meta.slug,
@@ -412,13 +453,13 @@ export class CanvasComponent implements AfterViewInit {
       slugRef: page.slug ?? null,
       status: page.status ?? 'draft',
       description: typeof page.meta?.description === 'string' ? page.meta.description : '',
-      keywords: this.stringifyKeywords(page.meta?.keywords),
+      keywords: stringifyKeywords(page.meta?.keywords),
     });
     this.keywordError.set(null);
     this.lastSavedAt.set(page.updatedAt ?? page.createdAt ?? null);
     this.applyGridSettings(page.grid);
     const normalizedBlocks = this.normalizeLoadedBlocks(page.blocks);
-    const orderedBlocks = [...normalizedBlocks].sort((a, b) => this.compareByLayout(a, b));
+    const orderedBlocks = [...normalizedBlocks].sort(compareByLayout);
     this.blocks.set(orderedBlocks);
     this.selectedId.set(null);
     this.saveError.set(null);
@@ -434,7 +475,11 @@ export class CanvasComponent implements AfterViewInit {
       }
       return {
         ...block,
-        images: this.normalizeInlineImages(block.images),
+        images: normalizeInlineImages(block.images, {
+          maxInlineImages: this.maxInlineImages,
+          placements: this.InlinePlacements,
+          sizes: this.InlineImageSizes,
+        }),
       };
     });
   }
@@ -467,11 +512,11 @@ export class CanvasComponent implements AfterViewInit {
   }
 
   private resetEditor() {
-    this.pageMeta.set({ ...defaultPageMeta });
+    this.pageMeta.set({ ...pageMetaState });
     this.keywordError.set(null);
     this.lastSavedAt.set(null);
     this.saveError.set(null);
-    this.applyGridSettings(GridSettingsDefaults);
+    this.applyGridSettings(GridDefaults);
     this.blocks.set(this.createDefaultBlocks());
     this.selectedId.set(null);
   }
@@ -485,12 +530,12 @@ export class CanvasComponent implements AfterViewInit {
   }
 
   private normalizeGridSettings(grid?: GridSettings | null): GridSettings {
-    const columns = Math.max(1, Math.min(this.maxColumns, Math.floor(grid?.columns ?? GridSettingsDefaults.columns)));
-    const gapPx = Math.max(0, Math.min(64, Math.floor(grid?.gapPx ?? GridSettingsDefaults.gapPx)));
-    const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridSettingsDefaults.rowHeight)));
+    const columns = Math.max(1, Math.min(this.maxColumns, Math.floor(grid?.columns ?? GridDefaults.columns)));
+    const gapPx = Math.max(0, Math.min(64, Math.floor(grid?.gapPx ?? GridDefaults.gapPx)));
+    const rowHeight = Math.max(8, Math.min(256, Math.floor(grid?.rowHeight ?? GridDefaults.rowHeight)));
     const maxWidthPx = Math.max(
       0,
-      Math.min(this.maxGridWidthPx, Math.floor(grid?.maxWidthPx ?? GridSettingsDefaults.maxWidthPx))
+      Math.min(this.maxGridWidthPx, Math.floor(grid?.maxWidthPx ?? GridDefaults.maxWidthPx))
     );
     return { columns, gapPx, rowHeight, maxWidthPx };
   }
@@ -590,13 +635,13 @@ export class CanvasComponent implements AfterViewInit {
   addTitle() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
-      const nextRow = this.nextRow(arr);
-      const layout = this.clampLayout({
-        row: nextRow,
+      const nextRowPosition = nextRow(arr);
+      const layout = clampLayout({
+        row: nextRowPosition,
         colStart: 1,
         colSpan: this.columns,
         rowSpan: 2,
-      });
+      }, this.columns);
       return [
         ...arr,
         {
@@ -615,13 +660,13 @@ export class CanvasComponent implements AfterViewInit {
   addByline() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
-      const nextRow = this.nextRow(arr);
-      const layout = this.clampLayout({
-        row: nextRow,
+      const nextRowPosition = nextRow(arr);
+      const layout = clampLayout({
+        row: nextRowPosition,
         colStart: 1,
         colSpan: this.columns,
         rowSpan: 2,
-      });
+      }, this.columns);
       return [
         ...arr,
         {
@@ -639,13 +684,13 @@ export class CanvasComponent implements AfterViewInit {
   addText() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
-      const nextRow = this.nextRow(arr);
-      const layout = this.clampLayout({
-        row: nextRow,
+      const nextRowPosition = nextRow(arr);
+      const layout = clampLayout({
+        row: nextRowPosition,
         colStart: 1,
         colSpan: Math.min(this.columns, 8),
         rowSpan: 4,
-      });
+      }, this.columns);
       return [
         ...arr,
         {
@@ -663,13 +708,13 @@ export class CanvasComponent implements AfterViewInit {
   addInlineText() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
-      const nextRow = this.nextRow(arr);
-      const layout = this.clampLayout({
-        row: nextRow,
+      const nextRowPosition = nextRow(arr);
+      const layout = clampLayout({
+        row: nextRowPosition,
         colStart: 1,
         colSpan: Math.min(this.columns, 8),
         rowSpan: 5,
-      });
+      }, this.columns);
       return [
         ...arr,
         {
@@ -689,13 +734,13 @@ export class CanvasComponent implements AfterViewInit {
   addVideo() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
-      const nextRow = this.nextRow(arr);
-      const layout = this.clampLayout({
-        row: nextRow,
+      const nextRowPosition = nextRow(arr);
+      const layout = clampLayout({
+        row: nextRowPosition,
         colStart: 1,
         colSpan: Math.min(this.columns, 4),
         rowSpan: 3,
-      });
+      }, this.columns);
       return [
         ...arr,
         {
@@ -715,13 +760,13 @@ export class CanvasComponent implements AfterViewInit {
   addImage() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
-      const nextRow = this.nextRow(arr);
-      const layout = this.clampLayout({
-        row: nextRow,
+      const nextRowPosition = nextRow(arr);
+      const layout = clampLayout({
+        row: nextRowPosition,
         colStart: 1,
         colSpan: Math.min(this.columns, 2),
         rowSpan: 3,
-      });
+      }, this.columns);
       return [
         ...arr,
         {
@@ -742,13 +787,13 @@ export class CanvasComponent implements AfterViewInit {
   addHorizontalRule() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
-      const nextRow = this.nextRow(arr);
-      const layout = this.clampLayout({
-        row: nextRow,
+      const nextRowPosition = nextRow(arr);
+      const layout = clampLayout({
+        row: nextRowPosition,
         colStart: 1,
         colSpan: this.columns,
         rowSpan: 1,
-      });
+      }, this.columns);
       return [
         ...arr,
         {
@@ -766,13 +811,13 @@ export class CanvasComponent implements AfterViewInit {
   addBackground() {
     const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     this.blocks.update(arr => {
-      const nextRow = this.nextRow(arr);
-      const layout = this.clampLayout({
-        row: nextRow,
+      const nextRowPosition = nextRow(arr);
+      const layout = clampLayout({
+        row: nextRowPosition,
         colStart: 1,
         colSpan: this.columns,
         rowSpan: 6,
-      });
+      }, this.columns);
       return [
         ...arr,
         {
@@ -870,7 +915,7 @@ export class CanvasComponent implements AfterViewInit {
         }
         return {
           ...block,
-          layout: this.clampLayout(block.layout, next),
+          layout: clampLayout(block.layout, next),
         };
       })
     );
@@ -906,19 +951,19 @@ export class CanvasComponent implements AfterViewInit {
   }
 
   onLayoutChange(block: AnyBlock, layout: GridPlacement) {
-    const currentLayout = block.layout ?? this.clampLayout({
+    const currentLayout = block.layout ?? clampLayout({
       row: 1,
       colStart: 1,
       colSpan: this.columns,
       rowSpan: 1,
-    });
+    }, this.columns);
     const targetRow = Math.max(1, Math.floor(layout.row ?? currentLayout.row ?? 1));
-    const normalized = this.clampLayout({
+    const normalized = clampLayout({
       ...currentLayout,
       ...layout,
       row: currentLayout.row ?? targetRow,
       rowGap: layout.rowGap ?? currentLayout.rowGap ?? 0,
-    });
+    }, this.columns);
     const layoutPatch: GridPlacement = {
       ...normalized,
       row: currentLayout.row ?? normalized.row,
@@ -967,7 +1012,7 @@ export class CanvasComponent implements AfterViewInit {
     if (!this.isInlineTextBlock(block)) {
       return;
     }
-    const placement = this.parseInlinePlacement(raw);
+    const placement = parseInlinePlacement(raw, this.InlinePlacements);
     this.updateInlineImages(block, images =>
       images.map(image => (image.id === imageId ? { ...image, placement } : image)),
     );
@@ -981,7 +1026,7 @@ export class CanvasComponent implements AfterViewInit {
     if (!this.isInlineTextBlock(block)) {
       return;
     }
-    const size = this.parseInlineImageSize(raw);
+    const size = parseInlineImageSize(raw, this.InlineImageSizes);
     this.updateInlineImages(block, images =>
       images.map(image => (image.id === imageId ? { ...image, size } : image)),
     );
@@ -1040,12 +1085,10 @@ export class CanvasComponent implements AfterViewInit {
         if (image.id !== imageId) {
           return image;
         }
-        const shouldSetAlt = !(image.alt ?? '').trim();
         return {
           ...image,
           src,
           mediaHandle: item.handle,
-          alt: shouldSetAlt ? this.buildAltSuggestion(item.filename) : image.alt,
         };
       }),
     );
@@ -1077,12 +1120,7 @@ export class CanvasComponent implements AfterViewInit {
       src: nextSrc,
       mediaHandle: item.handle
     };
-    if (this.isImageBlock(target)) {
-      if (!target.alt?.trim()) {
-        patch.alt = this.buildAltSuggestion(item.filename);
-      }
-      this.onBlockUpdate(target, patch);
-    } else if (this.isBackgroundBlock(target)) {
+    if (this.isImageBlock(target) || this.isBackgroundBlock(target)) {
       this.onBlockUpdate(target, patch);
     }
   }
@@ -1135,6 +1173,7 @@ export class CanvasComponent implements AfterViewInit {
     this.onBlockUpdate(block, { bgStyle: parsed.data });
   }
 
+  //Inspector
   onFontSizeInput(block: AnyBlock, raw: string | number | null | undefined) {
     if (!this.supportsFontSize(block)) {
       return;
@@ -1151,6 +1190,7 @@ export class CanvasComponent implements AfterViewInit {
     this.onBlockUpdate(block, parsed.data);
   }
 
+  //Inspector
   onFontColorChange(block: AnyBlock, raw: string | number | null | undefined) {
     if (!this.supportsColor(block)) {
       return;
@@ -1158,14 +1198,14 @@ export class CanvasComponent implements AfterViewInit {
     const color = (raw ?? '').toString().trim();
     this.onBlockUpdate(block, { color });
   }
-
+  //Inspector
   resetFontSize(block: AnyBlock) {
     if (!this.supportsFontSize(block)) {
       return;
     }
     this.onBlockUpdate(block, { fontSize: null });
   }
-
+  //Inspector
   onFontSizeBlur(block: AnyBlock) {
     if (!this.supportsFontSize(block)) {
       return;
@@ -1184,6 +1224,7 @@ export class CanvasComponent implements AfterViewInit {
     }
   }
 
+  //Alignment
   onHAlignChange(block: AnyBlock, align: AlignType) {
     const parsed = AlignTypeSchema.safeParse(align);
     if (!parsed.success) {
@@ -1191,7 +1232,7 @@ export class CanvasComponent implements AfterViewInit {
     }
     this.onBlockUpdate(block, { hAlign: parsed.data });
   }
-
+  //Alignment
   onVAlignChange(block: AnyBlock, align: AlignType) {
     const parsed = AlignTypeSchema.safeParse(align);
     if (!parsed.success) {
@@ -1204,7 +1245,7 @@ export class CanvasComponent implements AfterViewInit {
     if (!this.supportsRichText(block)) {
       return;
     }
-    const next = this.normalizeEditorHtml(html);
+    const next = normalizeEditorHtml(html);
     if ((block.text ?? '') === next) {
       return;
     }
@@ -1273,7 +1314,7 @@ export class CanvasComponent implements AfterViewInit {
         let next = { ...b };
 
         if (normalized.layout) {
-          next.layout = this.clampLayout(normalized.layout);
+          next.layout = clampLayout(normalized.layout, this.columns);
         }
         if (Object.prototype.hasOwnProperty.call(normalized, 'fontSize')) {
           if (normalized.fontSize === null) {
@@ -1297,7 +1338,14 @@ export class CanvasComponent implements AfterViewInit {
         if (this.isInlineTextBlock(next)) {
           if (Object.prototype.hasOwnProperty.call(normalized, 'images')) {
             const inlineImages = (normalized.images as InlineImage[] | null | undefined) ?? [];
-            next = { ...next, images: this.normalizeInlineImages(inlineImages) };
+            next = {
+              ...next,
+              images: normalizeInlineImages(inlineImages, {
+                maxInlineImages: this.maxInlineImages,
+                placements: this.InlinePlacements,
+                sizes: this.InlineImageSizes,
+              }),
+            };
           } else if (!Array.isArray(next.images)) {
             next = { ...next, images: [] };
           }
@@ -1348,27 +1396,10 @@ export class CanvasComponent implements AfterViewInit {
     );
   }
 
-  private normalizeEditorHtml(value: string | null | undefined) {
-    const trimmed = (value ?? '').trim();
-    const normalized = this.decodeNbsp(trimmed);
-    if (!normalized || normalized === '<p><br></p>') {
-      return '';
-    }
-    return normalized;
-  }
 
-  private decodeNbsp(html: string) {
-    if (!html) {
-      return '';
-    }
-    return html
-      .replace(/\u00a0/g, ' ')
-      .replace(/&(nbsp|#160|#x0*a0);/gi, ' ');
-  }
-
-  private buildMetaPayload(meta: PageMetaState): PageWrite['meta'] | undefined {
+  private buildMetaPayload(meta: PageMetaState): PageCreatePayload['meta'] | undefined {
     const description = meta.description.trim();
-    const { values: keywords } = this.collectKeywords(meta.keywords);
+    const { values: keywords } = validateKeywords(meta.keywords);
     if (!description && !keywords.length) {
       return undefined;
     }
@@ -1378,53 +1409,19 @@ export class CanvasComponent implements AfterViewInit {
     };
   }
 
-  private collectKeywords(raw: string | null | undefined): { values: string[]; invalid: string[] } {
-    if (!raw) {
-      return { values: [], invalid: [] };
-    }
-    const pattern = /^[A-Za-z0-9][A-Za-z0-9\s-]{0,38}$/;
-    const seen = new Set<string>();
-    const values: string[] = [];
-    const invalid: string[] = [];
-    raw
-      .split(',')
-      .map(entry => entry.trim())
-      .filter(Boolean)
-      .forEach(keyword => {
-        if (!pattern.test(keyword)) {
-          invalid.push(keyword);
-          return;
-        }
-        const normalized = keyword.toLowerCase();
-        if (seen.has(normalized)) {
-          return;
-        }
-        seen.add(normalized);
-        values.push(keyword);
-      });
-    return { values, invalid };
-  }
-
-  private stringifyKeywords(value: unknown): string {
-    if (Array.isArray(value)) {
-      return value
-        .map(entry => (typeof entry === 'string' ? entry.trim() : ''))
-        .filter(Boolean)
-        .join(', ');
-    }
-    if (typeof value === 'string') {
-      return value;
-    }
-    return '';
-  }
-
   private updateInlineImages(
     block: InlineTextBlock,
     transform: (images: InlineImage[]) => InlineImage[],
   ) {
     const current = Array.isArray(block.images) ? block.images : [];
     const next = transform([...current]);
-    this.onBlockUpdate(block, { images: this.normalizeInlineImages(next) });
+    this.onBlockUpdate(block, {
+      images: normalizeInlineImages(next, {
+        maxInlineImages: this.maxInlineImages,
+        placements: this.InlinePlacements,
+        sizes: this.InlineImageSizes,
+      }),
+    });
   }
 
   private createInlineImage(placement: InlinePlacement = 'top-left'): InlineImage {
@@ -1439,54 +1436,6 @@ export class CanvasComponent implements AfterViewInit {
     };
   }
 
-  private parseInlinePlacement(raw: string | InlinePlacement | null | undefined): InlinePlacement {
-    const candidate = (raw ?? '').toString() as InlinePlacement;
-    if (this.InlinePlacements.includes(candidate)) {
-      return candidate;
-    }
-    return 'top-left';
-  }
-
-  private parseInlineImageSize(raw: string | InlineImageSize | null | undefined): InlineImageSize {
-    const candidate = (raw ?? '').toString() as InlineImageSize;
-    if (this.InlineImageSizes.includes(candidate)) {
-      return candidate;
-    }
-    return 'medium';
-  }
-
-  private normalizeInlineImages(input: InlineImage[] | null | undefined): InlineImage[] {
-    if (!Array.isArray(input)) {
-      return [];
-    }
-    return input
-      .slice(0, this.maxInlineImages)
-      .map((image, index) => {
-        const placement = this.parseInlinePlacement(image.placement);
-        const size = this.InlineImageSizes.includes(image.size as InlineImageSize)
-          ? (image.size as InlineImageSize)
-          : 'medium';
-        const id = (image.id ?? '').trim() || `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
-        return {
-          id,
-          placement,
-          size,
-          src: (image.src ?? '').trim(),
-          alt: image.alt ?? '',
-          caption: image.caption ?? '',
-          mediaHandle: image.mediaHandle ?? null,
-        };
-      });
-  }
-
-  // Strip file extension, and replace underscores/dashes with spaces
-  private buildAltSuggestion(filename: string | null | undefined) {
-    if (!filename) {
-      return '';
-    }
-    return filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
-  }
-
   private updateInspectorView() {
     if (typeof window === 'undefined') {
       return;
@@ -1496,58 +1445,7 @@ export class CanvasComponent implements AfterViewInit {
     this.inspectorOpen.set(!shouldOverlap);
   }
 
-  // Find last empty row
-  private nextRow(blocks: AnyBlock[]) {
-    const lastRow = blocks.reduce((max, block) => {
-      const layout = block.layout;
-      if (!layout) {
-        return max;
-      }
-      const span = Math.max(1, layout.rowSpan ?? 1);
-      const rowEnd = (layout.row ?? 0) + span - 1;
-      return Math.max(max, rowEnd);
-    }, 0);
-    return lastRow + 1;
-  }
-
-  private reflowRows(snapshot?: AnyBlock[]) {
-    const blocks = snapshot ?? this.blocks();
-    if (!blocks.length) {
-      return;
-    }
-    let cursor = 1;
-    let changed = false;
-    const nextBlocks = blocks.map(block => {
-      const layout = this.clampLayout(
-        block.layout ?? { row: cursor, colStart: 1, colSpan: this.columns, rowSpan: 1 },
-        this.columns,
-      );
-      const rowGap = Math.max(0, layout.rowGap ?? 0);
-      const rowSpan = Math.max(1, layout.rowSpan ?? 1);
-      const row = Math.max(1, cursor + rowGap);
-      cursor = row + rowSpan;
-      const prevLayout = block.layout ?? layout;
-      const nextLayout = { ...layout, row, rowSpan, rowGap };
-      if (
-        prevLayout.row === nextLayout.row &&
-        prevLayout.rowSpan === nextLayout.rowSpan &&
-        (prevLayout.rowGap ?? 0) === nextLayout.rowGap &&
-        prevLayout.colStart === nextLayout.colStart &&
-        prevLayout.colSpan === nextLayout.colSpan
-      ) {
-        return block;
-      }
-      changed = true;
-      return {
-        ...block,
-        layout: nextLayout,
-      };
-    });
-    if (changed) {
-      this.blocks.set(nextBlocks);
-    }
-  }
-
+  // Remove block from blocks array, determine insertion point, clamp to grid, and update blocks state
   private moveBlockToRow(blockId: string, targetRow: number) {
     const ordered = [...this.blocks()];
     const currentIndex = ordered.findIndex(block => block.id === blockId);
@@ -1555,8 +1453,11 @@ export class CanvasComponent implements AfterViewInit {
       return;
     }
     const [block] = ordered.splice(currentIndex, 1);
-    const { index, gap } = this.findInsertionPoint(ordered, targetRow);
-    const layout = this.clampLayout(block.layout ?? { row: targetRow, colStart: 1, colSpan: this.columns, rowSpan: 1 }, this.columns);
+    const { index, gap } = findInsertPoint(ordered, targetRow, this.columns);
+    const layout = clampLayout(
+      block.layout ?? { row: targetRow, colStart: 1, colSpan: this.columns, rowSpan: 1 },
+      this.columns,
+    );
     const updated: AnyBlock = {
       ...block,
       layout: {
@@ -1566,93 +1467,6 @@ export class CanvasComponent implements AfterViewInit {
     };
     ordered.splice(index, 0, updated);
     this.blocks.set(ordered);
-  }
-
-  private findInsertionPoint(blocks: AnyBlock[], targetRow: number): { index: number; gap: number } {
-    const desiredRow = Math.max(1, Math.floor(targetRow));
-    let cursor = 1;
-    let rowTarget = desiredRow;
-    for (let i = 0; i < blocks.length; i++) {
-      const layout = blocks[i].layout ?? { row: cursor, colStart: 1, colSpan: this.columns, rowSpan: 1, rowGap: 0 };
-      const gap = Math.max(0, layout.rowGap ?? 0);
-      const start = cursor + gap;
-      if (rowTarget <= start) {
-        return {
-          index: i,
-          gap: Math.max(0, rowTarget - cursor),
-        };
-      }
-      const span = Math.max(1, layout.rowSpan ?? 1);
-      cursor = start + span;
-      if (rowTarget < cursor) {
-        rowTarget = cursor;
-      }
-    }
-    return {
-      index: blocks.length,
-      gap: Math.max(0, rowTarget - cursor),
-    };
-  }
-
-  // Sort by row then column
-  private compareByLayout(a: AnyBlock, b: AnyBlock) {
-    const rowDiff = (a.layout?.row ?? 0) - (b.layout?.row ?? 0);
-    if (rowDiff !== 0) {
-      return rowDiff;
-    }
-    const colDiff = (a.layout?.colStart ?? 1) - (b.layout?.colStart ?? 1);
-    if (colDiff !== 0) {
-      return colDiff;
-    }
-    return a.id.localeCompare(b.id);
-  }
-
-  // Helper to clamp blocks within current margins
-  private clampLayout(desired: GridPlacement, total = this.columns): GridPlacement {
-    const totalCols = total;
-    const row = Math.max(1, desired?.row ?? 1);
-    const colSpan = Math.max(1, Math.min(desired?.colSpan ?? totalCols, totalCols));
-    const maxStart = totalCols - colSpan + 1;
-    const colStart = Math.max(1, Math.min(desired?.colStart ?? 1, maxStart));
-    const rowSpan = Math.max(1, desired?.rowSpan ?? 1);
-    const rowGap = Math.max(0, desired?.rowGap ?? 0);
-    return { row, colStart, colSpan, rowSpan, rowGap };
-  }
-
-  // Sets a title and byline block at the top of a new page
-  private createDefaultBlocks(): AnyBlock[] {
-    const title = this.pageMeta().title ?? '';
-    const totalCols = Math.max(1, this.columns);
-    return [
-      {
-        id: 't1',
-        type: 'title',
-        layout: { row: 1, colStart: 1, colSpan: totalCols, rowSpan: 2 },
-        hAlign: 'flex-start',
-        vAlign: 'center',
-        text: title,
-      } as TitleBlock,
-      {
-        id: 'b1',
-        type: 'byline',
-        layout: { row: 3, colStart: 1, colSpan: totalCols, rowSpan: 2 },
-        hAlign: 'flex-start',
-        vAlign: 'center',
-        author: this.currentAuthor(),
-        publishedAt: '',
-      } as BylineBlock,
-    ];
-  }
-
-  // Convert a title to a valid URI value
-  private slugify(value: string) {
-    return value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9_\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
   }
 
   trackByBlockId: TrackByFunction<AnyBlock> = (_i, block) => block.id;

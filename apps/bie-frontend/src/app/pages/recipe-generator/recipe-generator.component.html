@@ -1,23 +1,75 @@
 <div class="recipe-gen-layout">
-  <div class="center-panel">
+
+  <div class="recipe-input">
+    <div class="recipe-controls">
+      <div class="recipe-controls-info">
+        <h2>Recipe Draft</h2>
+        <p>Slug: <strong>{{ slug() || '-' }}</strong></p>
+        <p>Status: <strong>{{ recipeMeta().status | titlecase }}</strong></p>
+        @if (lastSavedDisplay(); as savedAt) {
+        <p>Saved {{ savedAt }}</p>
+        } @else {
+        <p>Not saved yet.</p>
+        }
+        @if (loadError(); as loadMessage) {
+        <p class="recipe-error">{{ loadMessage }}</p>
+        }
+        @if (saveError(); as saveMessage) {
+        <p class="recipe-error">{{ saveMessage }}</p>
+        }
+      </div>
+      <div class="recipe-controls-actions">
+        <button type="button" (click)="saveRecipe()" [disabled]="savingRecipe() || deletingRecipe() || loadingRecipe()">
+          {{ recipeMeta().slugRef ? 'Save changes' : 'Save recipe' }}
+        </button>
+        <button type="button" (click)="deleteRecipe()" [disabled]="!recipeMeta().slugRef || savingRecipe() || deletingRecipe() || loadingRecipe()">
+          Delete recipe
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-image-input">
+      <div class="hero-image-preview" [class.has-image]="heroImageSrc()">
+        @if (heroImageSrc(); as src) {
+        <img [src]="src" [attr.alt]="heroAltControl.value || ''" />
+        } @else {
+        <div class="hero-image-placeholder">
+          <span>No hero image selected.</span>
+        </div>
+        }
+      </div>
+      <div class="hero-image-controls">
+        <div>
+          <p>Choose an image from the media library below.</p>
+          <label class="recipe-field">
+            <span>Alt text (optional)</span>
+            <input type="text" [formControl]="heroAltControl" placeholder="Describe the image">
+          </label>
+        </div>
+        <button type="button" (click)="clearHeroImage()" [disabled]="!heroImageSrc()">Clear image</button>
+      </div>
+    </div>
+    
     <div class="title-input">
-      <h3>Title</h3>
-      <input
-        id="recipe-title"
-        type="text"
-        [formControl]="titleControl"
-        placeholder="Enter recipe title"
-      />
+      <label class="recipe-field">
+        <input
+          id="recipe-title"
+          type="text"
+          [formControl]="titleControl"
+          placeholder="Enter a title..."
+        />
+      </label>
     </div>
 
     <div class="blurb-input">
-      <h3>Description</h3>
-      <input
-        id="recipe-blurb"
-        type="text"
-        [formControl]="blurbControl"
-        placeholder="Enter a short description"
-      />
+      <label class="recipe-field">
+        <input
+          id="recipe-blurb"
+          type="text"
+          [formControl]="blurbControl"
+          placeholder="Enter a 1-2 sentence description..."
+        />
+      </label>
     </div>
 
     <div class="ingredients-input">
@@ -35,10 +87,9 @@
       <app-bullet-editor [(items)]="notes" />
     </div>
 
-    <button type="button" (click)="submit()">Save recipe</button>
-
     <pre>
 {{ {
+  heroImage: heroImage(),
   title: titleControl.value,
   blurb: blurbControl.value,
   ingredients: ingredients(),
@@ -46,5 +97,14 @@
   notes: notes(),
 } | json }}
     </pre>
+  </div>
+
+  <div class="hero-image-picker">
+    <h3>Media library</h3>
+    <app-media-browser-carousel
+      [allowDelete]="false"
+      [viewMode]="'grid'"
+      (mediaSelected)="onHeroImageSelected($event)">
+    </app-media-browser-carousel>
   </div>
 </div>

@@ -7,7 +7,7 @@
 }
 
 .recipe-gen-layout,
-.center-panel,
+.recipe-input,
 .ingredients-input,
 .instructions-input,
 .notes-input,
@@ -27,8 +27,126 @@ fieldset {
   padding: 2rem;
 }
 
-.center-panel {
+.recipe-input {
   border-radius: 16px;
   border: 1px solid rgba(15, 23, 42, 0.1);
   padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.recipe-controls {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.recipe-controls-info h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+}
+
+.recipe-controls-info p {
+  margin: 0.15rem 0;
+  color: #475569;
+}
+
+.recipe-controls-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.recipe-controls-info .recipe-error {
+  margin-top: 0.5rem;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.hero-image-input {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.hero-image-preview {
+  position: relative;
+  border-radius: 16px;
+  border: 1px dashed rgba(15, 23, 42, 0.2);
+  background: #f8fafc;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.hero-image-preview.has-image {
+  border-style: solid;
+  background: #0f172a;
+}
+
+.hero-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-image-placeholder {
+  color: #475569;
+  font-weight: 600;
+}
+
+.hero-image-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hero-image-controls p {
+  margin: 0;
+  color: #64748b;
+}
+
+.recipe-field {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.recipe-field input {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+.title-input .recipe-field,
+.blurb-input .recipe-field {
+  margin-top: 16px;
+  font-size: 1rem;
+}
+
+.title-input .recipe-field input,
+.blurb-input .recipe-field input {
+  max-width: 100%;
+}
+
+.hero-image-picker {
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 1.5rem;
+  background: #fff;
+}
+
+.hero-image-picker h3 {
+  margin-top: 0;
 }

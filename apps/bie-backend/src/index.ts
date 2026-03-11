@@ -6,6 +6,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import authRouter from './auth.js';
 import filestackRouter from './filestack.js';
 import pagesRouter from './pages.js';
+import recipesRouter from './recipes.js';
 import { query } from './db.js';
 
 const normalizeOrigin = (value: string) => {
@@ -63,6 +64,7 @@ app.get('/healthz', async (_req, res) => {
 app.use('/api/auth', authRouter);           // Login/Auth
 app.use('/api/media', filestackRouter);     // Filestack media
 app.use('/api/pages', pagesRouter);         // Pages API
+app.use('/api/recipes', recipesRouter);     // Recipes API
 
 // SSR Proxy
 const SSR_TARGET = process.env.SSR_TARGET ?? 'http://127.0.0.1:4100';

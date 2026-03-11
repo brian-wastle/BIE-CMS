@@ -24,6 +24,7 @@ export const routes: Routes = [
       { path: 'author', data: { pageTitle: 'Canvas Editor' }, loadComponent: () => import('./pages/canvas/canvas.component').then(m => m.CanvasComponent)},
       { path: 'upload', data: { pageTitle: 'Media Browser' }, loadComponent: () => import('./pages/media-upload/media-upload.component').then(m => m.MediaUploadComponent)},
       { path: 'recipe', data: { pageTitle: 'Recipe Generator' }, loadComponent: () => import('./pages/recipe-generator/recipe-generator.component').then(m => m.RecipeGeneratorComponent)},
+      { path: 'recipes', data: { pageTitle: 'Recipe Manager' }, loadComponent: () => import('./pages/recipe-manager/recipe-manager.component').then(m => m.RecipeManagerComponent)},
       { path: 'drafts', data: { pageTitle: 'Draft Manager' }, loadComponent: () => import('./pages/draft-manager/draft-manager.component').then(m => m.DraftManagerComponent)},
       { path: 'login', data: { pageTitle: 'Sign In', requiresAuth: false }, loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent)},
     ],

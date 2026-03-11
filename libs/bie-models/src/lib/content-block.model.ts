@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/*
+                                                                                                     Canvas Editor
+*/
 /////////////////////////// Enums
 
 export const BlockTypeSchema = z.enum([
@@ -196,7 +199,32 @@ type Simplify<T> = { [K in keyof T]: T[K] };
 
 export type BlockUpdate = Simplify<z.infer<typeof BlockUpdateSchema> & BlockUpdateProps>;
 
-/////////////////////////// Page models
+/*
+                                                                                                     Recipe Generator
+*/
+
+export const RecipeHeroImageSchema = z
+  .object({
+    src: z.string(),
+    alt: z.string().optional(),
+  })
+  .strict();
+export type RecipeHeroImage = z.infer<typeof RecipeHeroImageSchema>;
+
+export const RecipeSchema = z.object({
+  title: z.string(),
+  blurb: z.string(),
+  heroImage: RecipeHeroImageSchema.optional(),
+  ingredients: z.array(z.string()),
+  instructions: z.array(z.string()),
+  notes: z.array(z.string()).optional(),
+});
+export type Recipe = z.infer<typeof RecipeSchema>;
+
+
+/*
+                                                                                                    Page models
+*/
 
 // Interface for media directories created by media upload page
 export const DirectoryMetaSchema = z.object({
@@ -249,20 +277,56 @@ export type PageMeta = z.infer<typeof PageMetaSchema>;
 export const PageStatusSchema = z.enum(['draft', 'published']);
 export type PageStatus = z.infer<typeof PageStatusSchema>;
 
-// Published page data type
-export const PageSchema = z.object({
+// Base published page schema
+export const BasePageSchema = z.object({
   id: z.string(),
   slug: z.string(),
   status: PageStatusSchema,
   title: z.string(),
-  blocks: z.array(AnyBlockSchema),
-  grid: GridSettingsSchema.default(GridDefaults),
   meta: PageMetaSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   publishedAt: z.string().nullable().optional(),
 });
+
+export type BasePage = z.infer<typeof BasePageSchema>;
+
+export const PageSchema = BasePageSchema.extend({
+  blocks: z.array(AnyBlockSchema),
+  grid: GridSettingsSchema.default(GridDefaults),
+});
+
 export type Page = z.infer<typeof PageSchema>;
+
+export const RecipePageSchema = BasePageSchema.extend({
+  recipe: RecipeSchema,
+});
+
+export type RecipePage = z.infer<typeof RecipePageSchema>;
+
+// Recipe page payloads
+const RecipePagePatchSchema = z.object({
+  title: z.string().min(1),
+  status: PageStatusSchema.optional(),
+  recipe: RecipeSchema,
+  meta: PageMetaSchema.optional(),
+  publishedAt: z.string().nullable().optional(),
+});
+
+export const RecipePageCreateSchema = RecipePagePatchSchema.extend({
+  slug: z.string().min(1),
+});
+export type RecipePageCreatePayload = z.infer<typeof RecipePageCreateSchema>;
+
+export const RecipePageUpdateSchema = RecipePagePatchSchema.extend({
+  slug: z.string().min(1).optional(),
+});
+export type RecipePageUpdatePayload = z.infer<typeof RecipePageUpdateSchema>;
+
+export const RecipePageSummarySchema = z.object({
+  page: RecipePageSchema,
+});
+export type RecipePageSummary = z.infer<typeof RecipePageSummarySchema>;
 
 // Used for updating block schema in canvas editor
 const PagePatchSchema = z.object({

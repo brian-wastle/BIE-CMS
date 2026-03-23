@@ -35,7 +35,7 @@
     @if (!loading() && !loadedPages()) {
     <div class="state state-empty">
       <p>No recipes have been created yet.</p>
-      <a routerLink="/recipe" class="link">Create your first recipe</a>
+      <a routerLink="/recipegenerator" class="link">Create your first recipe</a>
     </div>
     } @else if (displayedPages().length) {
     <ul class="recipe-list">
@@ -56,7 +56,7 @@
           <span>Created {{ formatDate(summary.page.createdAt) }}</span>
         </div>
         <div class="recipe-actions">
-          <a routerLink="/recipe" [queryParams]="{ recipe: summary.page.slug }">Edit Recipe</a>
+          <a routerLink="/recipegenerator" [queryParams]="{ recipe: summary.page.slug }">Edit Recipe</a>
         </div>
       </li>
       }

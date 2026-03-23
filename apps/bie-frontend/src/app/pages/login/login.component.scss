@@ -17,26 +17,35 @@ button {
 }
 
 .login-form-grid {
-    display: grid;
+  display: grid;
   grid-template-columns: max-content 1fr;
   gap: 0.75rem 1rem;
   align-items: center;
-  max-width: 480px;
+  width: 100%;
+  max-width: 360px;
   margin-bottom: 24px;
+  box-sizing: border-box;
 }
 
 .login-form-grid label {
-  justify-self: end;                      /* right-align labels */
+  justify-self: end;
 }
 
 .login-form-grid input {
-  width: 100%;                            /* let inputs fill their cell */
+  width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   font-size: 16px;
 }
 
-@media (max-width: 480px) {
+.login-form-grid button {
+  grid-column: 2;
+  justify-self: end;
+}
+
+@media (max-width: 400px) {
   .login-form-grid { grid-template-columns: 1fr; }
   .login-form-grid label { justify-self: start; }
+  .login-form-grid button { grid-column: 1; }
 }
 

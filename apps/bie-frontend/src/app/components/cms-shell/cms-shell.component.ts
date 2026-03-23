@@ -7,6 +7,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDividerModule } from '@angular/material/divider';
+import { CurrentUserService } from '../../services/current-user/current-user.service';
 
 @Component({
   selector: 'app-cms-shell',
@@ -17,8 +19,9 @@ import { MatButtonModule } from '@angular/material/button';
     MatToolbarModule,
     MatIconModule,
     MatListModule,
-    MatButtonModule
-],
+    MatButtonModule,
+    MatDividerModule,
+  ],
   templateUrl: './cms-shell.component.html',
   styleUrls: ['./cms-shell.component.scss'],
 })
@@ -31,6 +34,7 @@ export class CmsShellComponent implements OnInit {
   opened: WritableSignal<boolean> = signal(true);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private currentUser = inject(CurrentUserService);
 
   pageTitle = signal<string>('');
 
@@ -55,5 +59,11 @@ export class CmsShellComponent implements OnInit {
   toggleNavState() {
     this.sidenavOpened = !this.sidenavOpened;
     this.opened.set(this.sidenavOpened);
+  }
+
+  async logout() {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    await this.currentUser.refresh();
+    this.router.navigateByUrl('/login');
   }
 }

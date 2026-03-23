@@ -1,7 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-
 import { FormsModule } from '@angular/forms';
+import { CurrentUserService } from '../../services/current-user/current-user.service';
 
 @Component({
   selector: 'app-login',
@@ -10,12 +10,13 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {
+  private readonly router = inject(Router);
+  private readonly currentUser = inject(CurrentUserService);
+
   email = '';
   password = '';
   loading = signal(false);
   error = signal<string | null>(null);
-
-  constructor(private router: Router) {}
 
   async submit() {
     this.loading.set(true);
@@ -28,6 +29,7 @@ export class LoginComponent {
         body: JSON.stringify({ email: this.email, password: this.password })
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Login failed');
+      await this.currentUser.refresh();
       this.router.navigateByUrl('/author');
     } catch (e: any) {
       this.error.set(e.message ?? 'Login failed');

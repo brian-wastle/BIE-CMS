@@ -4,7 +4,10 @@ import { PublicShellComponent } from './pages/public-shell/public-shell.componen
 import { CmsShellComponent } from './components/cms-shell/cms-shell.component';
 import { PublishedPageComponent } from './pages/published-page/published-page.component';
 import { HomepageComponent } from './pages/homepage/homepage.component';
+import { CookbookComponent } from './pages/cookbook/cookbook.component';
+import { PublishedRecipePageComponent } from './pages/published-recipe-page/published-recipe-page.component';
 import { publishedPageResolver } from './resolvers/published-page.resolver';
+import { publishedRecipePageResolver } from './resolvers/published-recipe-page.resolver';
 import { ErrorPageComponent } from './pages/error-page/error-page.component';
 
 export const routes: Routes = [
@@ -14,6 +17,8 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', component: HomepageComponent },
       { path: 'blog/:slug', component: PublishedPageComponent, resolve: { publishedPage: publishedPageResolver } },
+      { path: 'recipes', component: CookbookComponent },
+      { path: 'recipes/:slug', component: PublishedRecipePageComponent, resolve: { publishedRecipePage: publishedRecipePageResolver } },
     ],
   },
   {
@@ -23,8 +28,8 @@ export const routes: Routes = [
     children: [
       { path: 'author', data: { pageTitle: 'Canvas Editor' }, loadComponent: () => import('./pages/canvas/canvas.component').then(m => m.CanvasComponent)},
       { path: 'upload', data: { pageTitle: 'Media Browser' }, loadComponent: () => import('./pages/media-upload/media-upload.component').then(m => m.MediaUploadComponent)},
-      { path: 'recipe', data: { pageTitle: 'Recipe Generator' }, loadComponent: () => import('./pages/recipe-generator/recipe-generator.component').then(m => m.RecipeGeneratorComponent)},
-      { path: 'recipes', data: { pageTitle: 'Recipe Manager' }, loadComponent: () => import('./pages/recipe-manager/recipe-manager.component').then(m => m.RecipeManagerComponent)},
+      { path: 'recipegenerator', data: { pageTitle: 'Recipe Generator' }, loadComponent: () => import('./pages/recipe-generator/recipe-generator.component').then(m => m.RecipeGeneratorComponent)},
+      { path: 'recipemanager', data: { pageTitle: 'Recipe Manager' }, loadComponent: () => import('./pages/recipe-manager/recipe-manager.component').then(m => m.RecipeManagerComponent)},
       { path: 'drafts', data: { pageTitle: 'Draft Manager' }, loadComponent: () => import('./pages/draft-manager/draft-manager.component').then(m => m.DraftManagerComponent)},
       { path: 'login', data: { pageTitle: 'Sign In', requiresAuth: false }, loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent)},
     ],

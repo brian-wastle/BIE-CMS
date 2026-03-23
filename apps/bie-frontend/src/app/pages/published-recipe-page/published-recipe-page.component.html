@@ -1,0 +1,56 @@
+@if (error(); as errorMessage) {
+<div class="state state-error">
+  <p>{{ errorMessage }}</p>
+</div>
+} @else if (page(); as p) {
+<article class="recipe-page">
+
+  @if (p.recipe.heroImage?.src) {
+  <div class="recipe-hero">
+    <img [src]="p.recipe.heroImage!.src" [attr.alt]="p.recipe.heroImage!.alt || p.title" />
+  </div>
+  }
+
+  <header class="recipe-header">
+    <h1>{{ p.title }}</h1>
+    @if (p.recipe.blurb) {
+    <p class="recipe-blurb">{{ p.recipe.blurb }}</p>
+    }
+    <p class="recipe-date">Published {{ p.publishedAt | date:"MMM dd, yyyy" }}</p>
+  </header>
+
+  <section class="recipe-ingredients">
+    <h2>Ingredients</h2>
+    <ul>
+      @for (item of p.recipe.ingredients; track $index) {
+      <li>{{ item }}</li>
+      }
+    </ul>
+  </section>
+
+  <section class="recipe-instructions">
+    <h2>Instructions</h2>
+    <ol>
+      @for (step of p.recipe.instructions; track $index) {
+      <li>{{ step }}</li>
+      }
+    </ol>
+  </section>
+
+  @if (p.recipe.notes?.length) {
+  <section class="recipe-notes">
+    <h2>Notes</h2>
+    <ul>
+      @for (note of p.recipe.notes!; track $index) {
+      <li>{{ note }}</li>
+      }
+    </ul>
+  </section>
+  }
+
+</article>
+} @else {
+<div class="state state-loading">
+  <p>Loading recipe...</p>
+</div>
+}

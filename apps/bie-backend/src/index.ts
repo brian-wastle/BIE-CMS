@@ -4,22 +4,12 @@ import helmet, { type HelmetOptions } from 'helmet';
 import cookieParser from 'cookie-parser';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import authRouter from './auth.js';
-import filestackRouter from './filestack.js';
+import mediaRouter from './media.js';
 import pagesRouter from './pages.js';
 import recipesRouter from './recipes.js';
 import { query } from './db.js';
 
-const normalizeOrigin = (value: string) => {
-  try {
-    return new URL(value).origin;
-  } catch {
-    return value;
-  }
-};
-
 const isProduction = process.env.NODE_ENV === 'production';
-const filestackCdnOrigin = normalizeOrigin(process.env.FILESTACK_CDN_BASE ?? 'https://cdn.filestackcontent.com');
-const filestackScriptOrigin = normalizeOrigin(process.env.FILESTACK_SCRIPT_SRC ?? 'https://static.filestackapi.com');
 const helmetOptions: HelmetOptions = {
   contentSecurityPolicy: isProduction
     ? {
@@ -31,13 +21,13 @@ const helmetOptions: HelmetOptions = {
           "frame-ancestors": ["'self'"],
           "frame-src": ["'self'"],
           "object-src": ["'none'"],
-          "script-src": ["'self'", filestackScriptOrigin],
+          "script-src": ["'self'"],
           "script-src-attr": ["'unsafe-inline'"],
           "style-src": ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
           "font-src": ["'self'", 'https://fonts.gstatic.com', 'data:'],
-          "img-src": ["'self'", 'data:', 'blob:', filestackCdnOrigin],
-          "media-src": ["'self'", 'blob:', filestackCdnOrigin],
-          "connect-src": ["'self'", filestackCdnOrigin, filestackScriptOrigin, 'https://www.filestackapi.com'],
+          "img-src": ["'self'", 'data:', 'blob:'],
+          "media-src": ["'self'", 'blob:'],
+          "connect-src": ["'self'"],
           "upgrade-insecure-requests": [],
         },
       }
@@ -62,7 +52,7 @@ app.get('/healthz', async (_req, res) => {
 
 // API Routes
 app.use('/api/auth', authRouter);           // Login/Auth
-app.use('/api/media', filestackRouter);     // Filestack media
+app.use('/api/media', mediaRouter);         // Media uploads
 app.use('/api/pages', pagesRouter);         // Pages API
 app.use('/api/recipes', recipesRouter);     // Recipes API
 

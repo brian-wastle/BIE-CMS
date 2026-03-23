@@ -45,3 +45,6 @@ Thumbs.db
 
 ubuntucodes.txt
 tailscale-ssh.txt
+
+# Local media uploads
+uploads/

@@ -1,0 +1,49 @@
+<div class="cookbook-wrapper">
+  <div class="cookbook-top">
+    <h1>Cookbook</h1>
+    <p>A collection of recipes I've put together.</p>
+  </div>
+
+  <div class="cookbook-flex">
+    @if (error(); as errorMessage) {
+    <div class="state state-error">
+      <p>{{ errorMessage }}</p>
+      <button type="button" (click)="refresh()" [disabled]="loading()">Try again</button>
+    </div>
+    } @else {
+    @if (loading() && !loadedPages()) {
+    <div class="state state-loading">
+      <p>Loading recipes...</p>
+    </div>
+    }
+
+    @if (!loading() && !loadedPages()) {
+    <div class="state state-empty">
+      <p>No recipes have been published yet.</p>
+    </div>
+    } @else {
+    <div class="recipe-list">
+      <ul role="list">
+        @for (summary of displayedPages(); track trackByRecipe($index, summary)) {
+        <li class="recipe-item">
+          <a class="recipe-title" [routerLink]="['/recipes', summary.page.slug]">
+            <h3>{{ summary.page.title }}</h3>
+          </a>
+          @if (summary.page.recipe.blurb) {
+          <p class="recipe-blurb">{{ summary.page.recipe.blurb }}</p>
+          }
+          <p class="recipe-date">{{ summary.page.publishedAt | date:"MMM dd, yyyy" }}</p>
+        </li>
+        }
+      </ul>
+    </div>
+
+    <div class="page-controls">
+      <button type="button" (click)="prevPage()" [disabled]="!hasPrevPage() || loading()">Previous</button>
+      <span>Page {{ currentPageDisplay() }} of {{ loadedPages() }}</span>
+      <button type="button" (click)="nextPage()" [disabled]="!hasNextPage() || loading()">Next</button>
+    </div>
+    }
+    }
+  </div>
+</div>

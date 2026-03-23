@@ -19,10 +19,13 @@
         }
       </div>
       <div class="recipe-controls-actions">
-        <button type="button" (click)="saveRecipe()" [disabled]="savingRecipe() || deletingRecipe() || loadingRecipe()">
-          {{ recipeMeta().slugRef ? 'Save changes' : 'Save recipe' }}
+        <button type="button" (click)="saveRecipe()" [disabled]="savingRecipe() || publishingRecipe() || deletingRecipe() || loadingRecipe()">
+          {{ savingRecipe() ? 'Saving...' : (recipeMeta().slugRef ? 'Save changes' : 'Save recipe') }}
         </button>
-        <button type="button" (click)="deleteRecipe()" [disabled]="!recipeMeta().slugRef || savingRecipe() || deletingRecipe() || loadingRecipe()">
+        <button type="button" (click)="publishRecipe()" [disabled]="savingRecipe() || publishingRecipe() || deletingRecipe() || loadingRecipe()">
+          {{ publishingRecipe() ? 'Publishing...' : (recipeMeta().status === 'published' ? 'Update published' : 'Publish recipe') }}
+        </button>
+        <button type="button" (click)="deleteRecipe()" [disabled]="!recipeMeta().slugRef || savingRecipe() || publishingRecipe() || deletingRecipe() || loadingRecipe()">
           Delete recipe
         </button>
       </div>
@@ -55,7 +58,8 @@
         <input
           id="recipe-title"
           type="text"
-          [formControl]="titleControl"
+          [value]="title()"
+          (input)="title.set($any($event.target).value)"
           placeholder="Enter a title..."
         />
       </label>
@@ -86,17 +90,6 @@
       <h3>Notes</h3>
       <app-bullet-editor [(items)]="notes" />
     </div>
-
-    <pre>
-{{ {
-  heroImage: heroImage(),
-  title: titleControl.value,
-  blurb: blurbControl.value,
-  ingredients: ingredients(),
-  instructions: instructions(),
-  notes: notes(),
-} | json }}
-    </pre>
   </div>
 
   <div class="hero-image-picker">

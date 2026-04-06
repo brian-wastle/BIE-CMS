@@ -1,0 +1,102 @@
+/* flourless-chocolate-cake.component.scss */
+
+:host {
+  display: block;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #1a1a1a;
+  background: #faf8f5;
+}
+
+.recipe {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* Header */
+.recipe__header {
+  border-bottom: 2px solid #1a1a1a;
+  padding-bottom: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.recipe__title {
+  font-size: 2rem;
+  font-weight: normal;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.01em;
+}
+
+.recipe__subtitle {
+  font-size: 0.95rem;
+  color: #555;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Section headings */
+h2 {
+  font-size: 1.15rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.75rem;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #777;
+  margin: 1.25rem 0 0.5rem;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Sections */
+.recipe__section,
+.recipe__equipment,
+.recipe__notes {
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.recipe__notes {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.recipe__description {
+  font-size: 0.95rem;
+  color: #444;
+  font-style: italic;
+  margin: 0 0 1rem;
+  line-height: 1.6;
+}
+
+/* Lists */
+ul, ol {
+  margin: 0;
+  padding-left: 1.4rem;
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+li {
+  margin-bottom: 0.35rem;
+}
+
+ol li {
+  margin-bottom: 0.65rem;
+}
+
+/* Inline note */
+.recipe__note {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+  margin: 0.75rem 0 0;
+  line-height: 1.5;
+}

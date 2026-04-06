@@ -5,13 +5,16 @@
     </div>
     <nav class="public-nav">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-        Home
+        <mat-icon class="nav-icon">home</mat-icon>
+        <span class="nav-label">Home</span>
       </a>
       <a routerLink="/recipes" routerLinkActive="active">
-        Cookbook
+        <mat-icon class="nav-icon">menu_book</mat-icon>
+        <span class="nav-label">Cookbook</span>
       </a>
       <a href="https://github.com/brian-wastle" target="_blank" rel="noopener noreferrer">
-        GitHub
+        <mat-icon class="nav-icon">code</mat-icon>
+        <span class="nav-label">GitHub</span>
       </a>
     </nav>
   </header>

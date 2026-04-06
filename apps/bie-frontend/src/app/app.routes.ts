@@ -19,6 +19,7 @@ export const routes: Routes = [
       { path: 'blog/:slug', component: PublishedPageComponent, resolve: { publishedPage: publishedPageResolver } },
       { path: 'recipes', component: CookbookComponent },
       { path: 'recipes/:slug', component: PublishedRecipePageComponent, resolve: { publishedRecipePage: publishedRecipePageResolver } },
+      { path: 'misc/flourless-cake', loadComponent: () => import('./pages/misc/flourless-cake/flourless-cake.component').then(m => m.FlourlessCakeComponent) },
     ],
   },
   {
